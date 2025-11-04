@@ -18,7 +18,9 @@ float3 sampleSkyFinal(const in float3 localPos, const in float3 viewLocalDir, bo
         intersectsPlanet = rayIntersectSphere(skyPos, viewLocalDir, groundRadiusMM) >= 0.0;
 
         if (!intersectsPlanet) {
-            float sunF = sun(viewLocalDir, scene[0].SunLocalDir);
+            // float sunF = sun(viewLocalDir, scene[0].SunLocalDir);
+            float3 sunLocalPos = sun_distanceMm * scene[0].SunLocalDir + localPos;
+            float sunF = step(0.0, rayIntersectSphere(sunLocalPos, -viewLocalDir, sun_radiusMm));
             if (sunF > 0.0) skyLight = 16.0 * sunF * scene[0].SunColor;
 
             float3 moonLocalPos = moon_distanceKm * scene[0].MoonLocalDir + localPos;

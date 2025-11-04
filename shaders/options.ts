@@ -1,5 +1,9 @@
 export function setupOptions() {
     return new Page('main')
+        .add(new Page('WATER')
+            .add(asBool('WATER_WAVES_ENABLED', true, true))
+            .add(asIntRange('WATER_WAVE_SIZE', 60, 2, 100, 2, false))
+            .build())
         .add(new Page('MATERIAL')
             .add(asInt('MATERIAL_FORMAT', 0, 1, 2).needsReload(true).build(0))
             .add(EMPTY)

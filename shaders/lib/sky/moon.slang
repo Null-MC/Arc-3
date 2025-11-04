@@ -5,8 +5,12 @@ import lib.sampling.ERP;
 import lib.sampling.dfd_normal;
 import lib.light.fresnel;
 
-static const float moon_radiusKm = 1740.0;
-static const float moon_distanceKm = 20000.0;
+static const float moon_radiusKm = 1737.4;
+static const float moon_distanceKm = 384400.0 * 0.5;
+
+// static const float moon_AreaDist = 100.0;
+// static const float moon_AreaSize = 8.0;
+
 static const float moon_surfaceDepthKm = 80.0;
 static const float moon_rotationSpeed = 0.0064;
 static const float moon_axisTilt = -0.6;
@@ -32,7 +36,7 @@ float3 renderMoon(const in float3 viewLocalDir, const in float3 moonLocalPos, co
 
     hitPos += moon_surfaceDepthKm * albedo_height.a * hitNormal;
 
-    float3 normal = getSurfaceNormal(hitPos, hitNormal);
+    float3 normal = getSurfaceNormal(hitPos, -hitNormal);
     if (isReflection) normal = -normal;
 
     const float3 fakeSunDir = normalize(float3(0.4, -1.0, 0.2));

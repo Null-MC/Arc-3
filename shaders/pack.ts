@@ -76,6 +76,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .addInt('MATERIAL_FORMAT', options.Material_Format)
         .addInt('Shadow_Resolution', options.Shadow_Resolution)
         .addInt('SHADOW_CASCADE_COUNT', 4)
+        .addInt('ReflectMode', options.Lighting_Reflection_Mode)
+        .addInt('RefractMode', options.Lighting_Refraction_Mode)
         .addBool('FloodFill_Enabled', options.Lighting_FloodFill_Enabled)
         .addInt('FloodFill_BufferSize', options.Lighting_FloodFill_Size)
         .addBool('PointLight_Enabled', options.Lighting_Point_Enabled)
@@ -442,7 +444,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     }
 
     translucentObjectShader("terrain-translucent", Usage.TERRAIN_TRANSLUCENT)
-        .exportBool('Water_WaveEnabled', options.Water_Wave_Enabled)
+        .exportBool('Water_WaveEnabled', options.Water_WavesEnabled)
         .exportBool('RENDER_TERRAIN', true)
         .compile();
 
@@ -693,7 +695,7 @@ export function onSettingsChanged(pipeline: PipelineConfig) {
     new StreamingBufferBuilder(settings)
         .appendFloat(options.Sky_SeaLevel)
         .appendInt(options.Water_WaveDetail)
-        .appendFloat(options.Water_WaveHeight)
+        .appendFloat(options.Water_WaveSize * 0.01)
         .appendFloat(options.Material_Parallax_Depth * 0.01)
         .appendFloat(options.Post_Bloom_Strength * 0.01)
         .appendFloat(options.Post_Exposure_Min)

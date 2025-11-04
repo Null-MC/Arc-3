@@ -1,3 +1,11 @@
+screen.WATER=Water
+
+option.WATER_WAVES_ENABLED=Waves Enabled
+
+option.WATER_WAVE_SIZE=Wave Size
+suffix.WATER_WAVE_SIZE=%
+
+
 screen.MATERIAL=Materials
 
 option.MATERIAL_FORMAT=Format

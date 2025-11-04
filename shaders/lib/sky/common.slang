@@ -11,6 +11,7 @@ static const uint2 skyIrradianceDimensions = 32;
 // Units are in megameters.
 static const float groundRadiusMM = 6.371;
 static const float atmosphereRadiusMM = 0.100 + groundRadiusMM;
+// static const float earthRadiusKm = 6371.0;
 
 static const float3 groundAlbedo = 0.3;
 
@@ -64,9 +65,9 @@ float getRayleighPhase(float cosTheta) {
 }
 
 // From https://gamedev.stackexchange.com/questions/96459/fast-ray-sphere-collision-code.
-float rayIntersectSphere(float3 ro, float3 rd, float rad) {
-    float b = dot(ro, rd);
-    float c = dot(ro, ro) - rad*rad;
+float rayIntersectSphere(float3 center, float3 direction, const in float radius) {
+    float b = dot(center, direction);
+    float c = dot(center, center) - pow2(radius);
     if (c > 0.0f && b > 0.0) return -1.0;
 
     float discr = b*b - c;

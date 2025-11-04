@@ -5,10 +5,14 @@ import lib.light.fresnel;
 import lib.light.brdf;
 import lib.material.pbr;
 import lib.sky.common;
+import lib.sky.sun;
+import lib.sky.moon;
 import lib.sky.sample_transmit;
 import lib.sky.sample_irradiance;
 import lib.sky.sample_view;
 import lib.sky.sample_light;
+
+extern static const int ReflectMode;
 
 Sampler2D<float> solidDepthTex;
 
@@ -88,11 +92,11 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         float NoVm = max(dot(tex_normal, viewLocalDir), 0.0);
 
         CelestialLight sun;
-        sun.localDir = scene[0].SunLocalDir;
+        sun.localDir = GetAreaLightDir(tex_normal, viewLocalDir, scene[0].SunLocalDir, sun_distanceMm, sun_radiusMm);
         sun.color = scene[0].SunColor * sampleSkyTransmit(surface.skyPos, sun.localDir);
 
         CelestialLight moon;
-        moon.localDir = scene[0].MoonLocalDir;
+        moon.localDir = GetAreaLightDir(tex_normal, viewLocalDir, scene[0].MoonLocalDir, moon_distanceKm, moon_radiusKm);
         moon.color = scene[0].MoonColor * sampleSkyTransmit(surface.skyPos, moon.localDir);
 
         float3 sss_ambient = sampleSkyIrradiance(-tex_normal) * lmcoord_y;
@@ -118,18 +122,20 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         float smoothness = 1.0 - roughness;
         output.diffuse *= 1.0 - metalness * smoothness;
 
-        float3 reflectLocalNormal = randomize(uv, tex_normal, surface.roughL);
+        if (ReflectMode == Reflect_SkyOnly) {
+            float3 reflectLocalNormal = randomize(uv, tex_normal, surface.roughL);
 
-        float3 fragViewDir = normalize(viewPos);
-        float3 viewNormal = mul(float3x3(ap.camera.view), reflectLocalNormal);
-        float3 reflectViewDir = reflect(fragViewDir, viewNormal);
-        float3 reflectLocalDir = mul(float3x3(ap.camera.viewInv), reflectViewDir);
-        reflectLocalDir = normalize(reflectLocalDir);
+            float3 fragViewDir = normalize(viewPos);
+            float3 viewNormal = mul(float3x3(ap.camera.view), reflectLocalNormal);
+            float3 reflectViewDir = reflect(fragViewDir, viewNormal);
+            float3 reflectLocalDir = mul(float3x3(ap.camera.viewInv), reflectViewDir);
+            reflectLocalDir = normalize(reflectLocalDir);
 
-        float3 skyColor = sampleSkyView(surface.skyPos, reflectLocalDir, scene[0].SunLocalDir);
-        float3 F_NoV = F_schlickRough(NoVm, surface.f0, surface.roughL);
-        output.specular += F_NoV * skyColor * ((1.0 - roughness) * lmcoord_y);
-        output.diffuse *= 1.0 - F_NoV;
+            float3 skyColor = sampleSkyView(surface.skyPos, reflectLocalDir, scene[0].SunLocalDir);
+            float3 F_NoV = F_schlickRough(NoVm, surface.f0, surface.roughL);
+            output.specular += F_NoV * skyColor * ((1.0 - roughness) * lmcoord_y);
+            output.diffuse *= 1.0 - F_NoV;
+        }
 
         output.specular *= surface.tint;
     }

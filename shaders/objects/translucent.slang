@@ -3,7 +3,10 @@ import lib.common;
 import lib.light.fresnel;
 import lib.light.floodfill;
 import lib.light.hand;
+import lib.light.brdf;
 import lib.sky.common;
+import lib.sky.sun;
+import lib.sky.moon;
 import lib.sky.sample_transmit;
 import lib.sky.sample_irradiance;
 import lib.sky.sample_view;
@@ -21,6 +24,7 @@ extern static const bool RENDER_PARTICLES = false;
 extern static const bool Water_WaveEnabled = false;
 extern static const bool FloodFill_Enabled;
 extern static const bool Debug_WhiteWorld;
+extern static const int ReflectMode;
 
 extern static const uint BLOCK_WATER;
 
@@ -215,7 +219,12 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
 
     float metalness = mat_metalness(f0_metal);
 
-    if (!isWater) {
+    if (isWater) {
+        albedo = float4(0.0, 0.0, 0.0, 0.02);
+        roughness = 0.04;
+        f0_metal = 0.02;
+    }
+    else {
         float3 tint = lerp(1.0, albedo.rgb, pow2(albedo.a));
         output.tint = float4(tint, 1.0);
     }
@@ -228,11 +237,11 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
     surface.tint = lerp(1.0, albedo.rgb, metalness);
 
     CelestialLight sun;
-    sun.localDir = scene[0].SunLocalDir;
+    sun.localDir = GetAreaLightDir(tex_normal, viewLocalDir, scene[0].SunLocalDir, sun_distanceMm, sun_radiusMm);
     sun.color = scene[0].SunColor * sampleSkyTransmit(surface.skyPos, sun.localDir);
 
     CelestialLight moon;
-    moon.localDir = scene[0].MoonLocalDir;
+    moon.localDir = GetAreaLightDir(tex_normal, viewLocalDir, scene[0].MoonLocalDir, moon_distanceKm, moon_radiusKm);
     moon.color = scene[0].MoonColor * sampleSkyTransmit(surface.skyPos, moon.localDir);
 
     // float3 sss_ambient = sampleSkyIrradiance(-tex_normal) * lmcoord_y;
@@ -282,29 +291,32 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
 
     if (mat_isMetal(f0_metal)) diffuse *= roughness;
 
-    float3 fragViewDir = normalize(input.viewPos);
-    float3 viewNormal = mul(float3x3(ap.camera.view), tex_normal);
-    float3 reflectViewDir = reflect(fragViewDir, viewNormal);
-    float3 reflectLocalDir = mul(float3x3(ap.camera.viewInv), reflectViewDir);
-    reflectLocalDir = normalize(reflectLocalDir);
+    if (ReflectMode == Reflect_SkyOnly) {
+        float3 fragViewDir = normalize(input.viewPos);
+        float3 viewNormal = mul(float3x3(ap.camera.view), tex_normal);
+        float3 reflectViewDir = reflect(fragViewDir, viewNormal);
+        float3 reflectLocalDir = mul(float3x3(ap.camera.viewInv), reflectViewDir);
+        reflectLocalDir = normalize(reflectLocalDir);
 
-    float3 skyColor = sampleSkyView(surface.skyPos, reflectLocalDir, scene[0].SunLocalDir);
-    float3 F_NoV = F_schlickRough(NoVm, surface.f0, surface.roughL);
-    specular += F_NoV * skyColor * ((1.0 - roughness) * lmcoord.y);
-    diffuse *= 1.0 - F_NoV;
+        float3 skyColor = sampleSkyView(surface.skyPos, reflectLocalDir, scene[0].SunLocalDir);
+        float3 F_NoV = F_schlickRough(NoVm, surface.f0, surface.roughL);
+        specular += F_NoV * skyColor * ((1.0 - roughness) * lmcoord.y);
+        diffuse *= 1.0 - F_NoV;
+
+        float F = F_schlickRough(NoVm, f0_metal, surface.roughL);
+        albedo.a = (1.0 - F) * albedo.a + F;
+    }
 
     specular *= surface.tint;
     
-
-
     const float3 ambient = 0.02;
     float emission = mat_emission(specularData) * BLOCK_LUX;
 
-    output.color.rgb = albedo.rgb * (diffuse + emission + ambient) + specular;
+    output.color.rgb = albedo.rgb * (diffuse + emission + ambient) * albedo.a + specular;
     output.color.a = albedo.a;
 
     // premultiply alpha
-    output.color.rgb *= output.color.a;
+    //output.color.rgb *= output.color.a;
 
     // clamp to avoid buffer overflow
     output.color = clamp(output.color, 0.0, 65000.0);

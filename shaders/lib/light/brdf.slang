@@ -2,6 +2,14 @@ import lib.common;
 import lib.light.fresnel;
 
 
+float3 GetAreaLightDir(const in float3 viewNormal, const in float3 viewDir, const in float3 lightDir, const in float lightDist, const in float lightSize) {
+    float3 r = reflect(viewDir, viewNormal);
+    float3 L = lightDir * lightDist;
+    float3 centerToRay = dot(L, r) * r - L;
+    float3 closestPoint = centerToRay * saturate(lightSize / length(centerToRay)) + L;
+    return normalize(closestPoint);
+}
+
 float GetLightAttenuation_Linear(const in float lightDist, const in float lightRange) {
     float lightDistF = lightDist / lightRange;
     lightDistF = 1.0 - saturate(lightDistF);
@@ -45,7 +53,7 @@ float3 SampleLightSpecular(float NoL, float NoH, float NoV, float3 F_VoH, float 
     float D = D_GGX(NoH, roughL);
     float G = V_SmithGGXCorrelated(NoL, NoV, roughL);
 
-    float3 numerator = saturate(D * G * F_VoH);
+    float3 numerator = clamp(D * G * F_VoH, 0.0, 1.0);
     float denominator = 4.0 * NoL * NoV + 0.0001;
     return numerator / denominator;
 }

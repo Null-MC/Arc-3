@@ -1,9 +1,9 @@
 export class Options {
     get Sky_SeaLevel(): number {return 62;}
 
-    get Water_Wave_Enabled(): boolean {return true;}
+    get Water_WavesEnabled(): boolean {return getBoolSetting('WATER_WAVES_ENABLED');}
+    get Water_WaveSize(): number {return getIntSetting('WATER_WAVE_SIZE');}
     get Water_WaveDetail(): number {return 18;}
-    get Water_WaveHeight(): number {return 0.8;}
 
     get Material_Format(): number {return getIntSetting('MATERIAL_FORMAT');}
 
