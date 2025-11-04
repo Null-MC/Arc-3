@@ -134,7 +134,7 @@ VertexOutput vertexMain(Vertex input) {
 struct FragmentOutput {
     float4 color : SV_Target0;
     float4 tint : SV_Target1;
-    float4 normal : SV_Target2;
+    uint data : SV_Target2;
     //float2 velocity : SV_Target2;
 };
 
@@ -147,6 +147,11 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
     float LOD = albedoTex.CalculateLevelOfDetail(input.uv);
     float4 albedo = albedoTex.SampleLevel(input.uv, LOD) * input.color;
     iris_discardIfNeeded(albedo);
+
+    if (RENDER_PARTICLES) {
+        // HACK: aperture discard doesn't include particles
+        if (albedo.a < (0.5/255.0)) discard;
+    }
 
     albedo.rgb = RgbToLinear(albedo.rgb);
     if (Debug_WhiteWorld) albedo.rgb = 0.85;
@@ -328,7 +333,8 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
     // }
 
     refractSurfaceNormal = normalize(refractSurfaceNormal + 0.2 * geo_normal);
-    output.normal = float4(tex_normal * 0.5 + 0.5, 1.0);
+    output.data = packUnorm4x8(float4(tex_normal * 0.5 + 0.5, 1.0));
+    output.data = bitfieldInsert(output.data, blockMapId, 24, 8);
     
     return output;
 }

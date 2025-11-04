@@ -125,10 +125,10 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .clearColor(1, 1, 1, 1)
         .build();
 
-    const texNormalTranslucent = pipeline.createTexture("texNormalTranslucent")
+    const texDataTranslucent = pipeline.createTexture("texDataTranslucent")
         .width(screenWidth)
         .height(screenHeight)
-        .format(Format.RGBA8)
+        .format(Format.R32UI)
         .clearColor(0, 0, 0, 0)
         .build();
 
@@ -435,9 +435,9 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     function translucentObjectShader(name: string, usage: ProgramUsage) {
         const shader = pipeline.createObjectShader(name, usage)
             .location("objects/translucent")
-            .target(0,  texFinalTranslucent).blendFunc(0, Func.ONE, Func.ONE_MINUS_SRC_ALPHA, Func.ONE, Func.ZERO)
-            .target(1,   texTintTranslucent).blendFunc(1, Func.DST_COLOR, Func.ZERO, Func.ZERO, Func.ZERO)
-            .target(2, texNormalTranslucent).blendOff(2);
+            .target(0, texFinalTranslucent).blendFunc(0, Func.ONE, Func.ONE_MINUS_SRC_ALPHA, Func.ONE, Func.ZERO)
+            .target(1,  texTintTranslucent).blendFunc(1, Func.DST_COLOR, Func.ZERO, Func.ZERO, Func.ZERO)
+            .target(2,  texDataTranslucent).blendOff(2);
 
         //if (options.Post_TAA_Enabled) shader.target(1, texVelocity).blendOff(1);
         return shader;
@@ -453,6 +453,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     translucentObjectShader("blockentity-translucent", Usage.BLOCK_ENTITY_TRANSLUCENT).compile();
 
     translucentObjectShader("hand-translucent", Usage.TRANSLUCENT_HAND).compile();
+
+    translucentObjectShader("text", Usage.TEXT).compile();
 
     translucentObjectShader("particles", Usage.PARTICLES)
         .exportBool('RENDER_PARTICLES', true)
@@ -568,8 +570,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 const screenHeight_half = Math.ceil(screenHeight / 2.0);
             
                 let maxLod = Math.log2(Math.min(screenWidth, screenHeight));
-                maxLod = Math.floor(maxLod - 2);
-                maxLod = Math.max(Math.min(maxLod, 8), 0);
+                maxLod = Math.floor(maxLod);
+                maxLod = Math.max(Math.min(maxLod, 12), 0);
             
                 const texBloom = pipeline.createTexture('texBloom')
                     .format(Format.RGB16F)

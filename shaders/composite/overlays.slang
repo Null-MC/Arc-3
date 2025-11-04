@@ -4,16 +4,18 @@ import lib.sampling.depth;
 import lib.water.common;
 
 extern static const int RefractMode;
+extern static const int REFRACTION_STEPS = 16;
+extern static const uint BLOCK_WATER;
 
-static const int REFRACTION_STEPS = 16;
 static const int Refract_ScreenSpace = 1;
+
 
 Sampler2D<float> mainDepthTex;
 Sampler2D<float> solidDepthTex;
 
 Sampler2D<half3> texSource;
 Sampler2D<half4> texFinalTranslucent;
-Sampler2D<half3> texNormalTranslucent;
+Sampler2D<uint> texDataTranslucent;
 Sampler2D<half3> texTintTranslucent;
 Sampler2D<half4> texWeather;
 
@@ -48,6 +50,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     half4 weather = texWeather[uv];
     half3 tint = texTintTranslucent[uv];
     half4 translucent = texFinalTranslucent[uv];
+    uint transData = texDataTranslucent[uv];
 
     float2 texcoord = pos / ap.game.screenSize;
     if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
@@ -62,10 +65,12 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     float3 transViewPos = project(ap.camera.projectionInv, transClipPos);
     // float3 localPos = mul3(ap.camera.viewInv, viewPos);
 
+    uint transBlockMapId = bitfieldExtract(transData, 24, 8);
+
     float2 refract_uv = pos / ap.game.screenSize;
 
     if (RefractMode == Refract_ScreenSpace && translucent.a > 0.0) {
-        float3 refract_localNormal = texNormalTranslucent[uv];
+        float3 refract_localNormal = unpackUnorm4x8ToFloat(transData).xyz;
         refract_localNormal = normalize(refract_localNormal * 2.0 - 1.0);
 
         const float IOR_AIR   = 1.0003;
@@ -100,7 +105,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
         opaque_color *= RgbToLinear(tint);
     }
 
-    bool isWater = true; // TODO
+    bool isWater = transBlockMapId == BLOCK_WATER;
     float dist_near = length(transViewPos);
     float dist_far = length(opaqueViewPos);
 
