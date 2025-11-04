@@ -16,17 +16,17 @@ static const bool SupportsTexNormals = !RENDER_PARTICLES;
 struct VertexOutput {
     float4 position : SV_Position;
 
-    float4 color;
     float2 uv;
     float2 light;
-    float3 normal;
-    float occlusion;
     float4 tangent;
 
     float3 localPos;
+    float occlusion;
     float3 tangentViewPos;
-    float2 atlasCoordMin;
-    float2 atlasCoordSize;
+    nointerpolation uint color;
+    nointerpolation uint normal;
+    nointerpolation uint atlasCoordMin;
+    nointerpolation uint atlasCoordSize;
 };
 
 [[shader("vertex")]]
@@ -42,22 +42,22 @@ VertexOutput vertexMain(Vertex input) {
     }
 
     output.uv = input.uv();
-    output.color = input.color();
+    half4 color = input.color();
     output.occlusion = input.ao();
 
     output.light = LightMapNorm(input.light());
     output.light = output.light * output.light;
 
     if (let overlayColor = input.overlayColor()) {
-        output.color = lerp(output.color, overlayColor, overlayColor.a);
+        color = lerp(color, overlayColor, overlayColor.a);
     }
 
     float3 viewNormal;
-    output.normal = 0.0;
+    output.normal = 0u;
     if (let value = input.normal()) {
         viewNormal = mul(input.normalMatrix(), value);
-        output.normal = mul(float3x3(ap.camera.viewInv), viewNormal);
-        output.normal = normalize(output.normal);
+        float3 localNormal = mul(float3x3(ap.camera.viewInv), viewNormal);
+        output.normal = packUnorm4x8(float4(normalize(localNormal) * 0.5 + 0.5, 1.0));
     }
 
     float3 viewTangent;
@@ -76,8 +76,8 @@ VertexOutput vertexMain(Vertex input) {
         if (let midCoord = input.midCoord()) {
             AtlasBounds atlas;
             atlas.Populate(output.uv, midCoord);
-            output.atlasCoordMin = atlas.CoordMin;
-            output.atlasCoordSize = atlas.CoordSize;
+            output.atlasCoordMin = packHalf2x16(atlas.CoordMin);
+            output.atlasCoordSize = packHalf2x16(atlas.CoordSize);
         }
 
         float3x3 TBN = GetTBN(viewNormal, viewTangent, output.tangent.w);
@@ -89,6 +89,8 @@ VertexOutput vertexMain(Vertex input) {
     if (TAA_Enabled) {
         output.position.xy += scene[0].taa_jitter * (2.0 * output.position.w);
     }
+
+    output.color = packUnorm4x8(color);
 
     return output;
 }
@@ -117,21 +119,23 @@ FragmentOutput fragmentMain(VertexOutput input) {
         tanViewDir = normalize(input.tangentViewPos);
 
         if (!skipParallax && viewDist < MATERIAL_PARALLAX_MAXDIST) {
-            atlas.CoordMin = input.atlasCoordMin;
-            atlas.CoordSize = input.atlasCoordSize;
+            atlas.CoordMin = unpackHalf2x16ToFloat(input.atlasCoordMin);
+            atlas.CoordSize = unpackHalf2x16ToFloat(input.atlasCoordSize);
 
             float2 localCoord = atlas.GetLocalCoord(uv);
             uv = GetParallaxCoord(localCoord, int(LOD), atlas, tanViewDir, viewDist, texDepth, traceCoordDepth);
         }
     }
 
-    float4 color = albedoTex.SampleLevel(uv, LOD) * input.color;
+    half4 tint = unpackUnorm4x8ToHalf(input.color);
+    float4 color = albedoTex.SampleLevel(uv, LOD) * tint;
     float4 normalData = normalTex.SampleLevel(uv, LOD);
     float4 specularData = specularTex.SampleLevel(uv, LOD);
 
     iris_discardIfNeeded(color);
 
-    float3 geo_normal = normalize(input.normal);
+    float3 geo_normal = unpackUnorm4x8ToFloat(input.normal).xyz;
+    geo_normal = normalize(geo_normal * 2.0 - 1.0);
     float3 tex_normal = geo_normal;
 
     if (SupportsTexNormals && MATERIAL_FORMAT != MAT_NONE) {

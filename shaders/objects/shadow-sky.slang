@@ -7,8 +7,8 @@ extern static const bool ALPHATEST_ENABLED = false;
 struct VertexOutput {
     float4 position : SV_Position;
 
-    float4 color;
     float2 uv;
+    nointerpolation uint color;
     nointerpolation int blockId;
 };
 
@@ -16,7 +16,7 @@ struct VertexOutput {
 VertexOutput vertexMain(Vertex input) {
     VertexOutput output;
     
-    output.color = input.color();
+    half4 color = input.color();
     output.uv = input.uv();
 
     output.blockId = -1;
@@ -27,8 +27,10 @@ VertexOutput vertexMain(Vertex input) {
     output.position = mul(input.projectionMatrix(), float4(shadowViewPos, 1.0));
 
     if (output.blockId >= 0 && ap.blocks[output.blockId].isFluid) {
-        output.color = 1.0;
+        color = half4(1.0);
     }
+
+    output.color = packUnorm4x8(color);
 
     return output;
 }
@@ -42,7 +44,8 @@ float4 fragmentMain(VertexOutput input) : SV_Target0 {
         color = float4(1.0, 1.0, 1.0, 0.02);
     }
     else if (ALPHATEST_ENABLED) {
-        color = albedoTex.Sample(input.uv) * input.color;
+        half4 tint = unpackUnorm4x8ToHalf(input.color);
+        color = albedoTex.Sample(input.uv) * tint;
         iris_discardIfNeeded(color);
 
         color.rgb = RgbToLinear(color.rgb);

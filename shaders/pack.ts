@@ -51,7 +51,10 @@ export function configureRenderer(config: RendererConfig): void {
     config.shadow.enabled = dimension.World_HasSky;
     config.shadow.resolution = options.Shadow_Resolution;
     config.shadow.distance = options.Shadow_Distance;
+    config.shadow.near = -800;
+    config.shadow.far = 800;
     config.shadow.cascades = 4;
+    config.shadow.entityCascadeCount = 2;
 
     config.pointLight.maxCount = options.Lighting_Point_Enabled ? options.Lighting_Point_MaxCount : 0;
     config.pointLight.resolution = options.Lighting_Point_Resolution;
