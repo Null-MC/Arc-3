@@ -2,6 +2,7 @@ import aperture;
 import lib.common;
 
 extern static const bool ALPHATEST_ENABLED = false;
+extern static const uint BLOCK_WATER;
 
 
 struct VertexOutput {
@@ -40,7 +41,7 @@ VertexOutput vertexMain(Vertex input) {
 float4 fragmentMain(VertexOutput input, int layer : SV_RenderTargetArrayIndex) : SV_Target0 {
     float4 color = float4(0.0, 0.0, 0.0, 1.0);
 
-    if (input.blockId >= 0 && ap.blocks[input.blockId].isFluid) {
+    if (input.blockId >= 0 && ap.blocks[input.blockId].customId == BLOCK_WATER) {
         color = float4(1.0, 1.0, 1.0, 0.02);
     }
     else if (ALPHATEST_ENABLED && layer <= 2) {

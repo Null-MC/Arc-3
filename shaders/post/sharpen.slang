@@ -1,7 +1,6 @@
 import aperture;
 import lib.common;
 
-// extern static const float sharpness = 0.5;
 static const uint groupResX = 16;
 static const uint groupResY = 16;
 
