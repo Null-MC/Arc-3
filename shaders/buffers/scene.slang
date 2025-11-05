@@ -6,9 +6,9 @@ struct SceneBuffer {
     float2 taa_jitter;
     float exposure;
 
-    float3 SunColor;
+    half3 SunColor;
     float3 SunLocalDir;
-    float3 MoonColor;
+    half3 MoonColor;
     float3 MoonLocalDir;
     float3 SkyLightLocalDir;
 

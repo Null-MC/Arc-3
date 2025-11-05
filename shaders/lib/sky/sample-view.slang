@@ -1,9 +1,9 @@
 import lib.common;
 import lib.sky.common;
 
-Sampler2D<float3> texSkyView;
+Sampler2D<half3> texSkyView;
 
-float3 sampleSkyView(const in float3 skyPos, const in float3 rayDir, const in float3 sunDir) {
+half3 sampleSkyView(const in float3 skyPos, const in float3 rayDir, const in float3 sunDir) {
     float height = length(skyPos);
     float3 up = skyPos / height;
 

@@ -1,9 +1,9 @@
 import lib.common;
 import lib.sky.common;
 
-Sampler2D<float3> texSkyTransmit;
+Sampler2D<half3> texSkyTransmit;
 
-float3 sampleSkyTransmit(const in float3 pos, const in float3 sunDir) {
+half3 sampleSkyTransmit(const in float3 pos, const in float3 sunDir) {
     float height = length(pos);
     float3 up = pos / height;
 

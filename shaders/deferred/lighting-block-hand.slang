@@ -16,15 +16,15 @@ Sampler2D<uint2> texMatLightGB;
 
 
 struct FragmentOutput {
-    float3 diffuse : SV_Target0;
-    float3 specular : SV_Target1;
+    half3 diffuse : SV_Target0;
+    half3 specular : SV_Target1;
 };
 
 [[shader("fragment")]]
 FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
     FragmentOutput output;
-    output.diffuse = 0.0;
-    output.specular = 0.0;
+    output.diffuse = half3(0.0);
+    output.specular = half3(0.0);
 
     uint2 uv = uint2(pos);
 
@@ -73,12 +73,12 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
         float3 handSampleLocalPos = geo_normal*0.02 + localPos;
         float3 viewDir = -normalize(localPos);
         
-        float3 albedo = RgbToLinear(colorData.rgb);
+        half3 albedo = RgbToLinear(colorData.rgb);
         float roughness = mat_roughness(specularData.r);
         float f0_metal = mat_f0_metal(specularData.g);
         float metalness = mat_metalness(f0_metal);
 
-        float3 f0 = lerp(f0_metal, albedo, metalness);
+        half3 f0 = lerp(f0_metal, albedo, metalness);
         float roughL = roughness*roughness;
 
         if (ap.game.mainHand != 0u) {
@@ -91,7 +91,7 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
             GetHandLight(output.diffuse, output.specular, ap.game.offHand, lightLocalPos, handSampleLocalPos, viewDir, tex_normal, geo_normal, f0, roughL);
         }
 
-        output.diffuse /= PI;
+        output.diffuse /= half3(PI);
 
         // remove diffuse for smooth metals
         float smoothness = 1.0 - roughness;

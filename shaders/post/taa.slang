@@ -9,10 +9,10 @@ static const uint groupResX = 16;
 static const uint groupResY = 16;
 
 [[vk::image_format("rgba16f")]]
-RWTexture2D<float4> imgFinal;
+RWTexture2D<half4> imgFinal;
 
 [[vk::image_format("rgba16f")]]
-RWTexture2D<float4> imgFinalPrev;
+RWTexture2D<half4> imgFinalPrev;
 
 Sampler2D<half3> texSource;
 Sampler2D<half4> texFinalPrev;
@@ -79,8 +79,7 @@ void applyTaa(ComputeInput input) {
 
             if (i_shared < sharedBufferSize) {
                 int2 uv_i = getSharedUV(i_shared);
-                half3 color = texSource[uv_base + uv_i];
-                sharedBuffer[i_shared] = color;
+                sharedBuffer[i_shared] = texSource[uv_base + uv_i];
             }
         }
     }
@@ -117,7 +116,7 @@ void applyTaa(ComputeInput input) {
         half3 in7 = sharedBuffer[getSharedIndex(uv + int2(+1, -1))];
         half3 in8 = sharedBuffer[getSharedIndex(uv + int2(-1, -1))];
 
-        float3 antialiased = lerp(lastColor.rgb * lastColor.rgb, in0 * in0, rcp(1.0 + mixRate));
+        half3 antialiased = lerp(lastColor.rgb * lastColor.rgb, in0 * in0, rcp(1.0 + mixRate));
         antialiased = sqrt(antialiased);
 
         // antialiased = mul(RGB_TO_YUV, antialiased);        
@@ -131,13 +130,13 @@ void applyTaa(ComputeInput input) {
         // in7 = mul(RGB_TO_YUV, in7);
         // in8 = mul(RGB_TO_YUV, in8);
         
-        float3 minColor = minOf(minOf(in0, in1, in2), in3, in4);
+        half3 minColor = minOf(minOf(in0, in1, in2), in3, in4);
         minColor = minOf(minOf(in5, in6, in7), in8, minColor);
 
-        float3 maxColor = maxOf(maxOf(in0, in1, in2), in3, in4);
+        half3 maxColor = maxOf(maxOf(in0, in1, in2), in3, in4);
         maxColor = maxOf(maxOf(in5, in6, in7), in8, maxColor);
         
-        float3 preclamping = antialiased;
+        half3 preclamping = antialiased;
         antialiased = clamp(antialiased, minColor, maxColor);
             
         float3 diff = antialiased - preclamping;
@@ -146,7 +145,7 @@ void applyTaa(ComputeInput input) {
         
         //antialiased = mul(YUV_TO_RGB, antialiased);
         
-        imgFinal[input.globalPos.xy] = float4(antialiased, 1.0);
-        imgFinalPrev[input.globalPos.xy] = float4(antialiased, mixRate + 1.0);
+        imgFinal[input.globalPos.xy] = half4(antialiased, 1.0);
+        imgFinalPrev[input.globalPos.xy] = half4(antialiased, mixRate + 1.0);
     }
 }

@@ -12,7 +12,7 @@ static const uint BLOCK_FACE_SOUTH = 3;
 static const uint BLOCK_FACE_EAST = 5;
 static const uint BLOCK_FACE_WEST = 4;
 
-Sampler3D<float3> texFloodFill_write;
+Sampler3D<half3> texFloodFill_write;
 
 
 bool FloodFill_InBounds(const in int3 bufferPos) {
@@ -42,8 +42,8 @@ float3 FloodFill_GetLocalPosition(const in float3 bufferPos) {
     return bufferPos - GetVoxelCenter(ap.camera.position);
 }
 
-float3 floodfill_sample(const in float3 bufferPos) {
-    if (!FloodFill_InBounds(bufferPos)) return 0.0;
+half3 floodfill_sample(const in float3 bufferPos) {
+    if (!FloodFill_InBounds(bufferPos)) return half3(0.0);
 
     float3 texcoord = bufferPos / FloodFill_BufferSize;
     return texFloodFill_write.Sample(texcoord);

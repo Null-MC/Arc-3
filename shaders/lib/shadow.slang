@@ -66,16 +66,16 @@ float SampleShadow(in float3 shadowPos, const in int cascade) {
     return solidShadowMapFiltered.SampleCmp(shadowCoord, shadowPos.z).r;
 }
 
-float3 SampleShadowColor(in float3 shadowPos, const in int cascade) {
+half3 SampleShadowColor(in float3 shadowPos, const in int cascade) {
     float3 shadowCoord = float3(shadowPos.xy, cascade);
     float depthOpaque = solidShadowMap.Sample(shadowCoord);
 
-    float3 shadow;
-    if (shadowPos.z > depthOpaque) shadow = 0.0;
+    half3 shadow;
+    if (shadowPos.z > depthOpaque) shadow = half3(0.0);
     else {
         float depthTrans = shadowMap.Sample(shadowCoord);
 
-        if (shadowPos.z + EPSILON <= depthTrans) shadow = 1.0;
+        if (shadowPos.z + EPSILON <= depthTrans) shadow = half3(1.0);
         else {
             shadow = texShadowColor.Sample(shadowCoord);
         }
@@ -128,10 +128,10 @@ float SampleShadow_PCF(const in float3 shadowPos, const in int cascade, const in
     return shadowFinal / Shadow_PcfSamples;
 }
 
-float3 SampleShadowColor_PCF(const in float3 shadowPos, const in int cascade, const in float2 pixelRadius, const in float dither) {
+half3 SampleShadowColor_PCF(const in float3 shadowPos, const in int cascade, const in float2 pixelRadius, const in float dither) {
     float2x2 rotation = GetSampleRotation(fract(dither + 0.183));
 
-    float3 shadowFinal = 0.0;
+    half3 shadowFinal = half3(0.0);
     for (int i = 0; i < Shadow_PcfSamples; i++) {
         float r = sqrt((i + 0.5) / Shadow_PcfSamples);
         float theta = i * GoldenAngle + PHI;
@@ -160,7 +160,7 @@ float SampleShadow_PCSS(const in float3 shadowPos, const in int cascade, const i
     return SampleShadow_PCF(shadowPos, cascade, pixelRadius, dither);
 }
 
-float3 SampleShadowColor_PCSS(const in float3 shadowPos, const in int cascade, const in float dither) {
+half3 SampleShadowColor_PCSS(const in float3 shadowPos, const in int cascade, const in float dither) {
     float3 projectionScale = GetShadowProjectionScale(cascade);
 
     float2 maxPixelRadius = Shadow_MaxRadius * projectionScale.xy;
@@ -175,12 +175,11 @@ float3 SampleShadowColor_PCSS(const in float3 shadowPos, const in int cascade, c
 }
 
 // [coverage, distance]
-float2 SSS_PCF(const in float3 shadowPos, const in int cascade, const in float2 pixelRadius, const in float bias_scale, const in float sss, const in float dither) {
+half2 SSS_PCF(const in float3 shadowPos, const in int cascade, const in float2 pixelRadius, const in float bias_scale, const in float sss, const in float dither) {
     float2x2 rotation = GetSampleRotation(fract(dither));
     float seed_pos = hash13(shadowPos * 999.0);
 
-    float shadowFinal = 0.0;
-    float distFinal = 0.0;
+    half2 final = half2(0.0);
     for (int i = 0; i < Shadow_SssPcfSamples; i++) {
         float r = sqrt((i + 0.5) / Shadow_SssPcfSamples);
         float theta = i * GoldenAngle + PHI;
@@ -194,9 +193,9 @@ float2 SSS_PCF(const in float3 shadowPos, const in int cascade, const in float2 
 
         float3 shadowCoord = float3(sampleShadowPos.xy, cascade);
         float sampleDepth = solidShadowMap.Sample(shadowCoord).r;
-        distFinal += max(shadowPos.z - sampleDepth, 0.0);
-        shadowFinal += step(shadowPos.z, sampleDepth);
+        final.y += max(shadowPos.z - sampleDepth, 0.0);
+        final.x += step(shadowPos.z, sampleDepth);
     }
 
-    return float2(shadowFinal, distFinal) / Shadow_SssPcfSamples;
+    return final / half2(Shadow_SssPcfSamples);
 }

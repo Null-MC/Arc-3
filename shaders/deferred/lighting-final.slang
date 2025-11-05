@@ -42,8 +42,8 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         half3 albedo = RgbToLinear(color.rgb);
         if (Debug_WhiteWorld) albedo = half3(0.85);
 
-        const float3 ambient = 0.2 * occlusion;
-        final = albedo.rgb * (diffuse + emission + ambient) + specular;
+        half3 ambient = half3(0.2 * occlusion);
+        final = albedo.rgb * (diffuse + half3(emission) + ambient) + specular;
     }
     else if (World_HasSky) {
         float2 texcoord = pos / ap.game.screenSize;

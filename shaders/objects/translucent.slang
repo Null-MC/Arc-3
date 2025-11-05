@@ -133,8 +133,8 @@ VertexOutput vertexMain(Vertex input) {
 
 
 struct FragmentOutput {
-    float4 color : SV_Target0;
-    float4 tint : SV_Target1;
+    half4 color : SV_Target0;
+    half4 tint : SV_Target1;
     uint data : SV_Target2;
     //float2 velocity : SV_Target2;
 };
@@ -143,10 +143,10 @@ struct FragmentOutput {
 FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
     FragmentOutput output;
     //output.velocity = 0.0;
-    output.tint = 1.0;
+    output.tint = half4(1.0);
 
     float LOD = albedoTex.CalculateLevelOfDetail(input.uv);
-    float4 albedo = albedoTex.SampleLevel(input.uv, LOD) * input.color;
+    half4 albedo = albedoTex.SampleLevel(input.uv, LOD) * input.color;
     iris_discardIfNeeded(albedo);
 
     if (RENDER_PARTICLES) {
@@ -155,7 +155,7 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
     }
 
     albedo.rgb = RgbToLinear(albedo.rgb);
-    if (Debug_WhiteWorld) albedo.rgb = 0.85;
+    if (Debug_WhiteWorld) albedo.rgb = half3(0.85);
 
     float4 normalData = normalTex.SampleLevel(input.uv, LOD);
     float4 specularData = specularTex.SampleLevel(input.uv, LOD);
@@ -231,13 +231,12 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
     float metalness = mat_metalness(f0_metal);
 
     if (isWater) {
-        albedo = float4(0.0, 0.0, 0.0, 0.02);
+        albedo = half4(0.0, 0.0, 0.0, 0.02);
         roughness = 0.04;
         f0_metal = 0.02;
     }
     else {
-        float3 tint = lerp(1.0, albedo.rgb, pow2(albedo.a));
-        output.tint = float4(tint, 1.0);
+        output.tint.rgb = lerp(1.0, albedo.rgb, pow2(albedo.a));
     }
 
     SurfaceData surface;
@@ -261,7 +260,8 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
 
     bool shadowIsSun = dot(ap.celestial.position, ap.celestial.sunPosition) > 0.0;
     float NoVm = max(dot(tex_normal, viewLocalDir), 0.0);
-    float3 diffuse = 0.0, specular = 0.0;
+    half3 diffuse = half3(0.0);
+    half3 specular = half3(0.0);
 
     sun.color *= shadowIsSun ? shadow : 1.0;
     SampleCelestial(diffuse, specular, sun, surface, viewLocalDir, NoVm);
@@ -296,7 +296,7 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
         GetHandLight(diffuse, specular, ap.game.offHand, lightLocalPos, handSampleLocalPos, viewLocalDir, tex_normal, geo_normal, surface.f0, surface.roughL);
     }
 
-    float3 sky_ambient = sampleSkyIrradiance(tex_normal) * lmcoord.y * occlusion;
+    half3 sky_ambient = sampleSkyIrradiance(tex_normal) * lmcoord.y * occlusion;
 
     diffuse = diffuse / PI + sky_ambient;
 
@@ -309,7 +309,7 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
         float3 reflectLocalDir = mul(float3x3(ap.camera.viewInv), reflectViewDir);
         reflectLocalDir = normalize(reflectLocalDir);
 
-        float3 skyColor = sampleSkyView(surface.skyPos, reflectLocalDir, scene[0].SunLocalDir);
+        half3 skyColor = sampleSkyView(surface.skyPos, reflectLocalDir, scene[0].SunLocalDir);
         float3 F_NoV = F_schlickRough(NoVm, surface.f0, surface.roughL);
         specular += F_NoV * skyColor * ((1.0 - roughness) * lmcoord.y);
         diffuse *= 1.0 - F_NoV;
@@ -320,7 +320,7 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
 
     specular *= surface.tint;
     
-    const float3 ambient = 0.02;
+    const half3 ambient = 0.02;
     float emission = mat_emission(specularData) * BLOCK_LUX;
 
     output.color.rgb = albedo.rgb * (diffuse + emission + ambient) * albedo.a + specular;

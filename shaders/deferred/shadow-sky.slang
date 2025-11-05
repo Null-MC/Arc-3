@@ -12,15 +12,15 @@ Sampler2D<uint2> texMatLightGB;
 
 
 struct FragmentOutput {
-    float4 shadow : SV_Target0;
-    float4 sss : SV_Target1;
+    half4 shadow : SV_Target0;
+    half4 sss : SV_Target1;
 };
 
 [[shader("fragment")]]
 FragmentOutput skyShadowSss(float2 pos : SV_Position) {
     FragmentOutput output;
-    output.shadow = 1.0;
-    output.sss = float4(0.0, 0.0, 0.0, 1.0);
+    output.shadow = half4(1.0);
+    output.sss = half4(0.0, 0.0, 0.0, 1.0);
 
     uint2 uv = uint2(pos);
     float depth = solidDepthTex[uv];
@@ -92,8 +92,8 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
             float2 coverage_dist = SSS_PCF(shadowPos, cascade, pixelRadius, bias_scale, sss, dither);
 
             float absorb_depth = 1.0 * (coverage_dist.y / cascadeScale.z) + 0.1;
-            float3 sss_color = normalize(RgbToLinear(1.0 - colorData.rgb) + 0.02);
-            float3 lit = coverage_dist.x * exp(-(absorb_depth * sss_color + EPSILON));
+            half3 sss_color = normalize(RgbToLinear(1.0 - colorData.rgb) + 0.02);
+            half3 lit = coverage_dist.x * exp(-(absorb_depth * sss_color + EPSILON));
 
             float tex_NoLm = max(dot(tex_normal, scene[0].SkyLightLocalDir), 0.0);
             output.sss.rgb = sss * (1.0 - tex_NoLm) * lit;

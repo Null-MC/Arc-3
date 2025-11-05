@@ -7,9 +7,11 @@ import lib.sky.sun;
 
 extern static const bool WORLD_OVERWORLD = true;
 
-float3 sampleSkyFinal(const in float3 localPos, const in float3 viewLocalDir, bool isReflection) {
+half3 sampleSkyFinal(const in float3 localPos, const in float3 viewLocalDir, bool isReflection) {
+    half3 skyLight = half3(0.0);
+    
     // float3 starViewDir = getStarViewDir(viewLocalDir);
-    float3 skyLight = 0;//STAR_LUMINANCE * GetStarLight(starViewDir);
+    // skyLight += STAR_LUMINANCE * GetStarLight(starViewDir);
 
     float3 skyPos;
     bool intersectsPlanet;
@@ -55,7 +57,7 @@ float3 sampleSkyFinal(const in float3 localPos, const in float3 viewLocalDir, bo
     // }
 
     if (WORLD_OVERWORLD) {
-        if (intersectsPlanet) skyLight = 0.0;
+        if (intersectsPlanet) skyLight = half3(0.0);
         else skyLight *= sampleSkyTransmit(skyPos, viewLocalDir);
 
         skyLight += sampleSkyView(skyPos, viewLocalDir, scene[0].SunLocalDir);
