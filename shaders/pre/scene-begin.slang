@@ -4,6 +4,7 @@ import buffers.sky;
 import lib.common;
 import lib.sampling.R2;
 import lib.light.floodfill;
+import lib.shadow;
 
 extern static const int DIMENSION;
 
@@ -23,8 +24,7 @@ void beginScene() {
     scene_writer[0].SkyLightLocalDir = normalize(mul(float3x3(ap.camera.viewInv), ap.celestial.position));
 
     for (int i = 0; i < SHADOW_CASCADE_COUNT; i++) {
-        scene_writer[0].shadowViewMin[i] = mul3(ap.celestial.projectionInv[i], float3(-1.0, -1.0, 0.0)).xy;
-        scene_writer[0].shadowViewMax[i] = mul3(ap.celestial.projectionInv[i], float3( 1.0,  1.0, 0.0)).xy;
+        GetShadowProjectionBounds(i, scene_writer[0].shadowViewMin[i], scene_writer[0].shadowViewMax[i]);
     }
 
     if (DIMENSION != DIM_END) {

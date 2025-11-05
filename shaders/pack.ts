@@ -186,6 +186,13 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .clearColor(0, 0, 0, 0)
         .build();
 
+    // pipeline.createImageTexture('texWaterVolume', 'imgWaterVolume')
+    //     .width(screenWidth)
+    //     .height(screenHeight)
+    //     .format(Format.RG32UI)
+    //     // .clearColor(0, 0, 0, 0)
+    //     .build();
+
     let texShadowColor: BuiltTexture | undefined;
     let texSkyTransmit: BuiltTexture | undefined;
     let texSkyMultiScatter: BuiltTexture | undefined;
@@ -337,6 +344,14 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .overrideObject('scene_writer', 'scene')
             .compile();
 
+        // beginStage.createCompute("clear-screen")
+        //     .location("pre/clear-screen", "clearScreen")
+        //     .workGroups(
+        //         Math.ceil(screenWidth / 16),
+        //         Math.ceil(screenHeight / 16),
+        //         1)
+        //     .compile();
+
         if (dimension.World_HasSky) {
             beginStage.createComposite('sky-view')
                 .location('pre/sky-view', 'bakeSkyView')
@@ -483,6 +498,12 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .location("deferred/shadow-sky", "skyShadowSss")
                     .target(0, texShadowGB)
                     .target(1, texSssGB)
+                    .exportFloat('Shadow_MaxRadius', options.Shadow_MaxRadius)
+                    .exportInt('Shadow_PcssSamples', options.Shadow_PcssSamples)
+                    .exportInt('Shadow_PcfSamples', options.Shadow_PcfSamples)
+                    .exportFloat('Shadow_SssMaxDist', options.Shadow_SssMaxDist)
+                    .exportFloat('Shadow_SssMaxRadius', options.Shadow_SssMaxRadius)
+                    .exportInt('Shadow_SssPcfSamples', options.Shadow_SssPcfSamples)
                     .compile();
 
                 opaqueStage.createCompute("deferred-shadow-sky-filter")
@@ -705,7 +726,8 @@ export function onSettingsChanged(pipeline: PipelineConfig) {
         .appendFloat(options.Post_Bloom_Strength * 0.01)
         .appendFloat(options.Post_Exposure_Min)
         .appendFloat(options.Post_Exposure_Max)
-        .appendFloat(options.Post_Exposure_Range);
+        .appendFloat(options.Post_Exposure_Range)
+        .appendFloat(options.Post_TAA_CasStrength * 0.01);
 }
 
 export function getBlockId(block: BlockState) : number {

@@ -12,6 +12,7 @@ import lib.sky.sample_irradiance;
 import lib.sky.sample_view;
 import lib.sky.sample_light;
 import lib.water.waves;
+import lib.water.water_depth;
 import lib.sampling.dfd_normal;
 import lib.shadow;
 import lib.material.pbr;
@@ -169,6 +170,11 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
 
     uint blockMapId = ap.blocks[input.blockId].customId;
     bool isWater = blockMapId == BLOCK_WATER;
+
+    // if (isWater) {
+    //     WaterDepth_set(uint2(fragPos), viewDist);
+    //     discard;
+    // }
 
     float3 tex_normal = geo_normal;
     if (SupportsTexNormals) {

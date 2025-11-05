@@ -67,7 +67,7 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
         float3 shadowViewPos = mul3(ap.celestial.view, shadowLocalPos);
         shadowViewPos.z += offset_bias;
         
-        int cascade = GetShadowProjection(shadowViewPos, Shadow_MaxPcfSize);
+        int cascade = GetShadowProjection(shadowViewPos, Shadow_MaxRadius);
 
         if (cascade >= 0) {
             float3 shadowPos = mul3(ap.celestial.projection[cascade], shadowViewPos) * 0.5 + 0.5;
@@ -79,7 +79,7 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
         // SSS
         shadowViewPos = mul3(ap.celestial.view, localPos);
         
-        float blockRadius = sss * SSS_BlockRadius;
+        float blockRadius = sss * Shadow_SssMaxRadius;
         cascade = GetShadowProjection(shadowViewPos, blockRadius);
 
         if (cascade >= 0) {
@@ -87,7 +87,7 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
 
             float3 cascadeScale = GetShadowProjectionScale(cascade);
 
-            float bias_scale = sss * SSS_MaxDist * cascadeScale.z;
+            float bias_scale = sss * Shadow_SssMaxDist * cascadeScale.z;
             float2 pixelRadius = blockRadius * cascadeScale.xy;
             float2 coverage_dist = SSS_PCF(shadowPos, cascade, pixelRadius, bias_scale, sss, dither);
 

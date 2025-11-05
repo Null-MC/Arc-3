@@ -91,6 +91,21 @@ option.SHADOW_DISTANCE=Distance
 option.SHADOW_ANGLE=Sun/Moon Angle
 
 
+screen.SHADOW_ADVANCED=Advanced Options
+
+option.SHADOW_MAX_RADIUS=Shadow Max Radius
+
+option.SHADOW_PCSS_SAMPLES=Shadow PCSS Samples
+
+option.SHADOW_PCF_SAMPLES=Shadow PCF Samples
+
+option.SHADOW_SSS_MAX_RADIUS=SSS Max Radius
+
+option.SHADOW_SSS_MAX_DIST=SSS Max Distance
+
+option.SHADOW_SSS_PCF_SAMPLES=SSS PCF Samples
+
+
 screen.POST=Post-Processing
 
 
@@ -99,12 +114,21 @@ screen.POST_BLOOM=Bloom
 option.POST_BLOOM_ENABLED=Enabled
 
 option.POST_BLOOM_STRENGTH=Strength
+option.POST_BLOOM_STRENGTH.comment=The amount of bloom to apply back onto the original scene.
 suffix.POST_BLOOM_STRENGTH=%
 
 
 screen.POST_TAA=TAA
 
 option.POST_TAA_ENABLED=Enabled
+option.POST_TAA_ENABLED.comment=Enable Temporal Anti-Aliasing to remove jagged edges and improve subpixel details.
+
+option.POST_TAA_CUBIC_HISTORY=Pre-Sharpen
+option.POST_TAA_CUBIC_HISTORY.comment=Sharpen history sampling using catmull-rom filter. Helps reduce blur when moving.
+
+option.POST_TAA_CAS_STRENGTH=Post-Sharpening
+option.POST_TAA_CAS_STRENGTH.comment=The amount of sharpening to apply after TAA, using AMD CAS. Helps reduce blur of overall scene.
+suffix.POST_TAA_CAS_STRENGTH=%
 
 
 screen.DEBUG=Debugging

@@ -7,4 +7,5 @@ struct SettingsBuffer {
     float Post_ExposureMin;
     float Post_ExposureMax;
     float Post_ExposureRange;
+    float Post_TAA_CasStrength;
 };

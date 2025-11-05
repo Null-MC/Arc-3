@@ -33,11 +33,19 @@ export class Options {
     get Shadow_Resolution(): number {return getIntSetting('SHADOW_RESOLUTION');}
     get Shadow_Distance(): number {return getIntSetting('SHADOW_DISTANCE');}
     get Shadow_Angle(): number {return getIntSetting('SHADOW_ANGLE');}
+    get Shadow_MaxRadius(): number {return getFloatSetting('SHADOW_MAX_RADIUS');}
+    get Shadow_PcssSamples(): number {return getIntSetting('SHADOW_PCSS_SAMPLES');}
+    get Shadow_PcfSamples(): number {return getIntSetting('SHADOW_PCF_SAMPLES');}
+    get Shadow_SssMaxRadius(): number {return getFloatSetting('SHADOW_SSS_MAX_RADIUS');}
+    get Shadow_SssMaxDist(): number {return getFloatSetting('SHADOW_SSS_MAX_DIST');}
+    get Shadow_SssPcfSamples(): number {return getIntSetting('SHADOW_SSS_PCF_SAMPLES');}
 
     get Post_Bloom_Enabled(): boolean {return getBoolSetting('POST_BLOOM_ENABLED');}
     get Post_Bloom_Strength(): number {return getFloatSetting('POST_BLOOM_STRENGTH');}
 
     get Post_TAA_Enabled(): boolean {return getBoolSetting('POST_TAA_ENABLED');}
+    get Post_TAA_CubicHistory(): boolean {return getBoolSetting('POST_TAA_CUBIC_HISTORY');}
+    get Post_TAA_CasStrength(): number {return getIntSetting('POST_TAA_CAS_STRENGTH');}
 
     get Post_Exposure_Min(): number {return -0.8;}
     get Post_Exposure_Max(): number {return 10.8;}

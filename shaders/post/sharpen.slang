@@ -1,7 +1,7 @@
 import aperture;
 import lib.common;
 
-extern static const float sharpness = 0.5;
+// extern static const float sharpness = 0.5;
 static const uint groupResX = 16;
 static const uint groupResY = 16;
 
@@ -60,7 +60,7 @@ void sharpen(ComputeInput input) {
         // Simplified version of "slow" CAS without upscaling or better diagonals
         // https://github.com/GPUOpen-Effects/FidelityFX-CAS/blob/master/ffx-cas/ffx_cas.h#L423
 
-        const float peak = -rcp(lerp(8.0, 5.0, sharpness));
+        const float peak = -rcp(lerp(8.0, 5.0, settings.Post_TAA_CasStrength));
 
         int2 uv = input.localPos.xy + 1;
         half3 b = sharedBuffer[getSharedIndex(uv + int2( 0,-1))];
