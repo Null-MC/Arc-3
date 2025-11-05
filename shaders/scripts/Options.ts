@@ -47,9 +47,9 @@ export class Options {
     get Post_TAA_CubicHistory(): boolean {return getBoolSetting('POST_TAA_CUBIC_HISTORY');}
     get Post_TAA_CasStrength(): number {return getIntSetting('POST_TAA_CAS_STRENGTH');}
 
-    get Post_Exposure_Min(): number {return -0.8;}
-    get Post_Exposure_Max(): number {return 10.8;}
-    get Post_Exposure_Range(): number {return 9.6;}
+    get Post_Exposure_Min(): number {return getFloatSetting('POST_EXPOSURE_MIN');}
+    get Post_Exposure_Max(): number {return getFloatSetting('POST_EXPOSURE_MAX');}
+    get Post_Exposure_Range(): number {return getFloatSetting('POST_EXPOSURE_RANGE');}
 
     get Debug_Material(): number {return getIntSetting('DEBUG_MATERIAL');}
     get Debug_WhiteWorld(): boolean {return getBoolSetting('DEBUG_WHITEWORLD');}
