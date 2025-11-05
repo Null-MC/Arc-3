@@ -33,5 +33,13 @@ void beginScene() {
         //lerp(scene_writer[0].sky, skyThunder, ap.world.thunderStrength, scene_writer[0].sky);
     }
 
+    float2 windFallSpeed = lerp(
+        float2(0.10, 0.04),
+        float2(0.40, 0.25),
+        ap.world.rainStrength);
+
+    float fall_speed = lerp(0.04, 0.25, ap.world.rainStrength);
+    scene_writer[0].WeatherOffset -= windFallSpeed * ap.timing.lastFrameTime;
+
     scene_writer[0].FloodFillCenter = GetVoxelCenter(ap.camera.position);
 }

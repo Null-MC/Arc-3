@@ -36,7 +36,7 @@ float3 renderMoon(const in float3 viewLocalDir, const in float3 moonLocalPos, co
 
     hitPos += moon_surfaceDepthKm * albedo_height.a * hitNormal;
 
-    float3 normal = getSurfaceNormal(hitPos, -hitNormal);
+    float3 normal = getSurfaceNormal(hitPos, hitNormal);
     if (isReflection) normal = -normal;
 
     const float3 fakeSunDir = normalize(float3(0.4, -1.0, 0.2));

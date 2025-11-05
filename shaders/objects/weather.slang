@@ -31,6 +31,8 @@ VertexOutput vertexMain(Vertex input) {
     output.light = input.light();
     output.uv = input.uv();
 
+    output.uv += scene[0].WeatherOffset;
+
     if (TAA_Enabled) {
         output.position.xy += scene[0].taa_jitter * (2.0 * output.position.w);
     }

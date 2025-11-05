@@ -17,5 +17,6 @@ struct SceneBuffer {
     float2 shadowViewMin[SHADOW_CASCADE_COUNT]; // 2*4
     float2 shadowViewMax[SHADOW_CASCADE_COUNT]; // 2*4
 
+    float2 WeatherOffset;
     SkyParameters sky;
 };
