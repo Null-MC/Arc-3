@@ -42,16 +42,16 @@ uint GetWaveOctaveCount(const in float viewDist) {
 struct VertexOutput {
     float4 position : SV_Position;
 
-    float4 color;
     float2 uv;
     float2 light;
-    float3 normal;
-    float occlusion;
-    float4 tangent;
     float3 viewPos;
+    float occlusion;
     float waveStrength;
     float waveOffset;
     float3 localPos;
+    nointerpolation uint color;
+    nointerpolation uint normal;
+    nointerpolation uint tangent;
     nointerpolation uint blockId;
 };
 
@@ -59,7 +59,7 @@ struct VertexOutput {
 VertexOutput vertexMain(Vertex input) {
     VertexOutput output;
     output.uv = input.uv();
-    output.color = input.color();
+    half4 color = half4(input.color());
     output.light = input.light();
 
     float3 modelPos = input.pos().xyz;
@@ -71,10 +71,12 @@ VertexOutput vertexMain(Vertex input) {
         output.occlusion = input.ao();
     }
 
-    output.normal = 0.0;//mul(float3x3(ap.camera.viewInv), float3(0,0,1));
-    if (let normal = input.normal()) {
-        output.normal = mul(input.normalMatrix(), normal);
-        output.normal = mul(float3x3(ap.camera.viewInv), output.normal);
+    float3 normal = 0.0;//mul(float3x3(ap.camera.viewInv), float3(0,0,1));
+    output.normal = 0u;
+    if (let value = input.normal()) {
+        normal = mul(input.normalMatrix(), value);
+        normal = mul(float3x3(ap.camera.viewInv), normal);
+        output.normal = packUnorm4x8(float4(normalize(normal) * 0.5 + 0.5, 1.0));
     }
 
     bool isWater = false;
@@ -88,7 +90,7 @@ VertexOutput vertexMain(Vertex input) {
         if (Water_WaveEnabled) {
             uint blockMapId = ap.blocks[output.blockId].customId;
             float3 worldPos = output.localPos + input.midBlock().value/64.0 + ap.camera.position;
-            bool isFacingAir = ap.voxel[int3(floor(worldPos + output.normal))].blockId == 0;
+            bool isFacingAir = ap.voxel[int3(floor(worldPos + normal))].blockId == 0;
             isWater = blockMapId == BLOCK_WATER;
 
             if (isWater) {
@@ -104,17 +106,19 @@ VertexOutput vertexMain(Vertex input) {
 
     //output.tangent = 0.0;
     if (SupportsTexNormals) {
-        output.tangent = 0.0;
+        // output.tangent = 0.0;
         if (let value = input.tangent()) {
-            output.tangent.xyz = mul(input.normalMatrix(), value.xyz);
-            output.tangent.xyz = mul(float3x3(ap.camera.viewInv), output.tangent.xyz);
-            output.tangent.xyz = normalize(output.tangent.xyz);
-            output.tangent.w = value.w;
+            float3 tangent = mul(input.normalMatrix(), value.xyz);
+            tangent = mul(float3x3(ap.camera.viewInv), tangent);
+            tangent = normalize(tangent);
+
+            output.tangent = packUnorm4x8(float4(tangent * 0.5 + 0.5, step(0.0, value.w)));
         }
     }
 
-    if (let overlayColor = input.overlayColor()) {
-        output.color = lerp(output.color, overlayColor, overlayColor.a);
+    if (let value = input.overlayColor()) {
+        half4 overlay = half4(value);
+        color = lerp(color, overlay, overlay.a);
     }
 
     output.viewPos = mul3(ap.camera.view, output.localPos);
@@ -127,6 +131,8 @@ VertexOutput vertexMain(Vertex input) {
     // if (isWater) {
     //     output.normal
     // }
+
+    output.color = packUnorm4x8(color);
 
     return output;
 }
@@ -146,7 +152,8 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
     output.tint = half4(1.0);
 
     float LOD = albedoTex.CalculateLevelOfDetail(input.uv);
-    half4 albedo = albedoTex.SampleLevel(input.uv, LOD) * input.color;
+    half4 tint = unpackUnorm4x8ToHalf(input.color);
+    half4 albedo = albedoTex.SampleLevel(input.uv, LOD) * tint;
     iris_discardIfNeeded(albedo);
 
     if (RENDER_PARTICLES) {
@@ -160,11 +167,9 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
     float4 normalData = normalTex.SampleLevel(input.uv, LOD);
     float4 specularData = specularTex.SampleLevel(input.uv, LOD);
 
-    bool has_normal = true;
-    float3 geo_normal = 0.0;
-    if (dot(input.normal, input.normal) > EPSILON)
-        geo_normal = normalize(input.normal);
-    else has_normal = false;
+    float3 geo_normal = unpackUnorm4x8ToFloat(input.normal).xyz;
+    geo_normal = normalize(geo_normal * 2.0 - 1.0);
+    bool has_normal = input.normal != 0u;
 
     float viewDist = length(input.localPos);
 
@@ -186,14 +191,12 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
             float3 waveOffset = GetWaveHeight(ap.camera.position + offsetLocalPos, input.light.y, ap.timing.timeElapsed, octaves);
 
             tex_normal = getSurfaceNormal((waveOffset + offsetLocalPos), float3(0,1,0));
-            // albedo = float4(tex_normal * 0.5 + 0.5, 1.0);
         }
         else {
             tex_normal = mat_normal(normalData.rgb);
 
-            float3 tangent = normalize(input.tangent.xyz);
-            float3x3 TBN = GetTBN(geo_normal, tangent, input.tangent.w);
-
+            float4 tangent = unpackUnorm4x8ToFloat(input.tangent) * 2.0 - 1.0;
+            float3x3 TBN = GetTBN(geo_normal, normalize(tangent.xyz), tangent.w);
             tex_normal = normalize(mul(tex_normal, TBN));
         }
     }
@@ -211,7 +214,6 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
     float geo_NoLm = 1.0;
     if (has_normal) geo_NoLm = 1.0 - abs(dot(geo_normal, scene[0].SkyLightLocalDir));
 
-    // float viewDist = length(input.localPos);
     float normal_bias = geo_NoLm * (viewDist * 0.006 + 0.06);
     float offset_bias = viewDist * 0.002;
 
@@ -236,15 +238,15 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
         f0_metal = 0.02;
     }
     else {
-        output.tint.rgb = lerp(1.0, albedo.rgb, pow2(albedo.a));
+        output.tint.rgb = lerp(half3(1.0), albedo.rgb, pow2(albedo.a));
     }
 
     SurfaceData surface;
     surface.skyPos = getSkyPosition(input.localPos);
     surface.normal = tex_normal;
     surface.roughL = roughness*roughness;
-    surface.f0 = lerp(f0_metal, albedo.rgb, metalness);
-    surface.tint = lerp(1.0, albedo.rgb, metalness);
+    surface.f0 = lerp(half3(f0_metal), albedo.rgb, metalness);
+    surface.tint = lerp(half3(1.0), albedo.rgb, metalness);
 
     CelestialLight sun;
     sun.localDir = GetAreaLightDir(tex_normal, viewLocalDir, scene[0].SunLocalDir, sun_distanceMm, sun_radiusMm);
@@ -310,9 +312,9 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
         reflectLocalDir = normalize(reflectLocalDir);
 
         half3 skyColor = sampleSkyView(surface.skyPos, reflectLocalDir, scene[0].SunLocalDir);
-        float3 F_NoV = F_schlickRough(NoVm, surface.f0, surface.roughL);
+        half3 F_NoV = F_schlickRough(NoVm, surface.f0, surface.roughL);
         specular += F_NoV * skyColor * ((1.0 - roughness) * lmcoord.y);
-        diffuse *= 1.0 - F_NoV;
+        diffuse *= half3(1.0) - F_NoV;
 
         float F = F_schlickRough(NoVm, f0_metal, surface.roughL);
         albedo.a = (1.0 - F) * albedo.a + F;
@@ -320,7 +322,7 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
 
     specular *= surface.tint;
     
-    const half3 ambient = 0.02;
+    const half3 ambient = half3(0.02);
     float emission = mat_emission(specularData) * BLOCK_LUX;
 
     output.color.rgb = albedo.rgb * (diffuse + emission + ambient) * albedo.a + specular;

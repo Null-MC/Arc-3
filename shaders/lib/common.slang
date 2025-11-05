@@ -63,6 +63,16 @@ T pow4<T>(const in T value) where T: IArithmetic {
     return sq*sq;
 }
 
+T pow5<T>(const in T value) where T: IArithmetic {
+    T sq = value*value;
+    return sq*sq * value;
+}
+
+// float pow5(const in float value) {
+//     float sq = value*value;
+//     return sq*sq * value;
+// }
+
 T sumOf<T>(const in vector<T, 3> vec) where T: IArithmetic {
     return vec.x + vec.y + vec.z;
 }

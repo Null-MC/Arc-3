@@ -22,7 +22,7 @@ void GetHandLight(inout half3 diffuse, inout half3 specular, const in int blockI
                   const in float3 F, const in float roughL) {
 //    vec3 lightLocalPos = vec3(0.2, 0.0, 0.0);
     float lightRange = ap.blocks[blockId].emission;
-    half3 lightColor = ap.blocks[blockId].lightColor.rgb;
+    half3 lightColor = half3(ap.blocks[blockId].lightColor.rgb);
     float lightSize = 0.5;//getLightSize(blockId);
 
     //            lightColor = RgbToLinear(lightColor);

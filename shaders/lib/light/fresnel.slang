@@ -27,17 +27,22 @@ float IorToF0(const in float ior, const in float medium) {
 
 float F_schlick(const in float cos_theta, const in float f0, const in float f90) {
     float invCosTheta = saturate(1.0 - cos_theta);
-    return f0 + (f90 - f0) * pow(invCosTheta, 5.0);
+    return f0 + (f90 - f0) * pow5(invCosTheta);
 }
 
 float F_schlickRough(const in float cos_theta, const in float f0, const in float rough) {
     float invCosTheta = saturate(1.0 - cos_theta);
-    return f0 + (max(1.0 - rough, f0) - f0) * pow(invCosTheta, 5.0);
+    return f0 + (max(1.0 - rough, f0) - f0) * pow5(invCosTheta);
 }
 
 float3 F_schlickRough(const in float cos_theta, const in float3 f0, const in float rough) {
     float invCosTheta = saturate(1.0 - cos_theta);
-    return f0 + (max(float3(1.0 - rough), f0) - f0) * pow(invCosTheta, 5.0);
+    return f0 + (max(float3(1.0 - rough), f0) - f0) * pow5(invCosTheta);
+}
+
+half3 F_schlickRough(const in float cos_theta, const in half3 f0, const in float rough) {
+    float invCosTheta = saturate(1.0 - cos_theta);
+    return f0 + (max(half3(1.0 - rough), f0) - f0) * pow5(invCosTheta);
 }
 
 float3 ComplexFresnel(const in float3 n, const in float3 k, const in float c) {

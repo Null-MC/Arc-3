@@ -49,11 +49,11 @@ float V_SmithGGXCorrelated(float NdotL, float NdotV, float roughness) {
     return G_V * G_L;
 }
 
-float3 SampleLightSpecular(float NoL, float NoH, float NoV, float3 F_VoH, float roughL) {
+half3 SampleLightSpecular(float NoL, float NoH, float NoV, half3 F_VoH, float roughL) {
     float D = D_GGX(NoH, roughL);
     float G = V_SmithGGXCorrelated(NoL, NoV, roughL);
 
-    float3 numerator = clamp(D * G * F_VoH, 0.0, 1.0);
+    half3 numerator = saturate(D * G * F_VoH);
     float denominator = 4.0 * NoL * NoV + 0.0001;
-    return numerator / denominator;
+    return numerator / half3(denominator);
 }

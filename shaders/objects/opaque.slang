@@ -18,13 +18,13 @@ struct VertexOutput {
 
     float2 uv;
     float2 light;
-    float4 tangent;
-
     float3 localPos;
     float occlusion;
     float3 tangentViewPos;
+    
     nointerpolation uint color;
     nointerpolation uint normal;
+    nointerpolation uint tangent;
     nointerpolation uint atlasCoordMin;
     nointerpolation uint atlasCoordSize;
 };
@@ -42,14 +42,15 @@ VertexOutput vertexMain(Vertex input) {
     }
 
     output.uv = input.uv();
-    half4 color = input.color();
+    half4 color = half4(input.color());
     output.occlusion = input.ao();
 
     output.light = LightMapNorm(input.light());
     output.light = output.light * output.light;
 
-    if (let overlayColor = input.overlayColor()) {
-        color = lerp(color, overlayColor, overlayColor.a);
+    if (let value = input.overlayColor()) {
+        half4 overlay = half4(value);
+        color.rgb = lerp(color.rgb, overlay.rgb, overlay.a);
     }
 
     float3 viewNormal;
@@ -60,15 +61,13 @@ VertexOutput vertexMain(Vertex input) {
         output.normal = packUnorm4x8(float4(normalize(localNormal) * 0.5 + 0.5, 1.0));
     }
 
-    float3 viewTangent;
-    //output.tangent = 0.0;
+    float4 viewTangent;
     if (SupportsTexNormals && MATERIAL_FORMAT != MAT_NONE) {
         if (let value = input.tangent()) {
-            output.tangent = value;
-            
-            viewTangent = mul(input.normalMatrix(), output.tangent.xyz);
-            output.tangent.xyz = mul(float3x3(ap.camera.viewInv), viewTangent);
-            output.tangent.xyz = normalize(output.tangent.xyz);
+            viewTangent.xyz = mul(input.normalMatrix(), value.xyz);
+            float3 tangent = normalize(mul(float3x3(ap.camera.viewInv), viewTangent.xyz));
+            output.tangent = packUnorm4x8(float4(tangent * 0.5 + 0.5, step(0.0, value.w)));
+            viewTangent.w = value.w;
         }
     }
 
@@ -80,8 +79,7 @@ VertexOutput vertexMain(Vertex input) {
             output.atlasCoordSize = packHalf2x16(atlas.CoordSize);
         }
 
-        float3x3 TBN = GetTBN(viewNormal, viewTangent, output.tangent.w);
-
+        float3x3 TBN = GetTBN(viewNormal, viewTangent.xyz, viewTangent.w);
         float3 viewPos = mul3(ap.camera.view, output.localPos);
         output.tangentViewPos = mul(TBN, viewPos.xyz);
     }
@@ -149,8 +147,8 @@ FragmentOutput fragmentMain(VertexOutput input) {
             }
         }
 
-        float3 tangent = normalize(input.tangent.xyz);
-        float3x3 TBN = GetTBN(geo_normal, tangent, input.tangent.w);
+        float4 tangent = unpackUnorm4x8ToFloat(input.tangent) * 2.0 - 1.0;
+        float3x3 TBN = GetTBN(geo_normal, normalize(tangent.xyz), tangent.w);
 
         tex_normal = normalize(mul(tex_normal, TBN));
     }
