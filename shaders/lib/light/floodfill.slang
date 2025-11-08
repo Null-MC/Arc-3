@@ -12,6 +12,10 @@ static const uint BLOCK_FACE_SOUTH = 3;
 static const uint BLOCK_FACE_EAST = 5;
 static const uint BLOCK_FACE_WEST = 4;
 
+[[vk::image_format("rgba16f")]]
+RWTexture3D<half3> imgFloodFill_write;
+
+Sampler3D<half3> texFloodFill_read;
 Sampler3D<half3> texFloodFill_write;
 
 

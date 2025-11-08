@@ -95,11 +95,11 @@ VertexOutput vertexMain(Vertex input) {
 
 
 struct FragmentOutput {
-    float4 albedo : SV_Target0;
+    half4 albedo : SV_Target0;
     // float3 position : SV_Target1;
     uint2 normals : SV_Target1;
     uint2 mat_lit : SV_Target2;
-    float2 velocity : SV_Target3;
+    half2 velocity : SV_Target3;
 };
 
 [[shader("fragment")]]
@@ -126,15 +126,15 @@ FragmentOutput fragmentMain(VertexOutput input) {
     }
 
     half4 tint = unpackUnorm4x8ToHalf(input.color);
-    float4 color = albedoTex.SampleLevel(uv, LOD) * tint;
-    float4 normalData = normalTex.SampleLevel(uv, LOD);
-    float4 specularData = specularTex.SampleLevel(uv, LOD);
+    half4 color = albedoTex.SampleLevel(uv, LOD) * tint;
+    half4 normalData = normalTex.SampleLevel(uv, LOD);
+    half4 specularData = specularTex.SampleLevel(uv, LOD);
 
     iris_discardIfNeeded(color);
 
-    float3 geo_normal = unpackUnorm4x8ToFloat(input.normal).xyz;
+    half3 geo_normal = unpackUnorm4x8ToHalf(input.normal).xyz;
     geo_normal = normalize(geo_normal * 2.0 - 1.0);
-    float3 tex_normal = geo_normal;
+    half3 tex_normal = geo_normal;
 
     if (SupportsTexNormals && MATERIAL_FORMAT != MAT_NONE) {
         tex_normal = mat_normal(normalData.rgb);
@@ -147,7 +147,7 @@ FragmentOutput fragmentMain(VertexOutput input) {
             }
         }
 
-        float4 tangent = unpackUnorm4x8ToFloat(input.tangent) * 2.0 - 1.0;
+        half4 tangent = unpackUnorm4x8ToHalf(input.tangent) * 2.0 - 1.0;
         float3x3 TBN = GetTBN(geo_normal, normalize(tangent.xyz), tangent.w);
 
         tex_normal = normalize(mul(tex_normal, TBN));
@@ -159,10 +159,10 @@ FragmentOutput fragmentMain(VertexOutput input) {
     FragmentOutput output;
     output.albedo = color;
     // output.position = input.localPos;
-    output.normals.r = packUnorm4x8(float4(geo_normal * 0.5 + 0.5, 0.0));
-    output.normals.g = packUnorm4x8(float4(tex_normal * 0.5 + 0.5, 0.0));
+    output.normals.r = packUnorm4x8(half4(geo_normal * 0.5 + 0.5, 0.0));
+    output.normals.g = packUnorm4x8(half4(tex_normal * 0.5 + 0.5, 0.0));
     output.mat_lit.r = packUnorm4x8(specularData);
-    output.mat_lit.g = packUnorm4x8(float4(input.light, occlusion, 0.0));
-    output.velocity = 0.0;
+    output.mat_lit.g = packUnorm4x8(half4(input.light, occlusion, 0.0));
+    output.velocity = half2(0.0);
     return output;
 }

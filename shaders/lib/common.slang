@@ -30,6 +30,10 @@ float3 minOf(float3 x, float3 y, float3 z) {
     return min(x, min(y, z));
 }
 
+float minOf(float3 vec) {
+    return min(vec.x, min(vec.y, vec.z));
+}
+
 // T minOf<T>(const in T x, const in T y, const in T z) where T: IComparable {
 //     return min(x, min(y, z));
 // }

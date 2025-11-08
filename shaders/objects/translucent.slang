@@ -13,11 +13,15 @@ import lib.sky.sample_view;
 import lib.sky.sample_light;
 import lib.water.waves;
 import lib.water.water_depth;
+import lib.sampling.atlas;
+import lib.sampling.linear;
 import lib.sampling.dfd_normal;
 import lib.shadow;
 import lib.material.pbr;
 import lib.material.parallax;
 import lib.tbn;
+
+extern static const bool SmoothNormalsEnabled = true;
 
 // extern static const float BLOCK_LUX;
 extern static const bool RENDER_TERRAIN = false;
@@ -31,6 +35,8 @@ extern static const uint BLOCK_WATER;
 
 static const bool SupportsParallax = Parallax_Enabled && !RENDER_PARTICLES;
 static const bool SupportsTexNormals = !RENDER_PARTICLES;
+
+Sampler2D<float> solidDepthTex;
 
 
 uint GetWaveOctaveCount(const in float viewDist) {
@@ -53,6 +59,8 @@ struct VertexOutput {
     nointerpolation uint normal;
     nointerpolation uint tangent;
     nointerpolation uint blockId;
+    nointerpolation uint atlasCoordMin;
+    nointerpolation uint atlasCoordSize;
 };
 
 [[shader("vertex")]]
@@ -89,17 +97,18 @@ VertexOutput vertexMain(Vertex input) {
 
         if (Water_WaveEnabled) {
             uint blockMapId = ap.blocks[output.blockId].customId;
-            float3 worldPos = output.localPos + input.midBlock().value/64.0 + ap.camera.position;
-            bool isFacingAir = ap.voxel[int3(floor(worldPos + normal))].blockId == 0;
             isWater = blockMapId == BLOCK_WATER;
 
             if (isWater) {
                 output.waveStrength = 1.0;
 
-                float viewDist = length(output.viewPos);
-                int octaves = GetWaveOctaveCount(viewDist);
-                output.waveOffset = GetWaveHeight(ap.camera.position + output.localPos, output.light.y, ap.timing.timeElapsed, octaves).y;
-                output.localPos.y += output.waveOffset;
+                // float3 worldPos = output.localPos + input.midBlock().value/64.0 + ap.camera.position;
+                // bool isFacingAir = ap.voxel[int3(floor(worldPos + normal))].blockId == 0;
+
+                // float viewDist = length(output.viewPos);
+                // int octaves = GetWaveOctaveCount(viewDist);
+                // output.waveOffset = GetWaveHeight(ap.camera.position + output.localPos, output.light.y, ap.timing.timeElapsed, octaves).y;
+                // output.localPos.y += output.waveOffset;
             }
         }
     }
@@ -119,6 +128,13 @@ VertexOutput vertexMain(Vertex input) {
     if (let value = input.overlayColor()) {
         half4 overlay = half4(value);
         color = lerp(color, overlay, overlay.a);
+    }
+
+    if (let midCoord = input.midCoord()) {
+        AtlasBounds atlas;
+        atlas.Populate(output.uv, midCoord);
+        output.atlasCoordMin = packHalf2x16(atlas.CoordMin);
+        output.atlasCoordSize = packHalf2x16(atlas.CoordSize);
     }
 
     output.viewPos = mul3(ap.camera.view, output.localPos);
@@ -165,6 +181,27 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
     if (Debug_WhiteWorld) albedo.rgb = half3(0.85);
 
     float4 normalData = normalTex.SampleLevel(input.uv, LOD);
+    if (SmoothNormalsEnabled) {
+        float2 atlasSize;
+        normalTex.GetDimensions(0, atlasSize.x, atlasSize.y);
+
+        AtlasBounds atlas;
+        atlas.CoordMin = unpackHalf2x16ToFloat(input.atlasCoordMin);
+        atlas.CoordSize = unpackHalf2x16ToFloat(input.atlasCoordSize);
+
+        float2 uv[4];
+        float2 localCoord = atlas.GetLocalCoord(input.uv);
+        float2 atlasTileSize = atlas.CoordSize * atlasSize;
+        float2 f = GetLinearCoords(localCoord, atlasTileSize, uv);
+
+        uv[0] = atlas.GetAtlasCoord(uv[0]);
+        uv[1] = atlas.GetAtlasCoord(uv[1]);
+        uv[2] = atlas.GetAtlasCoord(uv[2]);
+        uv[3] = atlas.GetAtlasCoord(uv[3]);
+
+        normalData.rg = normalTex.SampleLevelLinearRGB(uv, LOD, f).rg;
+    }
+
     float4 specularData = specularTex.SampleLevel(input.uv, LOD);
 
     float3 geo_normal = unpackUnorm4x8ToFloat(input.normal).xyz;
@@ -175,11 +212,6 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
 
     uint blockMapId = ap.blocks[input.blockId].customId;
     bool isWater = blockMapId == BLOCK_WATER;
-
-    // if (isWater) {
-    //     WaterDepth_set(uint2(fragPos), viewDist);
-    //     discard;
-    // }
 
     float3 tex_normal = geo_normal;
     if (SupportsTexNormals) {
@@ -334,14 +366,27 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
     // clamp to avoid buffer overflow
     output.color = clamp(output.color, 0.0, 65000.0);
 
-    // Refraction
-    float3 refractSurfaceNormal = tex_normal - geo_normal;
-    // if (MATERIAL_ROUGH_REFRACT) {
-    //     randomize_reflection(refractSurfaceNormal, localGeoNormal, roughness);
-    // }
+    uint packedTexNormal = packUnorm4x8(float4(tex_normal * 0.5 + 0.5, 1.0));
 
-    refractSurfaceNormal = normalize(refractSurfaceNormal + 0.2 * geo_normal);
-    output.data = packUnorm4x8(float4(tex_normal * 0.5 + 0.5, 1.0));
+    if (isWater) {
+        uint2 uv = uint2(fragPos);
+        
+        float opaqueDepth = solidDepthTex[uv];
+        float3 opaqueClipPos = float3(fragPos / ap.game.screenSize, opaqueDepth) * 2.0 - 1.0;
+        float3 opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);
+        float opaqueDist = length(opaqueViewPos);
+
+        if (viewDist < opaqueDist) {
+            if (WaterDepth_set(uv, viewDist)) {
+                imgWaterFinal[uv] = output.color;
+                imgWaterNormal[uv] = packedTexNormal;
+            }
+            
+            discard;
+        }
+    }
+
+    output.data = packedTexNormal;
     output.data = bitfieldInsert(output.data, blockMapId, 24, 8);
     
     return output;

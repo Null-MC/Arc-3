@@ -7,5 +7,5 @@ import lib.water.water_depth;
 void clearScreen(uint3 globalPos : SV_DispatchThreadID) {
     if (!all(globalPos.xy < ap.game.screenSize)) return;
 
-    imgWaterVolume[globalPos.xy] = WaterDepth_Clear;
+    WaterDepth_clear(globalPos.xy);
 }

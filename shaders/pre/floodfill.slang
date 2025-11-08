@@ -15,11 +15,6 @@ groupshared int sharedBlockMap[sharedBufferSize];
 groupshared uint sharedBlockMetaMap[sharedBufferSize];
 groupshared half3 floodfillBuffer[sharedBufferSize];
 
-[[vk::image_format("rgba16f")]]
-RWTexture3D<half3> imgFloodFill_write;
-
-Sampler3D<half3> texFloodFill_read;
-
 
 int getSharedCoord(int3 pos) {
 	return sumOf(pos * flattenShared);

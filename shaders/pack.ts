@@ -7,7 +7,9 @@ import {StreamingBufferBuilder} from "./scripts/StreamingBufferBuilder";
 import {ApplyLightColors} from "./scripts/Lights";
 
 
+const DEBUG = true;
 const DEBUG_LIGHT_TILES = false;
+const VOXEL_TEX_ENABLED = true;
 
 let dimension: Dimensions;
 let BlockMappings: BlockMap;
@@ -51,6 +53,7 @@ export function configureRenderer(config: RendererConfig): void {
     config.shadow.enabled = dimension.World_HasSky;
     config.shadow.resolution = options.Shadow_Resolution;
     config.shadow.distance = options.Shadow_Distance;
+    config.shadow.safeZone[1] = 128;
     config.shadow.near = -800;
     config.shadow.far = 800;
     config.shadow.cascades = 4;
@@ -186,12 +189,33 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .clearColor(0, 0, 0, 0)
         .build();
 
-    // pipeline.createImageTexture('texWaterVolume', 'imgWaterVolume')
-    //     .width(screenWidth)
-    //     .height(screenHeight)
-    //     .format(Format.RG32UI)
-    //     // .clearColor(0, 0, 0, 0)
-    //     .build();
+    pipeline.createImageTexture('texWaterFinal', 'imgWaterFinal')
+        .width(screenWidth)
+        .height(screenHeight)
+        .format(Format.RGBA16F)
+        .clearColor(0, 0, 0, 0)
+        .build();
+
+    pipeline.createImageTexture('texWaterNormal', 'imgWaterNormal')
+        .width(screenWidth)
+        .height(screenHeight)
+        .format(Format.R32UI)
+        .clearColor(0, 0, 0, 0)
+        .build();
+
+    pipeline.createImageTexture('texWaterDepth', 'imgWaterDepth')
+        .width(screenWidth)
+        .height(screenHeight)
+        .format(Format.R32UI)
+        // .clearColor(0, 0, 0, 0)
+        .build();
+
+    pipeline.createImageTexture('texWaterDepth2', 'imgWaterDepth2')
+        .width(screenWidth)
+        .height(screenHeight)
+        .format(Format.R32UI)
+        // .clearColor(0, 0, 0, 0)
+        .build();
 
     let texShadowColor: BuiltTexture | undefined;
     let texSkyTransmit: BuiltTexture | undefined;
@@ -273,6 +297,16 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         floodfill = new FloodFill(pipeline, options.Lighting_FloodFill_Size);
     }
 
+    if (VOXEL_TEX_ENABLED) {
+        pipeline.createImageTexture('texVoxelTexId', 'imgVoxelTexId')
+            .width(256)
+            .height(256)
+            .depth(256)
+            .format(Format.R32UI)
+            .clearColor(0, 0, 0, 0)
+            .build();
+    }
+
     const texDiffuse = pipeline.createImageTexture('texDiffuse', 'imgDiffuse')
         .width(screenWidth)
         .height(screenHeight)
@@ -293,7 +327,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .clear(false)
         .build();
 
-    if (DEBUG_LIGHT_TILES) {
+    if (DEBUG || DEBUG_LIGHT_TILES) {
         pipeline.createImageTexture('texDebug', 'imgDebug')
             .format(Format.RGBA8)
             .width(screenWidth)
@@ -344,13 +378,13 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .overrideObject('scene_writer', 'scene')
             .compile();
 
-        // beginStage.createCompute("clear-screen")
-        //     .location("pre/clear-screen", "clearScreen")
-        //     .workGroups(
-        //         Math.ceil(screenWidth / 16),
-        //         Math.ceil(screenHeight / 16),
-        //         1)
-        //     .compile();
+        beginStage.createCompute("clear-screen")
+            .location("pre/clear-screen", "clearScreen")
+            .workGroups(
+                Math.ceil(screenWidth / 16),
+                Math.ceil(screenHeight / 16),
+                1)
+            .compile();
 
         if (dimension.World_HasSky) {
             beginStage.createComposite('sky-view')
@@ -384,21 +418,38 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
     if (dimension.World_HasSky) {
         shadowSkyShader("shadow-sky", Usage.SHADOW).compile();
-    }
 
-    type ShadowPass = [string, ProgramUsage];
-    [
-        ['shadow-sky-terrain-cutout', Usage.SHADOW_TERRAIN_CUTOUT],
-        ['shadow-sky-terrain-translucent', Usage.SHADOW_TERRAIN_TRANSLUCENT],
-        ['shadow-sky-entity-cutout', Usage.SHADOW_ENTITY_CUTOUT],
-        ['shadow-sky-entity-translucent', Usage.SHADOW_ENTITY_TRANSLUCENT],
-        ['shadow-sky-blockentity-translucent', Usage.SHADOW_BLOCK_ENTITY_TRANSLUCENT],
-    ].forEach((pass: ShadowPass) => {
-        shadowSkyShader(pass[0], pass[1])
+        shadowSkyShader('shadow-sky-terrain-solid', Usage.SHADOW_TERRAIN_SOLID)
+            .exportBool('RENDER_TERRAIN', true)
+            .target(0, texShadowColor).blendOff(0)
+            .compile();
+
+        shadowSkyShader('shadow-sky-terrain-cutout', Usage.SHADOW_TERRAIN_CUTOUT)
+            .exportBool('RENDER_TERRAIN', true)
             .exportBool('ALPHATEST_ENABLED', true)
             .target(0, texShadowColor).blendOff(0)
             .compile();
-    });
+
+        shadowSkyShader('shadow-sky-terrain-translucent', Usage.SHADOW_TERRAIN_TRANSLUCENT)
+            .exportBool('RENDER_TERRAIN', true)
+            .exportBool('ALPHATEST_ENABLED', true)
+            .target(0, texShadowColor).blendOff(0)
+            .compile();
+
+        type ShadowPass = [string, ProgramUsage];
+        [
+            // ['shadow-sky-terrain-cutout', Usage.SHADOW_TERRAIN_CUTOUT],
+            // ['shadow-sky-terrain-translucent', Usage.SHADOW_TERRAIN_TRANSLUCENT],
+            ['shadow-sky-entity-cutout', Usage.SHADOW_ENTITY_CUTOUT],
+            ['shadow-sky-entity-translucent', Usage.SHADOW_ENTITY_TRANSLUCENT],
+            ['shadow-sky-blockentity-translucent', Usage.SHADOW_BLOCK_ENTITY_TRANSLUCENT],
+        ].forEach((pass: ShadowPass) => {
+            shadowSkyShader(pass[0], pass[1])
+                .exportBool('ALPHATEST_ENABLED', true)
+                .target(0, texShadowColor).blendOff(0)
+                .compile();
+        });
+    }
 
     if (options.Lighting_Point_Enabled) {
         pipeline.createObjectShader('shadow-point', Usage.POINT)
@@ -453,8 +504,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     function translucentObjectShader(name: string, usage: ProgramUsage) {
         const shader = pipeline.createObjectShader(name, usage)
             .location("objects/translucent")
-            .target(0, texFinalTranslucent).blendFunc(0, Func.ONE, Func.ONE_MINUS_SRC_ALPHA, Func.ONE, Func.ZERO)
-            .target(1,  texTintTranslucent).blendFunc(1, Func.DST_COLOR, Func.ZERO, Func.ZERO, Func.ZERO)
+            .target(0, texFinalTranslucent).blendOff(0) //.blendFunc(0, Func.ONE, Func.ONE_MINUS_SRC_ALPHA, Func.ONE, Func.ZERO)
+            .target(1,  texTintTranslucent).blendOff(1) //.blendFunc(1, Func.DST_COLOR, Func.ZERO, Func.ZERO, Func.ZERO)
             .target(2,  texDataTranslucent).blendOff(2);
 
         //if (options.Post_TAA_Enabled) shader.target(1, texVelocity).blendOff(1);
@@ -547,8 +598,11 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         withSubList(postRenderStage, 'translucent-composite', translucentStage => {
             finalFlipper.flip();
 
+            let location = options.Lighting_Refraction_Mode == Refract_WorldSpace
+                ? "composite/overlays_ws" : "composite/overlays_ss";
+            
             translucentStage.createComposite("composite-overlays")
-                .location("composite/overlays", "applyOverlays")
+                .location(location, "applyOverlays")
                 .target(0, finalFlipper.getWriteTexture())
                 .overrideObject('texSource', finalFlipper.getReadTexture().name())
                 .exportInt('RefractMode', options.Lighting_Refraction_Mode)

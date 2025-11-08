@@ -24,8 +24,8 @@ float2 GetParallaxCoord(const in float2 texcoord, const in int LOD, const in Atl
     if (Parallax_Optimize) {
         float2 atlasCoord = atlasBounds.GetAtlasCoord(texcoord);
 
-        float2 atlasSize_2;
-        normalTex.GetDimensions(2, atlasSize_2.x, atlasSize_2.y);
+        // float2 atlasSize_2;
+        // normalTex.GetDimensions(2, atlasSize_2.x, atlasSize_2.y);
 
         // TODO: project two points along ray
 

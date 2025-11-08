@@ -105,7 +105,7 @@ extension<T:ISampler> T {
     //     return LinearBlend4(samples, f);
     // }
 
-    static float3 TextureLodLinearRGB(const in float2 uv[4], const in float lod, const in float2 f) {
+    static float3 SampleLevelLinearRGB(const in float2 uv[4], const in float lod, const in float2 f) {
         float3 samples[4];
         samples[0] = this.SampleLevel(uv[0], lod).rgb;
         samples[1] = this.SampleLevel(uv[1], lod).rgb;
@@ -114,10 +114,10 @@ extension<T:ISampler> T {
         return LinearBlend4(samples, f);
     }
 
-    static float3 TextureLodLinearRGB(const in float2 texcoord, const in float2 texSize, const in float lod) {
+    static float3 SampleLevelLinearRGB(const in float2 texcoord, const in float2 texSize, const in float lod) {
         float2 uv[4];
         float2 f = GetLinearCoords(texcoord, texSize, uv);
-        return this.TextureLodLinearRGB(uv, lod, f);
+        return this.SampleLevelLinearRGB(uv, lod, f);
     }
 
     static float3 TextureGradLinearRGB(const in float2 uv[4], const in float2x2 dFdXY, const in float2 f) {
