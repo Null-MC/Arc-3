@@ -3,7 +3,7 @@ import lib.common;
 import lib.water.common;
 import lib.water.water_depth;
 
-extern static const int RefractMode;
+extern static const int Refract_Mode;
 
 // static const int Refract_WorldSpace = 2;
 static const int Refract_ScreenSpace = 1;
@@ -80,7 +80,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     half3 opaque_color = texSource[uv];
 
     bool hasRefract = translucent.a > 0.0 || waterDist < min(transDist, ap.camera.far);
-    if (RefractMode != Refract_None && hasRefract) {
+    if (Refract_Mode != Refract_None && hasRefract) {
         uint normalData = transDist < waterDist
             ? transData : texWaterNormal[uv];
 
@@ -104,7 +104,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
             opaque_color = half3(0.0);
         }
         else {
-            if (RefractMode == Refract_ScreenSpace) {
+            if (Refract_Mode == Refract_ScreenSpace) {
                 // float3 refract_viewPos = min(transDist, waterDist) * viewDir;
 
                 ss_refract(refract_texcoord, refract_viewPos, refract_viewDir);

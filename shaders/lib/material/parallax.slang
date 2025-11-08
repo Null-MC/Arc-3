@@ -86,7 +86,7 @@ float2 GetParallaxCoord(const in float2 texcoord, const in int LOD, const in Atl
         float2 prevTraceOffset = texcoord - pI * stepCoord;
         float prevTraceDepth = max(1.0 - pI * stepDepth, 0.0);
 
-        float t = (prevTraceDepth - prevTexDepth) / max(texDepth - prevTexDepth + prevTraceDepth - currentTraceDepth, EPSILON);
+        float t = (prevTraceDepth - prevTexDepth) / max((texDepth - prevTexDepth) + (prevTraceDepth - currentTraceDepth), EPSILON);
         t = saturate(t);
 
         traceDepth.xy = lerp(prevTraceOffset, currentTraceOffset, t);

@@ -13,15 +13,8 @@ import lib.sky.sample_final;
 import lib.shadow;
 import lib.voxel_tex;
 
-// extern static const int RefractMode;
-extern static const int REFRACTION_STEPS = 16;
-extern static const bool WS_SS_Fallback = false;
+extern static const bool Refract_SS_Fallback = true;
 extern static const uint BLOCK_WATER;
-
-// static const int Refract_WorldSpace = 2;
-// static const int Refract_ScreenSpace = 1;
-// static const int Refract_None = 0;
-
 
 Sampler2D<float> mainDepthTex;
 Sampler2D<float> solidDepthTex;
@@ -48,31 +41,28 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     uint transData = texDataTranslucent[uv];
 
     float2 texcoord = pos / ap.game.screenSize;
-    if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
+    if (TAA_Enabled) texcoord += scene[0].taa_jitter;
 
     float transDepth = mainDepthTex[uv];
-    float opaqueDepth = solidDepthTex[uv];
-
-    float3 opaqueClipPos = float3(texcoord, opaqueDepth) * 2.0 - 1.0;
-    float3 opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);
-    // // float3 localPos = mul3(ap.camera.viewInv, viewPos);
-
     float3 transClipPos = float3(texcoord, transDepth) * 2.0 - 1.0;
     float3 transViewPos = project(ap.camera.projectionInv, transClipPos);
     float3 transLocalPos = mul3(ap.camera.viewInv, transViewPos);
+    float transDist = length(transViewPos);
 
-    float3 viewDir = normalize(transViewPos);
-    float3 localDir = normalize(transLocalPos);
+    float3 viewDir = transViewPos / transDist;
+    float3 localDir = transLocalPos / transDist;
     tint = RgbToLinear(tint);
 
-    uint2 water_uv = uv;
-    float2 refract_texcoord = texcoord;
     float waterDist = WaterDepth_get(uv);
-    float transDist = length(transViewPos);
     half3 opaque_color = texSource[uv];
+    half4 waterColor = texWaterFinal[uv];
+    
+    bool hasOverlay = translucent.a > 0.0 || waterDist < min(transDist, ap.camera.far);
 
-    bool hasRefract = translucent.a > 0.0 || waterDist < min(transDist, ap.camera.far);
-    if (hasRefract) {
+    half4 overlayColor = transDist < waterDist
+        ? translucent : waterColor;
+
+    if (hasOverlay) {
         uint normalData = transDist < waterDist
             ? transData : texWaterNormal[uv];
 
@@ -95,7 +85,6 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
         int3 hitVoxelPos = 0;
 
         if (dot(refract_viewDir, refract_viewDir) < EPSILON) {
-            refract_texcoord = -1.0;
             opaque_color = half3(0.0);
         }
         else {
@@ -151,107 +140,127 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
             opaque_color = half3(0.65);
 
             bool ss_hit = false;
-            if (WS_SS_Fallback) {
-                //float3 stepLocalStart = traceLocalStart;
-                float3 stepViewStart = mul3(ap.camera.view, traceLocalStart);
-                float3 stepClipStart = project(ap.camera.projection, stepViewStart);
-                // float3 stepScreenStart = stepClipStart * 0.5 + 0.5;
+            if (Refract_SS_Fallback) {
+                float3 traceViewStart = mul3(ap.camera.view, traceLocalStart);
+                float3 traceClipStart = project(ap.camera.projection, traceViewStart);
 
-                // float3 stepLocalEnd = hitPos;
-                float3 stepViewEnd = mul3(ap.camera.view, hitPos);
-                float3 stepClipEnd = project(ap.camera.projection, stepViewEnd);
-                // float3 stepScreenEnd = stepClipEnd * 0.5 + 0.5;
+                float3 traceViewEnd = mul3(ap.camera.view, hitPos);
+                float3 traceClipEnd = project(ap.camera.projection, traceViewEnd);
 
-                const uint SS_StepCount = 16;
-                float stepMaxZ = abs(stepViewEnd.z - stepViewStart.z) / SS_StepCount;
+                const uint SS_StepCount = 24;
+                const uint SS_RefineSteps = 8;
 
-                // TODO: SS trace
-                for (uint i2 = 0; i2 < SS_StepCount; i2++) {
-                    float f = (i2 + dither) / SS_StepCount;
-                    float3 sub_clipPos = lerp(stepClipStart, stepClipEnd, f);
-                    float2 sub_screenPos = sub_clipPos.xy * 0.5 + 0.5;
+                float3 traceClipPos;
+                float3 traceClipPos_prev = traceClipStart;
+                float2 traceScreenPos;
+                float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
+                for (uint i = 0; i < SS_StepCount; i++) {
+                    float f = (i + dither) / SS_StepCount;
+                    traceClipPos = lerp(traceClipStart, traceClipEnd, f);
+                    traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
+                    if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
 
-                    float screenDepth = solidDepthTex.Sample(sub_screenPos);
-                    float screenDepthL = linearizeDepth(screenDepth * 2.0 - 1.0, ap.camera.near, ap.camera.far);
-                    float traceDepthL = linearizeDepth(sub_clipPos.z, ap.camera.near, ap.camera.far);
+                    float sampleClipDepth = solidDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
+                    float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
+                    float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
+
+                    float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
 
                     if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
                         hit = true;
                         ss_hit = true;
-                        // hitPos = lerp(traceLocalStart, hitPos, f);
-                        opaque_color = texSource.Sample(sub_screenPos);
                         break;
                     }
+
+                    traceClipPos_prev = traceClipPos;
+                    traceDepthL_prev = traceDepthL;
                 }
+
+                if (ss_hit) {
+                    traceClipStart = traceClipPos_prev;
+                    traceClipEnd = traceClipPos;
+
+                    traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
+                    for (uint i = 0; i < SS_RefineSteps; i++) {
+                        float f = (i + dither) / SS_RefineSteps;
+                        traceClipPos = lerp(traceClipStart, traceClipEnd, f);
+                        traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
+
+                        float sampleClipDepth = solidDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
+                        float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
+                        float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
+
+                        float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
+
+                        if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
+                            break;
+                        }
+                    }
+                }
+
+                if (ss_hit) opaque_color = texSource.Sample(traceScreenPos);
             }
 
             if (!ss_hit) {
+                // recreate final sample
                 if (hit) {
                     float3 hitNormal = -stepAxis * sign(refract_localDir);
                     float3 hit_viewPos = mul3(ap.camera.view, hitPos);
                     float3 hit_screenPos = project(ap.camera.projection, hit_viewPos) * 0.5 + 0.5;
                     float hit_depth = solidDepthTex.Sample(hit_screenPos.xy);
-                    // if (all(saturate(hit_screenPos) == hit_screenPos) && abs(hit_depth - hit_screenPos.z) < 0.00008) {
-                    //     opaque_color = texSource.Sample(hit_screenPos.xy);
-                    // }
-                    // else {
-                        // float3 voxelTex_pos = VoxelTex_GetBufferPosition(hitPos);
-                        // int3 voxelTex_coord = int3(floor(voxelTex_pos));
 
-                        if (VoxelTex_InBounds(hitVoxelTexPos)) {
-                            uint2 uv_min, uv_size;
-                            uint voxelTex_data = texVoxelTexId[hitVoxelTexPos];
-                            VoxelTex_unpack(voxelTex_data, uv_min, uv_size);
+                    if (VoxelTex_InBounds(hitVoxelTexPos)) {
+                        uint2 uv_min, uv_size;
+                        uint voxelTex_data = texVoxelTexId[hitVoxelTexPos];
+                        VoxelTex_unpack(voxelTex_data, uv_min, uv_size);
 
-                            // if (voxelTex_data > 0) opaque_color = 0.0;
+                        float2 hitCoord;
+                        if (abs(hitNormal.y) > 0.5)      hitCoord = currPos.xz;
+                        else if (abs(hitNormal.z) > 0.5) hitCoord = currPos.xy;
+                        else                             hitCoord = currPos.zy;
+                        hitCoord = 1.0 - fract(hitCoord);
 
-                            float2 hitCoord;
-                            if (abs(hitNormal.y) > 0.5)      hitCoord = currPos.xz;
-                            else if (abs(hitNormal.z) > 0.5) hitCoord = currPos.xy;
-                            else                             hitCoord = currPos.zy;
-                            hitCoord = 1.0 - fract(hitCoord);
+                        uint3 atlasSize;
+                        blockAtlas.GetDimensions(0, atlasSize.x, atlasSize.y, atlasSize.z);
 
-                            uint3 atlasSize;
-                            blockAtlas.GetDimensions(0, atlasSize.x, atlasSize.y, atlasSize.z);
+                        AtlasBounds atlas;
+                        atlas.CoordMin = uv_min / float2(atlasSize.xy);
+                        atlas.CoordSize = uv_size / float2(atlasSize.xy);
+                        float2 uv = atlas.GetAtlasCoord(hitCoord);
 
-                            AtlasBounds atlas;
-                            atlas.CoordMin = uv_min / float2(atlasSize.xy);
-                            atlas.CoordSize = uv_size / float2(atlasSize.xy);
-                            float2 uv = atlas.GetAtlasCoord(hitCoord);
+                        opaque_color = blockAtlas.Sample(uv).rgb;
+                        opaque_color = RgbToLinear(opaque_color);
 
-                            opaque_color = blockAtlas.Sample(uv).rgb;
-                            opaque_color = RgbToLinear(opaque_color);
-
-                            if (voxelTex_data == 0)
-                                opaque_color = float3(1,0,0);
+                        if (voxelTex_data == 0) {
+                            // debug missing data with red albedo
+                            opaque_color = half3(1.0, 0.0, 0.0);
                         }
+                    }
 
-                        // TODO: rebuild lighting sample
-                        half3 diffuse = half3(0.0);
-                        float3 skyPos = getSkyPosition(hitPos);
+                    half3 diffuse = half3(0.0);
+                    float3 skyPos = getSkyPosition(hitPos);
 
-                        float3 shadowLocalPos = hitNormal * 0.04 + hitPos;
-                        float3 shadowViewPos = mul3(ap.celestial.view, shadowLocalPos);
-                        shadowViewPos.z += 0.008;
+                    float3 shadowLocalPos = hitNormal * 0.04 + hitPos;
+                    float3 shadowViewPos = mul3(ap.celestial.view, shadowLocalPos);
+                    shadowViewPos.z += 0.008;
 
-                        int shadowCascade = GetShadowProjection(shadowViewPos, 0.05);
+                    int shadowCascade = GetShadowProjection(shadowViewPos, 0.05);
 
-                        float shadow = 1.0;
-                        if (shadowCascade >= 0) {
-                            float3 shadowPos = mul3(ap.celestial.projection[shadowCascade], shadowViewPos);
-                            shadow = SampleShadow(shadowPos * 0.5 + 0.5, shadowCascade);
-                        }
+                    float shadow = 1.0;
+                    if (shadowCascade >= 0) {
+                        float3 shadowPos = mul3(ap.celestial.projection[shadowCascade], shadowViewPos);
+                        shadow = SampleShadow(shadowPos * 0.5 + 0.5, shadowCascade);
+                    }
 
-                        float NoLm_sun = max(dot(hitNormal, scene[0].SunLocalDir), 0.0);
-                        half3 sunTransmit = sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
-                        diffuse += NoLm_sun * shadow * sunTransmit * scene[0].SunColor;
+                    float NoLm_sun = max(dot(hitNormal, scene[0].SunLocalDir), 0.0);
+                    half3 sunTransmit = sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
+                    diffuse += NoLm_sun * shadow * sunTransmit * scene[0].SunColor;
 
-                        var hitVoxel = ap.voxel[hitVoxelPos];
-                        float lmcoord_y = saturate(hitVoxel.lightData.y / 15.0);
-                        float3 sky_ambient = sampleSkyIrradiance(hitNormal) * lmcoord_y;// * occlusion;
+                    var hitVoxel = ap.voxel[hitVoxelPos];
+                    float lmcoord_y = saturate(hitVoxel.lightData.y / 15.0);
+                    float3 sky_ambient = sampleSkyIrradiance(hitNormal) * lmcoord_y;// * occlusion;
 
-                        opaque_color *= diffuse / PI + sky_ambient;
-                    // }
+                    opaque_color *= diffuse / PI + sky_ambient;
                 }
                 else {
                     opaque_color = sampleSkyFinal(hitPos, refract_localDir, false);
@@ -259,78 +268,17 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
             }
 
             opaque_color *= half3(exp(-traceWaterDist * Water_AbsorbColor));
-            // opaque_color *= traceTint;
         }
     }
 
-    uint2 refract_uv = uint2(refract_texcoord * ap.game.screenSize);
-
-    // if (hasRefract && waterDist > transDist) {
-    //     water_uv = refract_uv;
-    //     waterDist = WaterDepth_get(refract_uv);
-    // }
-
-    // if (hasRefract && transDist > waterDist && translucent.a > 0.0) {
-    //     // WARN: causes fuckery
-    //     // float transDepth = mainDepthTex[refract_uv];
-    //     translucent = texFinalTranslucent[refract_uv];
-    //     tint = texTintTranslucent[refract_uv];
-
-    //     // TODO: update trans pos/dist?
-    // }
-
-    half4 waterColor = texWaterFinal[water_uv];
-
-    opaqueViewPos = transViewPos;
-    if (hasRefract && all(refract_texcoord >= 0.0)) {
-        // float opaqueDepth = solidDepthTex.Sample(refract_texcoord);
-        float3 opaqueClipPos = float3(refract_texcoord, opaqueDepth) * 2.0 - 1.0;
-        opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);
-        // float3 localPos = mul3(ap.camera.viewInv, viewPos);
-
-        // opaque_color = texSource.Sample(refract_texcoord);
-
-        if (waterDist > transDist)
-            waterColor.rgb *= tint;
+    half3 final_color = opaque_color;
+    if (hasOverlay) {
+        final_color = fma(final_color, half3(1.0 - overlayColor.a), overlayColor.rgb);
     }
-
-    if (translucent.a > 0.0)
-        opaque_color *= tint;
-
-    float opaqueDist = length(opaqueViewPos);
-
-    float waterMin, waterMax;
-    if (ap.camera.fluid == 1) {
-        waterMin = 0.0;
-        waterMax = min(waterDist, opaqueDist);
-    }
-    else {
-        waterMin = waterDist;
-        waterMax = min(ap.camera.far, opaqueDist);
-    }
-
-    float waterDepthL = max(waterMax - waterMin, 0.0);
-
-    float opaqueWaterDepthL = max(waterMax - waterMin, 0.0);
-    half3 opaqueWaterTint = half3(exp(-(waterDepthL + EPSILON) * Water_AbsorbColor));
-
-    if (ap.camera.fluid == 0 && waterDepthL > 0.0) {
-        opaque_color += fma(opaque_color, half3(1.0 - waterColor.a), waterColor.rgb);
-    }
-
-    half3 final_color = fma(opaque_color, half3(1.0 - translucent.a), translucent.rgb);
-
-    if (ap.camera.fluid == 0 && translucent.a > 0.0 && transDist > waterDist) {
-        // tint translucent under water
-        float transWaterDist = max(transDist - waterDist, EPSILON);
-        half3 transWaterTint = half3(exp(-transWaterDist * Water_AbsorbColor));
-        final_color *= transWaterTint;
-    }
-
-    if (ap.camera.fluid == 1 || (translucent.a > 0.0 && transDist > waterDist))
-        final_color = fma(final_color, half3(1.0 - waterColor.a), waterColor.rgb);
 
     if (ap.camera.fluid == 1) {
+        float waterDepthL = min(waterDist, transDist);
+        half3 opaqueWaterTint = half3(exp(-(waterDepthL + EPSILON) * Water_AbsorbColor));
         final_color *= opaqueWaterTint;
     }
     

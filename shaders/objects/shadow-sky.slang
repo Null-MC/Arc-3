@@ -42,7 +42,7 @@ VertexOutput vertexMain(Vertex input) {
         }
     }
 
-    if (VOXEL_TEX_ENABLED && RENDER_TERRAIN && isFullBlock && !isFluidBlock && input.currentInstance() == 1) {
+    if (VOXEL_TEX_ENABLED && RENDER_TERRAIN && !isFluidBlock && input.currentInstance() == 1) {
         float3 origin = modelPos;// mul3(ap.celestial.viewInv, shadowViewPos);
         if (let value = input.midBlock()) origin += value;
         int3 voxelPos = int3(floor(VoxelTex_GetBufferPosition(origin)));

@@ -605,7 +605,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 .location(location, "applyOverlays")
                 .target(0, finalFlipper.getWriteTexture())
                 .overrideObject('texSource', finalFlipper.getReadTexture().name())
-                .exportInt('RefractMode', options.Lighting_Refraction_Mode)
+                .exportInt('Refract_Mode', options.Lighting_Refraction_Mode)
+                .exportBool('Refract_SS_Fallback', options.Lighting_Refraction_ScreenSpaceFallback)
                 .compile();
         });
 

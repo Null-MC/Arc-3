@@ -24,6 +24,7 @@ export function setupOptions() {
             .add(new Page('LIGHTING_REFRACTION')
                 // .add(asBool('LIGHTING_REFRACT_ENABLED', true, true))
                 .add(asInt('LIGHTING_REFRACT_MODE', 0, 1, 2).needsReload(true).build(1))
+                .add(asBool('LIGHTING_REFRACT_SS_FALLBACK', true, true))
                 .build())
             .add(new Page('LIGHTING_POINT')
                 .add(asBool('LIGHTING_POINT_ENABLED', true, true))

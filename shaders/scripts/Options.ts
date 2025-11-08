@@ -20,6 +20,7 @@ export class Options {
 
     // get Lighting_Refraction_Enabled(): boolean {return getBoolSetting('LIGHTING_REFRACT_ENABLED');}
     get Lighting_Refraction_Mode(): number {return getIntSetting('LIGHTING_REFRACT_MODE');}
+    get Lighting_Refraction_ScreenSpaceFallback(): boolean {return getBoolSetting('LIGHTING_REFRACT_SS_FALLBACK');}
 
     get Lighting_FloodFill_Enabled(): boolean {return getBoolSetting('LIGHTING_FLOODFILL_ENABLED');}
     get Lighting_FloodFill_Size(): number {return getIntSetting('LIGHTING_FLOODFILL_SIZE');}

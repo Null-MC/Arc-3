@@ -50,12 +50,15 @@ value.LIGHTING_REFLECT_MODE.3=World-Space
 
 screen.LIGHTING_REFRACTION=Refraction
 
-option.LIGHTING_REFRACT_ENABLED=Enabled
+# option.LIGHTING_REFRACT_ENABLED=Enabled
 
 option.LIGHTING_REFRACT_MODE=Mode
 value.LIGHTING_REFRACT_MODE.0=None
 value.LIGHTING_REFRACT_MODE.1=Screen-Space
 value.LIGHTING_REFRACT_MODE.2=World-Space
+
+option.LIGHTING_REFRACT_SS_FALLBACK=Hybrid Tracing
+option.LIGHTING_REFRACT_SS_FALLBACK.comment=Allows world-space refraction tracing to also perform a screen-space trace to include entities and non-full blocks.
 
 
 screen.LIGHTING_POINT=Point Lights
