@@ -1,4 +1,5 @@
 import aperture;
+import buffers.OpaqueObject;
 import lib.common;
 import lib.sampling.atlas;
 import lib.sampling.lmcoord;
@@ -112,6 +113,7 @@ FragmentOutput fragmentMain(VertexOutput input) {
     float texDepth = 1.0;
     float3 traceCoordDepth = 1.0;
     bool skipParallax = false;
+
     if (SupportsParallax) {
         float viewDist = length(input.localPos);
         tanViewDir = normalize(input.tangentViewPos);
@@ -125,44 +127,46 @@ FragmentOutput fragmentMain(VertexOutput input) {
         }
     }
 
+    OpaqueObject_Normals normals;
+    OpaqueObject_MatLit mat_lit;
+
     half4 tint = unpackUnorm4x8ToHalf(input.color);
     half4 color = albedoTex.SampleLevel(uv, LOD) * tint;
     half4 normalData = normalTex.SampleLevel(uv, LOD);
-    half4 specularData = specularTex.SampleLevel(uv, LOD);
+    mat_lit.specular = specularTex.SampleLevel(uv, LOD);
 
     iris_discardIfNeeded(color);
 
-    half3 geo_normal = unpackUnorm4x8ToHalf(input.normal).xyz;
-    geo_normal = normalize(geo_normal * 2.0 - 1.0);
-    half3 tex_normal = geo_normal;
+    normals.geo = unpackUnorm4x8ToHalf(input.normal).xyz;
+    normals.geo = normalize(normals.geo * 2.0 - 1.0);
+    normals.tex = normals.geo;
+
+    mat_lit.lmcoord = half2(input.light);
 
     if (SupportsTexNormals && MATERIAL_FORMAT != MAT_NONE) {
-        tex_normal = mat_normal(normalData.rgb);
+        normals.tex = mat_normal(normalData.rgb);
 
         if (SupportsParallax && !skipParallax && Parallax_Type == POM_TYPE_SHARP) {
             float depthDiff = max(texDepth - traceCoordDepth.z, 0.0);
 
             if (depthDiff >= ParallaxSharpThreshold) {
-                tex_normal = GetParallaxSlopeNormal(uv, int(LOD), atlas, traceCoordDepth.z, tanViewDir);
+                normals.tex = GetParallaxSlopeNormal(uv, int(LOD), atlas, traceCoordDepth.z, tanViewDir);
             }
         }
 
         half4 tangent = unpackUnorm4x8ToHalf(input.tangent) * 2.0 - 1.0;
-        float3x3 TBN = GetTBN(geo_normal, normalize(tangent.xyz), tangent.w);
+        float3x3 TBN = GetTBN(normals.geo, normalize(tangent.xyz), tangent.w);
 
-        tex_normal = normalize(mul(tex_normal, TBN));
+        normals.tex = normalize(mul(normals.tex, TBN));
     }
 
     float tex_occlusion = mat_occlusion(normalData.b);
-    float occlusion = input.occlusion * tex_occlusion;
+    mat_lit.occlusion = input.occlusion * tex_occlusion;
 
     FragmentOutput output;
     output.albedo = color;
-    // output.position = input.localPos;
-    output.normals.r = packUnorm4x8(half4(geo_normal * 0.5 + 0.5, 0.0));
-    output.normals.g = packUnorm4x8(half4(tex_normal * 0.5 + 0.5, 0.0));
-    output.mat_lit.r = packUnorm4x8(specularData);
-    output.mat_lit.g = packUnorm4x8(half4(input.light, occlusion, 0.0));
+    output.normals = normals.pack();
+    output.mat_lit = mat_lit.pack();
     output.velocity = half2(0.0);
     return output;
 }

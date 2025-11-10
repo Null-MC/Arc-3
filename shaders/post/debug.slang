@@ -1,5 +1,6 @@
 import aperture;
 import lib.common;
+import lib.octohedral;
 
 extern static const int DEBUG_MATERIAL;
 extern static const bool DEBUG_HISTOGRAM;
@@ -28,10 +29,10 @@ float4 renderDebugOverlay(float2 pos : SV_Position) : SV_Target0 {
                 color.rgb = texAlbedoGB[uv].rgb;
                 break;
             case DEBUG_GB_NORMAL_GEO:
-                color.rgb = unpackUnorm4x8ToFloat(texNormalGB[uv].r).xyz;
+                color.rgb = OctDecode(unpackUnorm4x8ToHalf(texNormalGB[uv].r).xy) * 0.5 + 0.5;
                 break;
             case DEBUG_GB_NORMAL_TEX:
-                color.rgb = unpackUnorm4x8ToFloat(texNormalGB[uv].g).xyz;
+                color.rgb = OctDecode(unpackUnorm4x8ToHalf(texNormalGB[uv].r).zw) * 0.5 + 0.5;
                 break;
             case DEBUG_GB_LMCOORD:
                 color.rgb = unpackUnorm4x8ToFloat(texMatLightGB[uv].g).rrg;

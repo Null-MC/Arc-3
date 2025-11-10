@@ -23,7 +23,7 @@ void beginScene() {
     scene_writer[0].MoonLocalDir = normalize(mul(float3x3(ap.camera.viewInv), ap.celestial.moonPosition));
     scene_writer[0].SkyLightLocalDir = normalize(mul(float3x3(ap.camera.viewInv), ap.celestial.position));
 
-    for (int i = 0; i < SHADOW_CASCADE_COUNT; i++) {
+    for (int i = 0; i < Shadow_CascadeCount; i++) {
         GetShadowProjectionBounds(i, scene_writer[0].shadowViewMin[i], scene_writer[0].shadowViewMax[i]);
     }
 

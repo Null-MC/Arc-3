@@ -1,9 +1,11 @@
 import aperture;
+import buffers.OpaqueObject;
 import lib.common;
 import lib.material.pbr;
 import lib.point_lights;
 import lib.light.floodfill;
 import lib.light.hand;
+import lib.octohedral;
 
 extern static const bool PointLight_Enabled;
 extern static const bool FloodFill_Enabled;
@@ -29,16 +31,14 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
     uint2 uv = uint2(pos);
 
     half4 colorData = texAlbedoGB[uv];
-    uint2 normalData = texNormalGB[uv];
-    uint2 matLightData = texMatLightGB[uv];
 
-    float3 geo_normal = normalize(unpackUnorm4x8ToFloat(normalData.r).xyz * 2.0 - 1.0);
-    float3 tex_normal = normalize(unpackUnorm4x8ToFloat(normalData.g).xyz * 2.0 - 1.0);
+    OpaqueObject_Normals normals;
+    normals.unpack(texNormalGB[uv]);
 
-    half4 specularData = unpackUnorm4x8ToHalf(matLightData.r);
-    half4 lightData = unpackUnorm4x8ToHalf(matLightData.g);
-    float lmcoord_x = lightData.r * lightData.r;
-    //float occlusion = light.b;
+    OpaqueObject_MatLit mat_lit;
+    mat_lit.unpack(texMatLightGB[uv]);
+
+    float lmcoord_x = pow2(mat_lit.lmcoord.r);
 
     float depth = solidDepthTex[uv];
     if (depth < 1.0) {
@@ -58,8 +58,8 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
         // FloodFill
         if (FloodFill_Enabled) {
             float3 lpvPos = FloodFill_GetBufferPosition(localPos);
-            lpvPos -= geo_normal * 0.25;
-            lpvPos += tex_normal * 0.75;
+            lpvPos -= normals.geo * 0.25;
+            lpvPos += normals.tex * 0.75;
             
             if (FloodFill_InBounds(lpvPos)) {
                 output.diffuse += floodfill_sample(lpvPos) * BLOCK_LUX;
@@ -70,12 +70,12 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
         output.diffuse += lmcoord_x * BLOCK_LUX;
 
         // Hand Lights
-        float3 handSampleLocalPos = geo_normal*0.02 + localPos;
+        float3 handSampleLocalPos = normals.geo*0.02 + localPos;
         float3 viewDir = -normalize(localPos);
         
         half3 albedo = RgbToLinear(colorData.rgb);
-        float roughness = mat_roughness(specularData.r);
-        float f0_metal = mat_f0_metal(specularData.g);
+        float roughness = mat_roughness(mat_lit.specular.r);
+        float f0_metal = mat_f0_metal(mat_lit.specular.g);
         float metalness = mat_metalness(f0_metal);
 
         half3 f0 = lerp(f0_metal, albedo, metalness);
@@ -83,12 +83,12 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
 
         if (ap.game.mainHand != 0u) {
             float3 lightLocalPos = GetHandLightPos(HandLightOffset_main);
-            GetHandLight(output.diffuse, output.specular, ap.game.mainHand, lightLocalPos, handSampleLocalPos, viewDir, tex_normal, geo_normal, f0, roughL);
+            GetHandLight(output.diffuse, output.specular, ap.game.mainHand, lightLocalPos, handSampleLocalPos, viewDir, normals.tex, normals.geo, f0, roughL);
         }
 
         if (ap.game.offHand != 0u) {
             float3 lightLocalPos = GetHandLightPos(HandLightOffset_alt);
-            GetHandLight(output.diffuse, output.specular, ap.game.offHand, lightLocalPos, handSampleLocalPos, viewDir, tex_normal, geo_normal, f0, roughL);
+            GetHandLight(output.diffuse, output.specular, ap.game.offHand, lightLocalPos, handSampleLocalPos, viewDir, normals.tex, normals.geo, f0, roughL);
         }
 
         output.diffuse /= half3(PI);

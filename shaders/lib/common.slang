@@ -5,6 +5,9 @@ import buffers.settings;
 ConstantBuffer<SettingsBuffer> settings;
 StructuredBuffer<SceneBuffer> scene;
 
+[[vk::image_format("rgba8")]]
+RWTexture2D<float4> imgDebug;
+
 extern static const bool TAA_Enabled;
 
 static const float PI = 3.14159265358;
@@ -16,6 +19,10 @@ static const int DIM_END = 1;
 
 static const int Reflect_SkyOnly = 1;
 // static const int Reflect_ScreenSpace = 2;
+
+static const int Refract_WorldSpace = 2;
+static const int Refract_ScreenSpace = 1;
+static const int Refract_None = 0;
 
 
 float minOf(float x, float y, float z) {
@@ -76,6 +83,10 @@ T pow5<T>(const in T value) where T: IArithmetic {
 //     float sq = value*value;
 //     return sq*sq * value;
 // }
+
+T sumOf<T>(const in vector<T, 2> vec) where T: IArithmetic {
+    return vec.x + vec.y;
+}
 
 T sumOf<T>(const in vector<T, 3> vec) where T: IArithmetic {
     return vec.x + vec.y + vec.z;

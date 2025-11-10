@@ -5,12 +5,12 @@ import lib.sampling.IGN;
 import lib.sampling.atlas;
 import lib.sampling.depth;
 import lib.water.common;
-import lib.water.water_depth;
 import lib.sky.common;
 import lib.sky.sample_transmit;
 import lib.sky.sample_irradiance;
 import lib.sky.sample_final;
 import lib.shadow;
+import lib.octohedral;
 import lib.voxel_tex;
 
 extern static const bool Refract_SS_Fallback = true;
@@ -26,9 +26,6 @@ Sampler2D<half3> texTintTranslucent;
 Sampler2D<half4> texWeather;
 
 Sampler2D<half3> blockAtlas;
-
-// [[vk::image_format("rgba8")]]
-// RWTexture2D<float4> imgDebug;
 
 
 [[shader("fragment")]]
@@ -53,21 +50,14 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     float3 localDir = transLocalPos / transDist;
     tint = RgbToLinear(tint);
 
-    float waterDist = WaterDepth_get(uv);
     half3 opaque_color = texSource[uv];
-    half4 waterColor = texWaterFinal[uv];
     
-    bool hasOverlay = translucent.a > 0.0 || waterDist < min(transDist, ap.camera.far);
-
-    half4 overlayColor = transDist < waterDist
-        ? translucent : waterColor;
+    bool hasOverlay = translucent.a > 0.0;
 
     if (hasOverlay) {
-        uint normalData = transDist < waterDist
-            ? transData : texWaterNormal[uv];
-
-        float3 refract_normal = unpackUnorm4x8ToFloat(normalData).xyz;
-        refract_normal = normalize(refract_normal * 2.0 - 1.0);
+        half4 packedTransData = unpackUnorm4x8ToHalf(transData);
+        float3 refract_normal = OctDecode(packedTransData.xy);
+        uint blockMapId = bitfieldExtract(transData, 24, 8);
 
         const float IOR_AIR   = 1.0003;
         const float IOR_WATER   = 1.333;
@@ -79,7 +69,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
 
         float3 refract_viewNormal = mul(float3x3(ap.camera.view), refract_normal);
         float3 refract_viewDir = refract(viewDir, refract_viewNormal, eta);
-        float3 refract_viewPos = min(transDist, waterDist) * viewDir;
+        float3 refract_viewPos = transDist * viewDir;
 
         int3 hitVoxelTexPos = -1;
         int3 hitVoxelPos = 0;
@@ -89,21 +79,18 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
         }
         else {
             float3 refract_localDir = mul(float3x3(ap.camera.viewInv), refract_viewDir);
-            //float3 refract_localPos = mul3(ap.camera.viewInv, refract_viewPos);
 
             float3 cameraFract = fract(ap.camera.position);
             uint3 cameraFloor = uint3(floor(ap.camera.position));
 
             float3 stepSizes, nextDist, stepAxis;
-            float3 traceLocalStart = (min(transDist, waterDist) + EPSILON) * localDir;
+            float3 traceLocalStart = (transDist + EPSILON) * localDir;
             float3 currPos = traceLocalStart + cameraFract;
             dda_init(stepSizes, nextDist, currPos, refract_localDir);
 
             bool hit = false;
             float traceWaterDist = EPSILON;
             float3 hitPos;
-
-            float dither = InterleavedGradientNoiseTime(pos);
 
             for (uint i = 0; i < 64; i++) {
                 float3 stepAxisNext;
@@ -141,6 +128,8 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
 
             bool ss_hit = false;
             if (Refract_SS_Fallback) {
+                float dither = InterleavedGradientNoiseTime(pos);
+
                 float3 traceViewStart = mul3(ap.camera.view, traceLocalStart);
                 float3 traceClipStart = project(ap.camera.projection, traceViewStart);
 
@@ -185,6 +174,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                         float f = (i + dither) / SS_RefineSteps;
                         traceClipPos = lerp(traceClipStart, traceClipEnd, f);
                         traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
+                        if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
 
                         float sampleClipDepth = solidDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
                         float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
@@ -273,12 +263,11 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
 
     half3 final_color = opaque_color;
     if (hasOverlay) {
-        final_color = fma(final_color, half3(1.0 - overlayColor.a), overlayColor.rgb);
+        final_color = fma(final_color, half3(1.0 - translucent.a), translucent.rgb);
     }
 
     if (ap.camera.fluid == 1) {
-        float waterDepthL = min(waterDist, transDist);
-        half3 opaqueWaterTint = half3(exp(-(waterDepthL + EPSILON) * Water_AbsorbColor));
+        half3 opaqueWaterTint = half3(exp(-(transDist + EPSILON) * Water_AbsorbColor));
         final_color *= opaqueWaterTint;
     }
     

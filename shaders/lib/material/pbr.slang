@@ -91,7 +91,8 @@ float mat_sss(const in float data) {
 
 float mat_f0_metal(const in float data) {
     if (MATERIAL_METALS_FORMAT != MAT_NONE) {
-        return data;
+        if (data == 0.0) return 0.04;
+        return min(data, 0.9);
     }
     else {
         return 0.04;

@@ -17,7 +17,7 @@ RWTexture2D<half4> imgFinalPrev;
 Sampler2D<half3> texSource;
 Sampler2D<half4> texFinalPrev;
 Sampler2D<half2> texVelocity;
-Sampler2D<float> mainDepthTex;
+Sampler2D<float> texDepth;
 
 static const uint sharedBufferResX = groupResX+2;
 static const uint sharedBufferResY = groupResY+2;
@@ -87,7 +87,7 @@ void applyTaa(ComputeInput input) {
     GroupMemoryBarrierWithGroupSync();
 
     if (all(input.globalPos.xy < ap.game.screenSize)) {
-        float depth = mainDepthTex[input.globalPos.xy].r;
+        float depth = texDepth[input.globalPos.xy].r;
         float2 velocity = float2(0.0);//texVelocity[input.globalPos.xy];
 
         float2 texcoord = (input.globalPos.xy + 0.5) / float2(ap.game.screenSize);

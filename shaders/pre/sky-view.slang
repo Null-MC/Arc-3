@@ -1,4 +1,3 @@
-import buffers.scene;
 import lib.common;
 import lib.sky.common;
 import lib.sky.scattering;

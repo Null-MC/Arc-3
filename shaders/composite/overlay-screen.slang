@@ -2,13 +2,9 @@ import aperture;
 import lib.common;
 import lib.water.common;
 import lib.water.water_depth;
+import lib.octohedral;
 
-extern static const int Refract_Mode;
-
-// static const int Refract_WorldSpace = 2;
-static const int Refract_ScreenSpace = 1;
-static const int Refract_None = 0;
-
+extern static const int RefractMode;
 
 Sampler2D<float> mainDepthTex;
 Sampler2D<float> solidDepthTex;
@@ -18,9 +14,6 @@ Sampler2D<half4> texFinalTranslucent;
 Sampler2D<uint> texDataTranslucent;
 Sampler2D<half3> texTintTranslucent;
 Sampler2D<half4> texWeather;
-
-// [[vk::image_format("rgba8")]]
-// RWTexture2D<float4> imgDebug;
 
 
 void ss_refract(inout float2 uv, const in float3 viewPos, const in float3 refractViewDir) {
@@ -80,12 +73,13 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     half3 opaque_color = texSource[uv];
 
     bool hasRefract = translucent.a > 0.0 || waterDist < min(transDist, ap.camera.far);
-    if (Refract_Mode != Refract_None && hasRefract) {
-        uint normalData = transDist < waterDist
-            ? transData : texWaterNormal[uv];
+    if (RefractMode != Refract_None && hasRefract) {
+        float3 waterNormal = OctDecode(unpackHalf2x16ToHalf(texWaterNormal[uv]));
+        
+        half4 packedTransData = unpackUnorm4x8ToHalf(transData);
+        float3 transNormal = OctDecode(packedTransData.xy);
 
-        float3 refract_normal = unpackUnorm4x8ToFloat(normalData).xyz;
-        refract_normal = normalize(refract_normal * 2.0 - 1.0);
+        float3 refract_normal = transDist < waterDist ? transNormal : waterNormal;
 
         const float IOR_AIR   = 1.0003;
         const float IOR_WATER   = 1.333;
@@ -104,7 +98,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
             opaque_color = half3(0.0);
         }
         else {
-            if (Refract_Mode == Refract_ScreenSpace) {
+            if (RefractMode == Refract_ScreenSpace) {
                 // float3 refract_viewPos = min(transDist, waterDist) * viewDir;
 
                 ss_refract(refract_texcoord, refract_viewPos, refract_viewDir);

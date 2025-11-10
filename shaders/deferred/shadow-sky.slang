@@ -1,4 +1,5 @@
 import aperture;
+import buffers.OpaqueObject;
 import lib.common;
 import lib.material.pbr;
 import lib.sampling.IGN;
@@ -35,19 +36,21 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
         float3 viewLocalDir = -normalize(localPos);
 
         half4 colorData = texAlbedoGB[uv];
-        uint2 normalData = texNormalGB[uv];
-        uint2 matLightData = texMatLightGB[uv];
+        // uint2 normalData = texNormalGB[uv];
+        // uint2 matLightData = texMatLightGB[uv];
 
-        half4 specularData = unpackUnorm4x8ToHalf(matLightData.r);
+        // half4 specularData = unpackUnorm4x8ToHalf(matLightData.r);
         // float3 albedo = RgbToLinear(colorData.rgb);
         // float roughness = mat_roughness(specularData.r);
         // float f0_metal = mat_f0_metal(specularData.g);
-        float sss = mat_sss(specularData.b);
 
-        float3 geo_normal = normalize(unpackUnorm4x8ToFloat(normalData.r).xyz * 2.0 - 1.0);
-        float3 tex_normal = normalize(unpackUnorm4x8ToFloat(normalData.g).xyz * 2.0 - 1.0);
+        OpaqueObject_Normals normals;
+        normals.unpack(texNormalGB[uv]);
 
-        half4 lightData = unpackUnorm4x8ToHalf(matLightData.g);
+        OpaqueObject_MatLit mat_lit;
+        mat_lit.unpack(texMatLightGB[uv]);
+
+        float sss = mat_sss(mat_lit.specular.b);
 
         float dither;
         if (TAA_Enabled) {
@@ -59,11 +62,11 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
 
         // Shadows
         float viewDist = length(viewPos);
-        float geo_NoLm = 1.0 - max(dot(geo_normal, scene[0].SkyLightLocalDir), 0.0);
+        float geo_NoLm = 1.0 - max(dot(normals.geo, scene[0].SkyLightLocalDir), 0.0);
         float normal_bias = geo_NoLm * (viewDist * 0.006 + 0.06);
         float offset_bias = viewDist * 0.002;
 
-        float3 shadowLocalPos = geo_normal * normal_bias + localPos;
+        float3 shadowLocalPos = normals.geo * normal_bias + localPos;
         float3 shadowViewPos = mul3(ap.celestial.view, shadowLocalPos);
         shadowViewPos.z += offset_bias;
         
@@ -95,7 +98,7 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
             half3 sss_color = normalize(RgbToLinear(1.0 - colorData.rgb) + 0.02);
             half3 lit = coverage_dist.x * exp(-(absorb_depth * sss_color + EPSILON));
 
-            float tex_NoLm = max(dot(tex_normal, scene[0].SkyLightLocalDir), 0.0);
+            float tex_NoLm = max(dot(normals.tex, scene[0].SkyLightLocalDir), 0.0);
             output.sss.rgb = sss * (1.0 - tex_NoLm) * lit;
         }
     }

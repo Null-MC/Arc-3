@@ -1,4 +1,5 @@
 import aperture;
+import buffers.OpaqueObject;
 import lib.common;
 import lib.material.pbr;
 import lib.light.brdf;
@@ -25,9 +26,6 @@ RWTexture2D<half3> imgDiffuse;
 
 [[vk::image_format("rgba16f")]]
 RWTexture2D<half3> imgSpecular;
-
-[[vk::image_format("rgba8")]]
-RWTexture2D<float4> imgDebug;
 
 Sampler2D<float> solidDepthTex;
 
@@ -144,8 +142,14 @@ void applyPointLights(ComputeInput input) {
 
     if (depth < 1.0 && total > 0) {
         float4 colorData = texAlbedoGB[input.globalPos.xy];
-        uint2 normal_data = texNormalGB[input.globalPos.xy];
-        uint2 mat_light_data = texMatLightGB[input.globalPos.xy];
+        // uint2 normal_data = texNormalGB[input.globalPos.xy];
+        // uint2 mat_light_data = texMatLightGB[input.globalPos.xy];
+
+        OpaqueObject_Normals normals;
+        normals.unpack(texNormalGB[input.globalPos.xy]);
+
+        OpaqueObject_MatLit mat_lit;
+        mat_lit.unpack(texMatLightGB[input.globalPos.xy]);
 
         float2 texcoord = (input.globalPos.xy + 0.5) / float2(ap.game.screenSize);
         if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
@@ -156,21 +160,21 @@ void applyPointLights(ComputeInput input) {
 
         float3 viewDir = -normalize(localPos);
 
-        float3 geo_normal = normalize(unpackUnorm4x8ToFloat(normal_data.r).xyz * 2.0 - 1.0);
-        float3 tex_normal = normalize(unpackUnorm4x8ToFloat(normal_data.g).xyz * 2.0 - 1.0);
-        float4 specular_data = unpackUnorm4x8ToFloat(mat_light_data.r);
+        // float3 geo_normal = normalize(unpackUnorm4x8ToFloat(normal_data.r).xyz * 2.0 - 1.0);
+        // float3 tex_normal = normalize(unpackUnorm4x8ToFloat(normal_data.g).xyz * 2.0 - 1.0);
+        // float4 specular_data = unpackUnorm4x8ToFloat(mat_light_data.r);
 
-        half roughness = mat_roughness(specular_data.r);
-        half f0_metal = mat_f0_metal(specular_data.g);
+        half roughness = mat_roughness(mat_lit.specular.r);
+        half f0_metal = mat_f0_metal(mat_lit.specular.g);
 
         half3 albedo = RgbToLinear(colorData.rgb);
         half roughL = roughness * roughness;
 
         const float offsetBias = 0.06;
         const float normalBias = 0.12;
-        float3 localSamplePos = normalBias * geo_normal + localPos;
+        float3 localSamplePos = normalBias * normals.geo + localPos;
 
-        float NoVm = max(dot(tex_normal, viewDir), 0.0);
+        float NoVm = max(dot(normals.tex, viewDir), 0.0);
         // float3 f0 = f0_metal < 0.9 ? f0_metal : albedo;
         half metalness = mat_metalness(f0_metal);
         half3 f0 = lerp(f0_metal, albedo, metalness);
@@ -194,8 +198,8 @@ void applyPointLights(ComputeInput input) {
             lightColor *= saturate(lightRange / 15.0) * BLOCK_LUX;
 
             float3 H = normalize(lightDir + viewDir);
-            float NoLm = max(dot(tex_normal, lightDir), 0.0);
-            float NoHm = max(dot(tex_normal, H), 0.0);
+            float NoLm = max(dot(normals.tex, lightDir), 0.0);
+            float NoHm = max(dot(normals.tex, H), 0.0);
             float LoHm = max(dot(lightDir, H), 0.0);
             float VoHm = max(dot(viewDir, H), 0.0);
 

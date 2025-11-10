@@ -23,6 +23,11 @@ let settings: BuiltStreamingBuffer | undefined;
 
 let _renderConfig: RendererConfig;
 
+const Reflect_WorldSpace = 3;
+const Reflect_ScreenSpace = 2;
+const Reflect_SkyOnly = 1;
+const Reflect_None = 0;
+
 const Refract_WorldSpace = 2;
 const Refract_ScreenSpace = 1;
 const Refract_None = 0;
@@ -81,7 +86,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .addFloat('BLOCK_LUX', 200)
         .addInt('MATERIAL_FORMAT', options.Material_Format)
         .addInt('Shadow_Resolution', options.Shadow_Resolution)
-        .addInt('SHADOW_CASCADE_COUNT', 4)
+        .addInt('Shadow_CascadeCount', renderConfig.shadow.cascades)
         .addInt('ReflectMode', options.Lighting_Reflection_Mode)
         .addInt('RefractMode', options.Lighting_Refraction_Mode)
         .addBool('FloodFill_Enabled', options.Lighting_FloodFill_Enabled)
@@ -588,24 +593,33 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .exportBool('DEBUG_LIGHT_TILES', DEBUG_LIGHT_TILES)
                     .compile();
             }
-
+            
             opaqueStage.createComposite("deferred-lighting-final")
                 .location("deferred/lighting-final", "lightingFinal")
                 .target(0, finalFlipper.getWriteTexture())
                 .compile();
+
+            if (options.Lighting_Reflection_Mode == Reflect_ScreenSpace) {
+                finalFlipper.flip();
+
+                opaqueStage.createComposite("deferred-reflections")
+                    .location("deferred/reflect_screen", "applyReflections")
+                    .target(0, finalFlipper.getWriteTexture())
+                    .overrideObject('texSource', finalFlipper.getReadTexture().name())
+                    .compile();
+            }
         });
 
         withSubList(postRenderStage, 'translucent-composite', translucentStage => {
             finalFlipper.flip();
 
             let location = options.Lighting_Refraction_Mode == Refract_WorldSpace
-                ? "composite/overlays_ws" : "composite/overlays_ss";
+                ? "composite/overlay_voxel" : "composite/overlay_screen";
             
             translucentStage.createComposite("composite-overlays")
                 .location(location, "applyOverlays")
                 .target(0, finalFlipper.getWriteTexture())
                 .overrideObject('texSource', finalFlipper.getReadTexture().name())
-                .exportInt('Refract_Mode', options.Lighting_Refraction_Mode)
                 .exportBool('Refract_SS_Fallback', options.Lighting_Refraction_ScreenSpaceFallback)
                 .compile();
         });
@@ -705,6 +719,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         1)
                     .overrideObject("texSource", finalFlipper.getReadTexture().name())
                     .overrideObject("imgFinal", finalFlipper.getWriteTexture().imageName())
+                    .overrideObject('texDepth', 'solidDepthTex')
                     .compile();
             }
 
@@ -756,12 +771,12 @@ export function beginFrame(state : WorldState) : void {
     const options = new Options();
     const alt = state.currentFrame() % 2 == 1;
     
-    if (options.Post_TAA_Enabled) {
+    if (texFinalPrevRef && options.Post_TAA_Enabled) {
         texFinalPrevRef.pointTo(alt ? texFinalPrevA : texFinalPrevB);
         imgFinalPrevRef.pointTo(alt ? texFinalPrevB : texFinalPrevA);
     }
 
-    if (options.Lighting_FloodFill_Enabled) {
+    if (floodfill && options.Lighting_FloodFill_Enabled) {
         floodfill.update(alt);
     }
 

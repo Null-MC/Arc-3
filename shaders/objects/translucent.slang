@@ -19,6 +19,7 @@ import lib.sampling.dfd_normal;
 import lib.shadow;
 import lib.material.pbr;
 import lib.material.parallax;
+import lib.octohedral;
 import lib.tbn;
 
 extern static const bool SmoothNormalsEnabled = true;
@@ -26,6 +27,7 @@ extern static const bool SmoothNormalsEnabled = true;
 // extern static const float BLOCK_LUX;
 extern static const bool RENDER_TERRAIN = false;
 extern static const bool RENDER_PARTICLES = false;
+extern static const int RefractMode;
 extern static const bool Water_WaveEnabled = false;
 extern static const bool FloodFill_Enabled;
 extern static const bool Debug_WhiteWorld;
@@ -366,28 +368,36 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
     // clamp to avoid buffer overflow
     output.color = clamp(output.color, 0.0, 65000.0);
 
-    uint packedTexNormal = packUnorm4x8(float4(tex_normal * 0.5 + 0.5, 1.0));
+    half2 packedTexNormal = OctEncode(tex_normal);
 
-    if (isWater) {
+    if (RefractMode != Refract_WorldSpace && isWater) {
         uint2 uv = uint2(fragPos);
         
         float opaqueDepth = solidDepthTex[uv];
-        float3 opaqueClipPos = float3(fragPos / ap.game.screenSize, opaqueDepth) * 2.0 - 1.0;
-        float3 opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);
-        float opaqueDist = length(opaqueViewPos);
+        float2 screen_texcoord = fragPos / ap.game.screenSize;
+        if (TAA_Enabled) screen_texcoord += scene[0].taa_jitter;
 
-        if (viewDist < opaqueDist) {
+        float3 opaqueClipPos = float3(screen_texcoord, opaqueDepth) * 2.0 - 1.0;
+        float3 opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);
+        float opaqueDistSq = dot(opaqueViewPos, opaqueViewPos);
+
+        if (pow2(viewDist) < opaqueDistSq) {
             if (WaterDepth_set(uv, viewDist)) {
                 imgWaterFinal[uv] = output.color;
-                imgWaterNormal[uv] = packedTexNormal;
+                imgWaterNormal[uv] = packHalf2x16(packedTexNormal);
             }
             
             discard;
         }
     }
 
-    output.data = packedTexNormal;
+    // uint2 scaledPackedNormal = uint2(packedTexNormal * 4096.0);
+
+    // output.data = bitfieldInsert(          0, scaledPackedNormal.x,  0, 12);
+    // output.data = bitfieldInsert(output.data, scaledPackedNormal.y, 12, 12);
+    output.data = packUnorm4x8(half4(packedTexNormal, 0.0, 0.0));
     output.data = bitfieldInsert(output.data, blockMapId, 24, 8);
+
     
     return output;
 }
