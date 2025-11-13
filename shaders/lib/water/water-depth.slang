@@ -1,40 +1,32 @@
 import aperture;
 
 [[vk::image_format("r32ui")]]
-RWTexture2D<uint> imgWaterDepth;
+RWTexture2D<uint> imgDepth_water;
 
-// [[vk::image_format("r32ui")]]
-// RWTexture2D<uint> imgWaterDepth2;
-
-[[vk::image_format("rgba16f")]]
-RWTexture2D<half4> imgWaterFinal;
+[[vk::image_format("rgba8")]]
+RWTexture2D<half4> imgAlbedoGB_water;
 
 [[vk::image_format("r32ui")]]
-RWTexture2D<uint> imgWaterNormal;
+RWTexture2D<uint2> imgNormalGB_water;
 
-Sampler2D<uint> texWaterDepth;
-// Sampler2D<uint> texWaterDepth2;
-Sampler2D<half4> texWaterFinal;
-Sampler2D<uint> texWaterNormal;
+[[vk::image_format("rg32ui")]]
+RWTexture2D<uint2> imgMatLightGB_water;
+
+Sampler2D<uint> texDepth_water;
+Sampler2D<half4> texAlbedoGB_water;
+Sampler2D<uint2> texNormalGB_water;
+Sampler2D<uint2> texMatLightGB_water;
 
 
 void WaterDepth_clear(const in uint2 uv) {
-    imgWaterDepth[uv] = uint.maxValue;
-    // imgWaterDepth2[uv] = uint.maxValue;
+    imgDepth_water[uv] = uint.maxValue;
 }
 
 bool WaterDepth_set(const in uint2 uv, const in float distance) {
-    float distNorm = saturate(distance / ap.camera.far);
-    uint depthInt = uint(distNorm * uint.maxValue);
-    // InterlockedMin(imgWaterDepth[uv], depthInt);
-    uint depthLast = __atomic_min(imgWaterDepth[uv], depthInt);
-    bool result = depthLast > depthInt;
-    // if (result && depthLast < uint.maxValue) __atomic_min(imgWaterDepth2[uv], depthLast);
-    return result;
+    uint depthInt = uint(saturate(distance / ap.camera.far) * uint.maxValue);
+    return __atomic_min(imgDepth_water[uv], depthInt) > depthInt;
 }
 
 float WaterDepth_get(const in uint2 uv) {
-    float distNorm = texWaterDepth[uv] / float(uint.maxValue);
-    // float2 distNorm = float2(texWaterDepth[uv], texWaterDepth2[uv]) / float(uint.maxValue);
-    return distNorm * ap.camera.far;
+    return (texDepth_water[uv] / float(uint.maxValue)) * ap.camera.far;
 }

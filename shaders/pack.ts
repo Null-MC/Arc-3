@@ -1,5 +1,6 @@
 import {Options} from "./scripts/Options";
 import {BlockMap} from "./scripts/BlockMap";
+import {TagBuilder} from "./scripts/TagBuilder";
 import {Dimensions} from "./scripts/Dimensions";
 import {FloodFill} from "./scripts/FloodFill";
 import {BufferFlipper} from "./scripts/BufferFlipper";
@@ -76,10 +77,6 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     const renderConfig = pipeline.getRendererConfig();
     const options = new Options();
 
-    BlockMappings = new BlockMap();
-    BlockMappings.map('water', 'BLOCK_WATER');
-    BlockMappings.map('lava', 'BLOCK_LAVA');
-
     const globalExports = pipeline.createExportList()
         .addInt('DIMENSION', dimension.Index)
         .addBool('World_HasSky', dimension.World_HasSky)
@@ -96,10 +93,15 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .addBool('TAA_Enabled', options.Post_TAA_Enabled)
         .addBool('Debug_WhiteWorld', options.Debug_WhiteWorld);
 
-    for (let blockName in BlockMappings.mappings) {
-        const meta = BlockMappings.get(blockName);
-        globalExports.addInt(meta.define, meta.index);
-    }
+    BlockMappings = new BlockMap(globalExports)
+        .map('water', 'BLOCK_WATER')
+        .map('lava', 'BLOCK_LAVA');
+
+    const tagMap = new TagBuilder(pipeline, globalExports)
+        // .map("TAG_LEAVES", new NamespacedId("minecraft", "leaves"))
+        .map("TAG_STAIRS", new NamespacedId("minecraft", "stairs"))
+        .map("TAG_SLABS", new NamespacedId("minecraft", "slabs"));
+        // .map("TAG_SNOW", new NamespacedId("minecraft", "snow"));
         
     pipeline.setGlobalExport(globalExports.build());
 
@@ -122,25 +124,27 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
     const finalFlipper = new BufferFlipper(texFinalA, texFinalB);
 
-    const texFinalTranslucent = pipeline.createTexture("texFinalTranslucent")
+    const texFinal_translucent = pipeline.createTexture("texFinal_translucent")
         .width(screenWidth)
         .height(screenHeight)
         .format(Format.RGBA16F)
         .clearColor(0, 0, 0, 0)
         .build();
 
+    const texFinal_water = pipeline.createTexture("texFinal_water")
+        .width(screenWidth)
+        .height(screenHeight)
+        .format(Format.RGBA16F)
+        .clearColor(0, 0, 0, 0)
+        .build();
+
+    // const finalTranslucentFlipper = new BufferFlipper(texFinalTranslucentA, texFinalTranslucentB);
+
     const texTintTranslucent = pipeline.createTexture("texTintTranslucent")
         .width(screenWidth)
         .height(screenHeight)
         .format(Format.RGB8)
         .clearColor(1, 1, 1, 1)
-        .build();
-
-    const texDataTranslucent = pipeline.createTexture("texDataTranslucent")
-        .width(screenWidth)
-        .height(screenHeight)
-        .format(Format.R32UI)
-        .clearColor(0, 0, 0, 0)
         .build();
 
     let texVelocity : BuiltTexture | undefined;
@@ -166,61 +170,80 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .build();
     }
 
-    // const texPositionGB = pipeline.createTexture('texPositionGB')
-    //     .width(screenWidth)
-    //     .height(screenHeight)
-    //     .format(Format.RGB16F)
-    //     .clearColor(0, 0, 0, 0)
-    //     .build();
-
-    const texAlbedoGB = pipeline.createTexture('texAlbedoGB')
+    const texAlbedoGB_opaque = pipeline.createTexture('texAlbedoGB_opaque')
         .width(screenWidth)
         .height(screenHeight)
         .format(Format.RGBA8)
         .clearColor(0, 0, 0, 0)
         .build();
 
-    const texNormalGB = pipeline.createTexture('texNormalGB')
+    const texNormalGB_opaque = pipeline.createTexture('texNormalGB_opaque')
         .width(screenWidth)
         .height(screenHeight)
         .format(Format.RG32UI)
         .clearColor(0, 0, 0, 0)
         .build();
 
-    const texMatLightGB = pipeline.createTexture('texMatLightGB')
+    const texMatLightGB_opaque = pipeline.createTexture('texMatLightGB_opaque')
         .width(screenWidth)
         .height(screenHeight)
         .format(Format.RG32UI)
         .clearColor(0, 0, 0, 0)
         .build();
 
-    pipeline.createImageTexture('texWaterFinal', 'imgWaterFinal')
+    const texAlbedoGB_translucent = pipeline.createTexture('texAlbedoGB_translucent')
         .width(screenWidth)
         .height(screenHeight)
-        .format(Format.RGBA16F)
+        .format(Format.RGBA8)
         .clearColor(0, 0, 0, 0)
         .build();
 
-    pipeline.createImageTexture('texWaterNormal', 'imgWaterNormal')
+    const texNormalGB_translucent = pipeline.createTexture('texNormalGB_translucent')
         .width(screenWidth)
         .height(screenHeight)
-        .format(Format.R32UI)
+        .format(Format.RG32UI)
         .clearColor(0, 0, 0, 0)
         .build();
 
-    pipeline.createImageTexture('texWaterDepth', 'imgWaterDepth')
+    const texMatLightGB_translucent = pipeline.createTexture('texMatLightGB_translucent')
         .width(screenWidth)
         .height(screenHeight)
-        .format(Format.R32UI)
-        // .clearColor(0, 0, 0, 0)
+        .format(Format.RG32UI)
+        .clearColor(0, 0, 0, 0)
         .build();
 
-    pipeline.createImageTexture('texWaterDepth2', 'imgWaterDepth2')
-        .width(screenWidth)
-        .height(screenHeight)
-        .format(Format.R32UI)
-        // .clearColor(0, 0, 0, 0)
-        .build();
+    let texAlbedoGB_water: BuiltTexture | undefined;
+    let texNormalGB_water: BuiltTexture | undefined;
+    let texMatLightGB_water: BuiltTexture | undefined;
+    if (options.Lighting_Refraction_Mode != Refract_WorldSpace) {
+        texAlbedoGB_water = pipeline.createImageTexture('texAlbedoGB_water', 'imgAlbedoGB_water')
+            .width(screenWidth)
+            .height(screenHeight)
+            .format(Format.RGBA8)
+            .clearColor(0, 0, 0, 0)
+            .build();
+
+        texNormalGB_water = pipeline.createImageTexture('texNormalGB_water', 'imgNormalGB_water')
+            .width(screenWidth)
+            .height(screenHeight)
+            .format(Format.RG32UI)
+            .clearColor(0, 0, 0, 0)
+            .build();
+
+        texMatLightGB_water = pipeline.createImageTexture('texMatLightGB_water', 'imgMatLightGB_water')
+            .width(screenWidth)
+            .height(screenHeight)
+            .format(Format.RG32UI)
+            .clearColor(0, 0, 0, 0)
+            .build();
+
+        pipeline.createImageTexture('texDepth_water', 'imgDepth_water')
+            .width(screenWidth)
+            .height(screenHeight)
+            .format(Format.R32UI)
+            // .clearColor(0, 0, 0, 0)
+            .build();
+    }
 
     let texShadowColor: BuiltTexture | undefined;
     let texSkyTransmit: BuiltTexture | undefined;
@@ -332,8 +355,9 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .clear(false)
         .build();
 
+    let texDebug: BuiltTexture | undefined;
     if (DEBUG || DEBUG_LIGHT_TILES) {
-        pipeline.createImageTexture('texDebug', 'imgDebug')
+        texDebug = pipeline.createImageTexture('texDebug', 'imgDebug')
             .format(Format.RGBA8)
             .width(screenWidth)
             .height(screenHeight)
@@ -472,13 +496,12 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .location("objects/opaque")
             .exportBool('Parallax_Enabled', options.Material_Parallax_Enabled)
             .exportInt('Parallax_Type', options.Material_Parallax_Type)
-            // .exportFloat('Parallax_Depth', options.Material_Parallax_Depth * 0.01)
             .exportInt('Parallax_SampleCount', options.Material_Parallax_SampleCount)
             .exportBool('Parallax_Optimize', options.Material_Parallax_Optimize)
-            .target(0, texAlbedoGB).blendOff(0)//.blendFunc(0, Func.SRC_ALPHA, Func.ONE_MINUS_SRC_ALPHA, Func.ONE, Func.ZERO)
-            // .target(1, texPositionGB).blendOff(1)
-            .target(1, texNormalGB).blendOff(1)
-            .target(2, texMatLightGB).blendOff(2);
+            .exportBool('Material_SmoothNormals', options.Material_SmoothNormals)
+            .target(0, texAlbedoGB_opaque).blendOff(0)//.blendFunc(0, Func.SRC_ALPHA, Func.ONE_MINUS_SRC_ALPHA, Func.ONE, Func.ZERO)
+            .target(1, texNormalGB_opaque).blendOff(1)
+            .target(2, texMatLightGB_opaque).blendOff(2);
 
         if (options.Post_TAA_Enabled) shader.target(3, texVelocity).blendOff(3);
         return shader;
@@ -509,11 +532,16 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     function translucentObjectShader(name: string, usage: ProgramUsage) {
         const shader = pipeline.createObjectShader(name, usage)
             .location("objects/translucent")
-            .target(0, texFinalTranslucent).blendOff(0) //.blendFunc(0, Func.ONE, Func.ONE_MINUS_SRC_ALPHA, Func.ONE, Func.ZERO)
-            .target(1,  texTintTranslucent).blendOff(1) //.blendFunc(1, Func.DST_COLOR, Func.ZERO, Func.ZERO, Func.ZERO)
-            .target(2,  texDataTranslucent).blendOff(2);
+            .exportBool('Parallax_Enabled', options.Material_Parallax_Enabled)
+            .exportInt('Parallax_Type', options.Material_Parallax_Type)
+            .exportInt('Parallax_SampleCount', options.Material_Parallax_SampleCount)
+            .exportBool('Parallax_Optimize', options.Material_Parallax_Optimize)
+            .target(0, texAlbedoGB_translucent).blendOff(0)//.blendFunc(0, Func.SRC_ALPHA, Func.ONE_MINUS_SRC_ALPHA, Func.ONE, Func.ZERO)
+            .target(1,  texTintTranslucent).blendOff(1)
+            .target(2, texNormalGB_translucent).blendOff(2)
+            .target(3, texMatLightGB_translucent).blendOff(3);
 
-        //if (options.Post_TAA_Enabled) shader.target(1, texVelocity).blendOff(1);
+        //if (options.Post_TAA_Enabled) shader.target(4, texVelocity).blendOff(1);
         return shader;
     }
 
@@ -542,18 +570,26 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     }
     
     withStage(pipeline, Stage.POST_RENDER, postRenderStage => {
-        finalFlipper.flip();
-
-        if (options.Lighting_Refraction_Mode == Refract_WorldSpace) {
-            // TODO: rewrite opaque gbuffer data with WS refraction?
-        }
-
         withSubList(postRenderStage, 'opaque-deferred', opaqueStage => {
+            opaqueStage.createComposite("deferred-lighting-block-hand")
+                .location("deferred/lighting-block-hand", "lightingBlockHand")
+                .target(0, texDiffuse)
+                .target(1, texSpecular)
+                .overrideObject('texDepth', 'solidDepthTex')
+                .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
+                .overrideObject('texNormalGB', texNormalGB_opaque.name())
+                .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
+                .compile();
+
             if (dimension.World_HasSky) {
                 opaqueStage.createComposite("deferred-shadow-sky")
                     .location("deferred/shadow-sky", "skyShadowSss")
                     .target(0, texShadowGB)
                     .target(1, texSssGB)
+                    .overrideObject('texDepth', 'solidDepthTex')
+                    .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
+                    .overrideObject('texNormalGB', texNormalGB_opaque.name())
+                    .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                     .exportFloat('Shadow_MaxRadius', options.Shadow_MaxRadius)
                     .exportInt('Shadow_PcssSamples', options.Shadow_PcssSamples)
                     .exportInt('Shadow_PcfSamples', options.Shadow_PcfSamples)
@@ -568,20 +604,19 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         Math.ceil(screenWidth / 16),
                         Math.ceil(screenHeight / 16),
                         1)
+                    .overrideObject('texDepth', 'solidDepthTex')
                     .compile();
 
                 opaqueStage.createComposite("deferred-lighting-sky")
                     .location("deferred/lighting-sky", "lightingSky")
-                    .target(0, texDiffuse)
-                    .target(1, texSpecular)
+                    .target(0, texDiffuse).blendFunc(0, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
+                    .target(1, texSpecular).blendFunc(1, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
+                    .overrideObject('texDepth', 'solidDepthTex')
+                    .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
+                    .overrideObject('texNormalGB', texNormalGB_opaque.name())
+                    .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                     .compile();
             }
-
-            opaqueStage.createComposite("deferred-lighting-block-hand")
-                .location("deferred/lighting-block-hand", "lightingBlockHand")
-                .target(0, texDiffuse).blendFunc(0, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
-                .target(1, texSpecular).blendFunc(1, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
-                .compile();
 
             if (options.Lighting_Point_Enabled) {
                 opaqueStage.createCompute("deferred-lighting-block-point")
@@ -590,28 +625,156 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         Math.ceil(screenWidth / 16.0),
                         Math.ceil(screenHeight / 16.0),
                         1)
+                    .overrideObject('texDepth', 'solidDepthTex')
+                    .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
+                    .overrideObject('texNormalGB', texNormalGB_opaque.name())
+                    .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                     .exportBool('DEBUG_LIGHT_TILES', DEBUG_LIGHT_TILES)
                     .compile();
             }
+
+            finalFlipper.flip();
             
             opaqueStage.createComposite("deferred-lighting-final")
                 .location("deferred/lighting-final", "lightingFinal")
                 .target(0, finalFlipper.getWriteTexture())
+                .overrideObject('texDepth', 'solidDepthTex')
+                .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
+                .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                 .compile();
 
-            if (options.Lighting_Reflection_Mode == Reflect_ScreenSpace) {
+            if (options.Lighting_Reflection_Mode == Reflect_WorldSpace || options.Lighting_Reflection_Mode == Reflect_ScreenSpace) {
                 finalFlipper.flip();
 
-                opaqueStage.createComposite("deferred-reflections")
-                    .location("deferred/reflect_screen", "applyReflections")
+                const location = options.Lighting_Reflection_Mode == Reflect_WorldSpace
+                    ? 'deferred/reflect_voxel' : 'deferred/reflect_screen';
+
+                opaqueStage.createComposite("opaque-reflections")
+                    .location(location, "applyReflections")
                     .target(0, finalFlipper.getWriteTexture())
                     .overrideObject('texSource', finalFlipper.getReadTexture().name())
+                    .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
+                    .overrideObject('texNormalGB', texNormalGB_opaque.name())
+                    .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                     .compile();
             }
         });
 
+        withSubList(postRenderStage, 'translucent-deferred', translucentStage => {
+            translucentStage.createComposite("deferred-lighting-block-hand")
+                .location("deferred/lighting-block-hand", "lightingBlockHand")
+                .target(0, texDiffuse)
+                .target(1, texSpecular)
+                .overrideObject('texDepth', 'mainDepthTex')
+                .overrideObject('texAlbedoGB', texAlbedoGB_translucent.name())
+                .overrideObject('texNormalGB', texNormalGB_translucent.name())
+                .overrideObject('texMatLightGB', texMatLightGB_translucent.name())
+                .compile();
+
+            if (dimension.World_HasSky) {
+                translucentStage.createComposite("deferred-shadow-sky")
+                    .location("deferred/shadow-sky", "skyShadowSss")
+                    .target(0, texShadowGB)
+                    .target(1, texSssGB)
+                    .overrideObject('texDepth', 'mainDepthTex')
+                    .overrideObject('texAlbedoGB', texAlbedoGB_translucent.name())
+                    .overrideObject('texNormalGB', texNormalGB_translucent.name())
+                    .overrideObject('texMatLightGB', texMatLightGB_translucent.name())
+                    .exportFloat('Shadow_MaxRadius', options.Shadow_MaxRadius)
+                    .exportInt('Shadow_PcssSamples', options.Shadow_PcssSamples)
+                    .exportInt('Shadow_PcfSamples', options.Shadow_PcfSamples)
+                    .exportFloat('Shadow_SssMaxDist', options.Shadow_SssMaxDist)
+                    .exportFloat('Shadow_SssMaxRadius', options.Shadow_SssMaxRadius)
+                    .exportInt('Shadow_SssPcfSamples', options.Shadow_SssPcfSamples)
+                    .compile();
+
+                translucentStage.createCompute("deferred-shadow-sky-filter")
+                    .location("deferred/shadow-sky-filter", "filterShadowSss")
+                    .workGroups(
+                        Math.ceil(screenWidth / 16),
+                        Math.ceil(screenHeight / 16),
+                        1)
+                    .overrideObject('texDepth', 'mainDepthTex')
+                    .compile();
+
+                translucentStage.createComposite("deferred-lighting-sky")
+                    .location("deferred/lighting-sky", "lightingSky")
+                    .target(0, texDiffuse).blendFunc(0, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
+                    .target(1, texSpecular).blendFunc(1, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
+                    .overrideObject('texDepth', 'mainDepthTex')
+                    .overrideObject('texAlbedoGB', texAlbedoGB_translucent.name())
+                    .overrideObject('texNormalGB', texNormalGB_translucent.name())
+                    .overrideObject('texMatLightGB', texMatLightGB_translucent.name())
+                    .compile();
+            }
+
+            if (options.Lighting_Point_Enabled) {
+                translucentStage.createCompute("deferred-lighting-block-point")
+                    .location("deferred/lighting-block-point", "applyPointLights")
+                    .workGroups(
+                        Math.ceil(screenWidth / 16.0),
+                        Math.ceil(screenHeight / 16.0),
+                        1)
+                    .overrideObject('texDepth', 'mainDepthTex')
+                    .overrideObject('texAlbedoGB', texAlbedoGB_translucent.name())
+                    .overrideObject('texNormalGB', texNormalGB_translucent.name())
+                    .overrideObject('texMatLightGB', texMatLightGB_translucent.name())
+                    .exportBool('DEBUG_LIGHT_TILES', DEBUG_LIGHT_TILES)
+                    .compile();
+            }
+            
+            translucentStage.createComposite("deferred-lighting-final")
+                .location("deferred/lighting-final", "lightingFinal")
+                .target(0, texFinal_translucent)
+                .overrideObject('texDepth', 'mainDepthTex')
+                .overrideObject('texAlbedoGB', texAlbedoGB_translucent.name())
+                .overrideObject('texMatLightGB', texMatLightGB_translucent.name())
+                .exportBool('RENDER_TRANSLUCENT', true)
+                .compile();
+        });
+
+        if (options.Lighting_Refraction_Mode != Refract_WorldSpace) {
+            withSubList(postRenderStage, 'water-deferred', waterStage => {
+                waterStage.createComposite("deferred-lighting-block-hand")
+                    .location("deferred-water/lighting-block-hand", "lightingBlockHand")
+                    .target(0, texDiffuse)
+                    .target(1, texSpecular)
+                    .compile();
+
+                if (dimension.World_HasSky) {
+                    waterStage.createComposite("deferred-lighting-sky")
+                        .location("deferred-water/lighting-sky", "lightingSky")
+                        .target(0, texDiffuse).blendFunc(0, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
+                        .target(1, texSpecular).blendFunc(1, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
+                        .exportFloat('Shadow_MaxRadius', options.Shadow_MaxRadius)
+                        .compile();
+                }
+
+                // if (options.Lighting_Point_Enabled) {
+                //     waterStage.createCompute("deferred-lighting-block-point")
+                //         .location("deferred/lighting-block-point", "applyPointLights")
+                //         .workGroups(
+                //             Math.ceil(screenWidth / 16.0),
+                //             Math.ceil(screenHeight / 16.0),
+                //             1)
+                //         // .overrideObject('texDepth', 'mainDepthTex')
+                //         .overrideObject('texAlbedoGB', texAlbedoGB_water.name())
+                //         .overrideObject('texNormalGB', texNormalGB_water.name())
+                //         .overrideObject('texMatLightGB', texMatLightGB_water.name())
+                //         .exportBool('DEBUG_LIGHT_TILES', DEBUG_LIGHT_TILES)
+                //         .compile();
+                // }
+                
+                waterStage.createComposite("deferred-lighting-final")
+                    .location("deferred-water/lighting-final", "lightingFinal")
+                    .target(0, texFinal_water)
+                    .compile();
+            });
+        }
+
         withSubList(postRenderStage, 'translucent-composite', translucentStage => {
             finalFlipper.flip();
+            // finalTranslucentFlipper.flip();
 
             let location = options.Lighting_Refraction_Mode == Refract_WorldSpace
                 ? "composite/overlay_voxel" : "composite/overlay_screen";
@@ -619,9 +782,23 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             translucentStage.createComposite("composite-overlays")
                 .location(location, "applyOverlays")
                 .target(0, finalFlipper.getWriteTexture())
-                .overrideObject('texSource', finalFlipper.getReadTexture().name())
+                .overrideObject('texFinal_opaque', finalFlipper.getReadTexture().name())
                 .exportBool('Refract_SS_Fallback', options.Lighting_Refraction_ScreenSpaceFallback)
                 .compile();
+
+            if (options.Lighting_Reflection_Mode == Reflect_WorldSpace || options.Lighting_Reflection_Mode == Reflect_ScreenSpace) {
+                finalFlipper.flip();
+
+                let location = options.Lighting_Reflection_Mode == Reflect_WorldSpace
+                    ? "composite/reflect_voxel" : "composite/reflect_screen";
+
+                translucentStage.createComposite("translucent-reflections")
+                    .location(location, "applyReflections")
+                    .target(0, finalFlipper.getWriteTexture())
+                    .overrideObject('texSource', finalFlipper.getReadTexture().name())
+                    .exportBool('Reflect_SS_Fallback', options.Lighting_Reflection_ScreenSpaceFallback)
+                    .compile();
+            }
         });
 
         withSubList(postRenderStage, 'final', finalStage => {

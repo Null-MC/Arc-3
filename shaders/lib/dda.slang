@@ -17,3 +17,12 @@ float3 dda_step(out float3 stepAxis, inout float3 nextDist, const in float3 step
 
     return localDir * closestDist;
 }
+
+float3 projectToScreenBounds(const in float3 screenPos, const in float3 screenDir) {
+    float3 stepDir = sign(screenDir);
+    float3 nextDist = stepDir * 0.5 + 0.5;
+    nextDist = (nextDist - fract(screenPos)) / screenDir;
+
+    float closestDist = minOf(nextDist);
+    return fma(screenDir, closestDist, screenPos);
+}

@@ -1,4 +1,5 @@
 import aperture;
+import buffers.ObjectData;
 import lib.common;
 import lib.dda;
 import lib.sampling.IGN;
@@ -13,18 +14,18 @@ import lib.shadow;
 import lib.octohedral;
 import lib.voxel_tex;
 
-extern static const bool Refract_SS_Fallback = true;
+extern static const bool Refract_SS_Fallback;
 extern static const uint BLOCK_WATER;
 
 Sampler2D<float> mainDepthTex;
 Sampler2D<float> solidDepthTex;
 
-Sampler2D<half3> texSource;
-Sampler2D<half4> texFinalTranslucent;
-Sampler2D<uint> texDataTranslucent;
+Sampler2D<half3> texFinal_opaque;
+Sampler2D<half4> texFinal_translucent;
+Sampler2D<uint2> texNormalGB_translucent;
 Sampler2D<half3> texTintTranslucent;
-Sampler2D<half4> texWeather;
 
+Sampler2D<half4> texWeather;
 Sampler2D<half3> blockAtlas;
 
 
@@ -33,9 +34,8 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     uint2 uv = uint2(pos);
 
     half4 weather = texWeather[uv];
-    half3 tint = texTintTranslucent[uv];
-    half4 translucent = texFinalTranslucent[uv];
-    uint transData = texDataTranslucent[uv];
+    half4 translucent = texFinal_translucent[uv];
+    // uint transData = texDataTranslucent[uv];
 
     float2 texcoord = pos / ap.game.screenSize;
     if (TAA_Enabled) texcoord += scene[0].taa_jitter;
@@ -48,16 +48,18 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
 
     float3 viewDir = transViewPos / transDist;
     float3 localDir = transLocalPos / transDist;
-    tint = RgbToLinear(tint);
 
-    half3 opaque_color = texSource[uv];
+    half3 opaque_color = texFinal_opaque[uv];
     
     bool hasOverlay = translucent.a > 0.0;
+    half3 tint = half3(1.0);
 
     if (hasOverlay) {
-        half4 packedTransData = unpackUnorm4x8ToHalf(transData);
-        float3 refract_normal = OctDecode(packedTransData.xy);
-        uint blockMapId = bitfieldExtract(transData, 24, 8);
+        tint = RgbToLinear(texTintTranslucent[uv]);
+
+        // half4 packedTransData = unpackUnorm4x8ToHalf(transData);
+        float3 refract_normal = ObjectData_Normals.unpackTex(texNormalGB_translucent[uv].g);
+        // uint blockMapId = bitfieldExtract(transData, 24, 8);
 
         const float IOR_AIR   = 1.0003;
         const float IOR_WATER   = 1.333;
@@ -188,7 +190,12 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                     }
                 }
 
-                if (ss_hit) opaque_color = texSource.Sample(traceScreenPos);
+                if (ss_hit) {
+                    opaque_color = texFinal_opaque.Sample(traceScreenPos);
+
+                    // TODO: check if pixel is water, and recalc new hit point distance
+                    traceWaterDist = 0.0;
+                }
             }
 
             if (!ss_hit) {
@@ -223,7 +230,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
 
                         if (voxelTex_data == 0) {
                             // debug missing data with red albedo
-                            opaque_color = half3(1.0, 0.0, 0.0);
+                            opaque_color = half3(1, 0, 0);
                         }
                     }
 
@@ -247,7 +254,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                     diffuse += NoLm_sun * shadow * sunTransmit * scene[0].SunColor;
 
                     var hitVoxel = ap.voxel[hitVoxelPos];
-                    float lmcoord_y = saturate(hitVoxel.lightData.y / 15.0);
+                    float lmcoord_y = 1.0;//saturate(hitVoxel.lightData.y / 15.0);
                     float3 sky_ambient = sampleSkyIrradiance(hitNormal) * lmcoord_y;// * occlusion;
 
                     opaque_color *= diffuse / PI + sky_ambient;
@@ -262,7 +269,10 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     }
 
     half3 final_color = opaque_color;
+
     if (hasOverlay) {
+        final_color *= tint;
+
         final_color = fma(final_color, half3(1.0 - translucent.a), translucent.rgb);
     }
 

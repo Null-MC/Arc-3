@@ -1,11 +1,11 @@
 import aperture;
-import buffers.OpaqueObject;
+import buffers.ObjectData;
 import lib.common;
 import lib.material.pbr;
 import lib.sampling.IGN;
 import lib.shadow;
 
-Sampler2D<float> solidDepthTex;
+Sampler2D<float> texDepth;
 
 Sampler2D<half4> texAlbedoGB;
 Sampler2D<uint2> texNormalGB;
@@ -20,13 +20,14 @@ struct FragmentOutput {
 [[shader("fragment")]]
 FragmentOutput skyShadowSss(float2 pos : SV_Position) {
     FragmentOutput output;
-    output.shadow = half4(1.0);
-    output.sss = half4(0.0, 0.0, 0.0, 1.0);
+    output.shadow = half4(1);
+    output.sss = half4(0, 0, 0, 1);
 
     uint2 uv = uint2(pos);
-    float depth = solidDepthTex[uv];
+    float depth = texDepth[uv];
+    half4 colorData = texAlbedoGB[uv];
     
-    if (depth < 1.0) {
+    if (depth < 1.0 && colorData.a > 0.0) {
         float2 texcoord = pos / ap.game.screenSize;
         if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
@@ -35,22 +36,12 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
         float3 localPos = mul3(ap.camera.viewInv, viewPos);
         float3 viewLocalDir = -normalize(localPos);
 
-        half4 colorData = texAlbedoGB[uv];
-        // uint2 normalData = texNormalGB[uv];
-        // uint2 matLightData = texMatLightGB[uv];
-
-        // half4 specularData = unpackUnorm4x8ToHalf(matLightData.r);
-        // float3 albedo = RgbToLinear(colorData.rgb);
-        // float roughness = mat_roughness(specularData.r);
-        // float f0_metal = mat_f0_metal(specularData.g);
-
-        OpaqueObject_Normals normals;
+        ObjectData_Normals normals;
         normals.unpack(texNormalGB[uv]);
 
-        OpaqueObject_MatLit mat_lit;
-        mat_lit.unpack(texMatLightGB[uv]);
+        half4 specularData = ObjectData_MatLit.unpackSpecular(texMatLightGB[uv].r);
 
-        float sss = mat_sss(mat_lit.specular.b);
+        half sss = mat_sss(specularData.b);
 
         float dither;
         if (TAA_Enabled) {
@@ -66,9 +57,9 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
         float normal_bias = geo_NoLm * (viewDist * 0.006 + 0.06);
         float offset_bias = viewDist * 0.002;
 
-        float3 shadowLocalPos = normals.geo * normal_bias + localPos;
+        float3 shadowLocalPos = normals.geo * normal_bias * (1.0 - sss) + localPos;
         float3 shadowViewPos = mul3(ap.celestial.view, shadowLocalPos);
-        shadowViewPos.z += offset_bias;
+        shadowViewPos.z += offset_bias * (1.0 - sss);
         
         int cascade = GetShadowProjection(shadowViewPos, Shadow_MaxRadius);
 
@@ -98,8 +89,8 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
             half3 sss_color = normalize(RgbToLinear(1.0 - colorData.rgb) + 0.02);
             half3 lit = coverage_dist.x * exp(-(absorb_depth * sss_color + EPSILON));
 
-            float tex_NoLm = max(dot(normals.tex, scene[0].SkyLightLocalDir), 0.0);
-            output.sss.rgb = sss * (1.0 - tex_NoLm) * lit;
+            // half tex_NoLm = max((half)dot(normals.tex, scene[0].SkyLightLocalDir), (half)0.0);
+            output.sss.rgb = LinearToRgb(sss * lit);
         }
     }
 

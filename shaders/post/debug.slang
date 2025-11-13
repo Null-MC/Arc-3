@@ -1,4 +1,5 @@
 import aperture;
+import buffers.ObjectData;
 import lib.common;
 import lib.octohedral;
 
@@ -11,34 +12,34 @@ static const int DEBUG_GB_NORMAL_TEX = 3;
 static const int DEBUG_GB_LMCOORD = 4;
 static const int DEBUG_GB_OCCLUSION = 5;
 
-Sampler2D<float4> texAlbedoGB;
+Sampler2D<half4> texAlbedoGB;
 Sampler2D<uint2> texNormalGB;
 Sampler2D<uint2> texMatLightGB;
 Sampler1D<uint> texHistogram;
 
 [[shader("fragment")]]
-float4 renderDebugOverlay(float2 pos : SV_Position) : SV_Target0 {
-    float4 color = float4(0.0);
+half4 renderDebugOverlay(float2 pos : SV_Position) : SV_Target0 {
+    half4 color = half4(0.0);
     uint2 uv = uint2(pos);
 
     if (DEBUG_MATERIAL > 0) {
-        color.a = 1.0;
+        color.a = (half)1.0;
 
         switch (DEBUG_MATERIAL) {
             case DEBUG_GB_ALBEDO:
                 color.rgb = texAlbedoGB[uv].rgb;
                 break;
             case DEBUG_GB_NORMAL_GEO:
-                color.rgb = OctDecode(unpackUnorm4x8ToHalf(texNormalGB[uv].r).xy) * 0.5 + 0.5;
+                color.rgb = ObjectData_Normals.unpackGeo(texNormalGB[uv].r) * half3(0.5) + half3(0.5);
                 break;
             case DEBUG_GB_NORMAL_TEX:
-                color.rgb = OctDecode(unpackUnorm4x8ToHalf(texNormalGB[uv].r).zw) * 0.5 + 0.5;
+                color.rgb = ObjectData_Normals.unpackTex(texNormalGB[uv].g) * half3(0.5) + half3(0.5);
                 break;
             case DEBUG_GB_LMCOORD:
-                color.rgb = unpackUnorm4x8ToFloat(texMatLightGB[uv].g).rrg;
+                color.rgb = ObjectData_MatLit.unpackLightOcclusion(texMatLightGB[uv].g).rrg;
                 break;
             case DEBUG_GB_OCCLUSION:
-                color.rgb = unpackUnorm4x8ToFloat(texMatLightGB[uv].g).bbb;
+                color.rgb = ObjectData_MatLit.unpackLightOcclusion(texMatLightGB[uv].g).bbb;
                 break;
         }
     }
@@ -53,12 +54,12 @@ float4 renderDebugOverlay(float2 pos : SV_Position) : SV_Target0 {
         float2 previewCoord = (pos - 8.0) / float2(256.0, 32.0);
         if (all(saturate(previewCoord) == previewCoord)) {
             uint sampleVal = texHistogram.SampleLevel(previewCoord.x, 0);
-            color.gb = float2(step(previewCoord.y*previewCoord.y, sampleVal / float(ap.game.screenSize.x*ap.game.screenSize.y)));
-            color.ra = float2(0.0, 1.0);
+            color.gb = half2(step(previewCoord.y*previewCoord.y, sampleVal / float(ap.game.screenSize.x*ap.game.screenSize.y)));
+            color.ra = half2(0, 1);
 
             float meter = saturate(unmix(settings.Post_ExposureMin, settings.Post_ExposureMax, log2(scene[0].exposure)));
             if (abs(previewCoord.x - meter) < (4.0/ap.game.screenSize.x))
-                color.r = 1.0 - color.r;
+                color.r = (half)1.0 - color.r;
 
             // float shit2 = saturate(unmix(settings.Post_ExposureMin, settings.Post_ExposureMax, log2(Scene_AvgExposure) + Post_ExposureOffset));
             // if (abs(previewCoord.x - shit2) < 0.008)

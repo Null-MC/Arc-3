@@ -41,6 +41,10 @@ float minOf(float3 vec) {
     return min(vec.x, min(vec.y, vec.z));
 }
 
+half minOf(half2 vec) {
+    return min(vec.x, vec.y);
+}
+
 // T minOf<T>(const in T x, const in T y, const in T z) where T: IComparable {
 //     return min(x, min(y, z));
 // }
@@ -55,6 +59,10 @@ half3 maxOf(half3 x, half3 y, half3 z) {
 
 float3 maxOf(float3 x, float3 y, float3 z) {
     return max(x, max(y, z));
+}
+
+half maxOf(half2 vec) {
+    return max(vec.x, vec.y);
 }
 
 // T maxOf<T>(const in T x, const in T y, const in T z) where T: IArithmetic {
@@ -124,6 +132,14 @@ float3 LinearToRgb(const in float3 color) {
     float3 is_high = step(0.00313066844250063, color);
     float3 higher = 1.055 * pow(color, float3(1.0/2.4)) - 0.055;
     float3 lower = color * 12.92;
+
+    return lerp(lower, higher, is_high);
+}
+
+half3 LinearToRgb(const in half3 color) {
+    half3 is_high = step((half)0.00313066844250063, color);
+    half3 higher = (half)1.055 * pow(color, half3(1.0/2.4)) - (half)0.055;
+    half3 lower = color * (half)12.92;
 
     return lerp(lower, higher, is_high);
 }

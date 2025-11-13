@@ -5,15 +5,11 @@ import lib.material.pbr;
 import lib.point_lights;
 import lib.light.floodfill;
 import lib.light.hand;
+import lib.sampling.depth;
+import lib.water.water_depth;
 
 extern static const bool PointLight_Enabled;
 extern static const bool FloodFill_Enabled;
-
-Sampler2D<float> texDepth;
-
-Sampler2D<half4> texAlbedoGB;
-Sampler2D<uint2> texNormalGB;
-Sampler2D<uint2> texMatLightGB;
 
 
 struct FragmentOutput {
@@ -24,19 +20,21 @@ struct FragmentOutput {
 [[shader("fragment")]]
 FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
     uint2 uv = uint2(pos);
-    half4 colorData = texAlbedoGB[uv];
-    float depth = texDepth[uv];
+    float depthL = WaterDepth_get(uv);
+    float depth = delinearizeDepth(depthL, ap.camera.near, ap.camera.far) * 0.5 + 0.5;
 
     FragmentOutput output;
     output.diffuse = half3(0.0);
     output.specular = half3(0.0);
 
-    if (depth < 1.0 && colorData.a > 0.0) {
+    if (depth < 1.0) {
+        half4 colorData = texAlbedoGB_water[uv];
+
         ObjectData_Normals normals;
-        normals.unpack(texNormalGB[uv]);
+        normals.unpack(texNormalGB_water[uv]);
 
         ObjectData_MatLit mat_lit;
-        mat_lit.unpack(texMatLightGB[uv]);
+        mat_lit.unpack(texMatLightGB_water[uv]);
 
         half lmcoord_x = pow2(mat_lit.lmcoord.r);
 

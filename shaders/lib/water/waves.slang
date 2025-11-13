@@ -58,3 +58,8 @@ float3 GetWaveHeight(const in float3 position, const in float skyLight, const in
 
     return delta;
 }
+
+uint GetWaveOctaveCount(const in float viewDist) {
+    float value = lerp(settings.Water_WaveDetail, 6.0, saturate(viewDist / 80.0));
+    return clamp(int(value), 1, 32);
+}

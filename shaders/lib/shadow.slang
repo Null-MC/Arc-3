@@ -61,9 +61,9 @@ float2x2 GetSampleRotation(const in float dither) {
         -s, c);
 }
 
-float SampleShadow(in float3 shadowPos, const in int cascade) {
+half SampleShadow(in float3 shadowPos, const in int cascade) {
     float3 shadowCoord = float3(shadowPos.xy, cascade);
-    return solidShadowMapFiltered.SampleCmp(shadowCoord, shadowPos.z).r;
+    return (half)solidShadowMapFiltered.SampleCmp(shadowCoord, shadowPos.z).r;
 }
 
 half3 SampleShadowColor(in float3 shadowPos, const in int cascade) {
@@ -143,7 +143,7 @@ half3 SampleShadowColor_PCF(const in float3 shadowPos, const in int cascade, con
         shadowFinal += SampleShadowColor(sampleShadowPos, cascade);
     }
 
-    return shadowFinal / Shadow_PcfSamples;
+    return shadowFinal / (half)Shadow_PcfSamples;
 }
 
 float SampleShadow_PCSS(const in float3 shadowPos, const in int cascade, const in float dither) {

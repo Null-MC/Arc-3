@@ -1,12 +1,15 @@
 import aperture;
-import buffers.OpaqueObject;
+import buffers.ObjectData;
 import lib.common;
+import lib.octohedral;
 import lib.sampling.atlas;
 import lib.sampling.lmcoord;
+import lib.sampling.linear;
 import lib.material.pbr;
 import lib.material.parallax;
 import lib.tbn;
 
+extern static const bool Material_SmoothNormals = true;
 extern static const bool RENDER_TERRAIN = false;
 extern static const bool RENDER_PARTICLES = false;
 
@@ -59,16 +62,24 @@ VertexOutput vertexMain(Vertex input) {
     if (let value = input.normal()) {
         viewNormal = mul(input.normalMatrix(), value);
         float3 localNormal = mul(float3x3(ap.camera.viewInv), viewNormal);
-        output.normal = packUnorm4x8(float4(normalize(localNormal) * 0.5 + 0.5, 1.0));
+        localNormal = normalize(localNormal);
+
+        output.normal = packUnorm2x16(OctEncode(half3(localNormal)));
     }
 
     float4 viewTangent;
+    output.tangent = 0u;
     if (SupportsTexNormals && MATERIAL_FORMAT != MAT_NONE) {
         if (let value = input.tangent()) {
             viewTangent.xyz = mul(input.normalMatrix(), value.xyz);
-            float3 tangent = normalize(mul(float3x3(ap.camera.viewInv), viewTangent.xyz));
-            output.tangent = packUnorm4x8(float4(tangent * 0.5 + 0.5, step(0.0, value.w)));
+            float3 localTangent = mul(float3x3(ap.camera.viewInv), viewTangent.xyz);
+            localTangent = normalize(localTangent);
             viewTangent.w = value.w;
+
+            output.tangent = packUnorm4x8(half4(
+                OctEncode(half3(localTangent)),
+                (half)0.0,
+                step((half)0.0, (half)value.w)));
         }
     }
 
@@ -97,7 +108,6 @@ VertexOutput vertexMain(Vertex input) {
 
 struct FragmentOutput {
     half4 albedo : SV_Target0;
-    // float3 position : SV_Target1;
     uint2 normals : SV_Target1;
     uint2 mat_lit : SV_Target2;
     half2 velocity : SV_Target3;
@@ -105,8 +115,8 @@ struct FragmentOutput {
 
 [[shader("fragment")]]
 FragmentOutput fragmentMain(VertexOutput input) {
-    float2 uv = input.uv;
-    float LOD = albedoTex.CalculateLevelOfDetail(uv);
+    float2 tex_uv = input.uv;
+    float LOD = albedoTex.CalculateLevelOfDetail(tex_uv);
 
     AtlasBounds atlas;
     float3 tanViewDir;
@@ -122,23 +132,48 @@ FragmentOutput fragmentMain(VertexOutput input) {
             atlas.CoordMin = unpackHalf2x16ToFloat(input.atlasCoordMin);
             atlas.CoordSize = unpackHalf2x16ToFloat(input.atlasCoordSize);
 
-            float2 localCoord = atlas.GetLocalCoord(uv);
-            uv = GetParallaxCoord(localCoord, int(LOD), atlas, tanViewDir, viewDist, texDepth, traceCoordDepth);
+            float2 localCoord = atlas.GetLocalCoord(tex_uv);
+            tex_uv = GetParallaxCoord(localCoord, int(LOD), atlas, tanViewDir, viewDist, texDepth, traceCoordDepth);
         }
     }
 
-    OpaqueObject_Normals normals;
-    OpaqueObject_MatLit mat_lit;
+    ObjectData_Normals normals;
+    ObjectData_MatLit mat_lit;
 
     half4 tint = unpackUnorm4x8ToHalf(input.color);
-    half4 color = albedoTex.SampleLevel(uv, LOD) * tint;
-    half4 normalData = normalTex.SampleLevel(uv, LOD);
-    mat_lit.specular = specularTex.SampleLevel(uv, LOD);
+    half4 color = (half4)albedoTex.SampleLevel(tex_uv, LOD) * tint;
+    half4 normalData = (half4)normalTex.SampleLevel(tex_uv, LOD);
+    mat_lit.specular = (half4)specularTex.SampleLevel(tex_uv, LOD);
 
     iris_discardIfNeeded(color);
 
-    normals.geo = unpackUnorm4x8ToHalf(input.normal).xyz;
-    normals.geo = normalize(normals.geo * 2.0 - 1.0);
+    if (Material_SmoothNormals) {
+        float2 atlasSize;
+        normalTex.GetDimensions(0, atlasSize.x, atlasSize.y);
+
+        AtlasBounds atlas;
+        atlas.CoordMin = unpackHalf2x16ToFloat(input.atlasCoordMin);
+        atlas.CoordSize = unpackHalf2x16ToFloat(input.atlasCoordSize);
+
+        float2 uv[4];
+        float2 localCoord = atlas.GetLocalCoord(input.uv);
+        float2 atlasTileSize = atlas.CoordSize * atlasSize;
+        float2 f = GetLinearCoords(localCoord, atlasTileSize, uv);
+
+        uv[0] = atlas.GetAtlasCoord(uv[0]);
+        uv[1] = atlas.GetAtlasCoord(uv[1]);
+        uv[2] = atlas.GetAtlasCoord(uv[2]);
+        uv[3] = atlas.GetAtlasCoord(uv[3]);
+
+        half2 smoothXY = half2(0.5) - half2(abs(localCoord - 0.5));
+        float2 localSize = atlasSize * atlas.CoordSize;
+        half smoothF = saturate(minOf(smoothXY*localSize - 1.0));
+
+        half2 smooth_normal = half2(normalTex.SampleLevelLinearRGB(uv, LOD, f).rg);
+        normalData.rg = lerp(normalData.rg, smooth_normal, smoothF);
+    }
+
+    normals.geo = OctDecode(unpackUnorm2x16ToHalf(input.normal));
     normals.tex = normals.geo;
 
     mat_lit.lmcoord = half2(input.light);
@@ -150,18 +185,18 @@ FragmentOutput fragmentMain(VertexOutput input) {
             float depthDiff = max(texDepth - traceCoordDepth.z, 0.0);
 
             if (depthDiff >= ParallaxSharpThreshold) {
-                normals.tex = GetParallaxSlopeNormal(uv, int(LOD), atlas, traceCoordDepth.z, tanViewDir);
+                normals.tex = (half3)GetParallaxSlopeNormal(tex_uv, int(LOD), atlas, traceCoordDepth.z, tanViewDir);
             }
         }
 
-        half4 tangent = unpackUnorm4x8ToHalf(input.tangent) * 2.0 - 1.0;
-        float3x3 TBN = GetTBN(normals.geo, normalize(tangent.xyz), tangent.w);
+        half4 tangentData = unpackUnorm4x8ToHalf(input.tangent);
+        float3x3 TBN = GetTBN(normals.geo, OctDecode(tangentData.xy), tangentData.w);
 
-        normals.tex = normalize(mul(normals.tex, TBN));
+        normals.tex = normalize(half3(mul(normals.tex, TBN)));
     }
 
-    float tex_occlusion = mat_occlusion(normalData.b);
-    mat_lit.occlusion = input.occlusion * tex_occlusion;
+    half tex_occlusion = mat_occlusion(normalData.b);
+    mat_lit.occlusion = (half)input.occlusion * tex_occlusion;
 
     FragmentOutput output;
     output.albedo = color;

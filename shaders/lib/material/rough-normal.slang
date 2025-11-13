@@ -11,5 +11,5 @@ float3 randomizeNormal(int2 uv, const in float3 normal, const in float roughL) {
     if (dot(normal, random_normal) < 0)
         random_normal = -random_normal;
 
-    return normalize(lerp(normal, random_normal, roughL*roughL));
+    return normalize(lerp(normal, random_normal, roughL));
 }

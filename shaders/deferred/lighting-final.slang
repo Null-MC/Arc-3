@@ -1,17 +1,19 @@
 import aperture;
-import buffers.OpaqueObject;
+import buffers.ObjectData;
 import lib.common;
 import lib.material.pbr;
 import lib.sky.sample_final;
 
-extern static const float BLOCK_LUX;
+extern static const bool RENDER_TRANSLUCENT = false;
+extern static const half BLOCK_LUX;
 extern static const bool Debug_WhiteWorld;
 extern static const bool World_HasSky;
 
-Sampler2D<float> solidDepthTex;
+Sampler2D<float> texDepth;
 
 Sampler2D<half4> texAlbedoGB;
 Sampler2D<uint2> texMatLightGB;
+
 Sampler2D<half3> texDiffuse;
 Sampler2D<half3> texSpecular;
 
@@ -19,25 +21,38 @@ Sampler2D<half3> texSpecular;
 [[shader("fragment")]]
 half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
     uint2 uv = uint2(pos);
-    float depth = solidDepthTex[uv];
+    float depth = texDepth[uv];
+    half4 color = texAlbedoGB[uv];
 
-    half3 final = half3(0.0);
-    if (depth < 1.0) {
-        OpaqueObject_MatLit mat_lit;
+    half4 final = half4(0.0);
+    if (depth < 1.0 && color.a > 0.0) {
+        ObjectData_MatLit mat_lit;
         mat_lit.unpack(texMatLightGB[uv]);
 
-        half4 color = texAlbedoGB[uv];
         half3 diffuse = texDiffuse[uv];
         half3 specular = texSpecular[uv];
-        float emission = mat_emission(mat_lit.specular) * BLOCK_LUX;
+
+        half roughness = mat_roughness(mat_lit.specular.r);
+        half f0_metal = mat_f0_metal(mat_lit.specular.g);
+        half emission = mat_emission(mat_lit.specular);
+        half metalness = mat_metalness(f0_metal);
 
         half3 albedo = RgbToLinear(color.rgb);
+        half3 tint = lerp(half3(1.0), albedo, metalness);
+
+        half3 ambient = (half)0.2 * mat_lit.occlusion;
+        diffuse += ambient + emission * BLOCK_LUX;
+
+        // remove diffuse for smooth metals
+        half smoothness = (half)1.0 - pow2(roughness);
+        diffuse *= (half)1.0 - metalness * smoothness;
+
         if (Debug_WhiteWorld) albedo = half3(0.85);
 
-        half3 ambient = half3(0.2 * mat_lit.occlusion);
-        final = albedo.rgb * (diffuse + half3(emission) + ambient) + specular;
+        final.rgb = albedo * diffuse + specular * tint;
+        final.a = color.a;
     }
-    else if (World_HasSky) {
+    else if (!RENDER_TRANSLUCENT && World_HasSky) {
         float2 texcoord = pos / ap.game.screenSize;
         if (TAA_Enabled) texcoord += scene[0].taa_jitter;
 
@@ -46,8 +61,9 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         float3 localPos = mul3(ap.camera.viewInv, viewPos);
         float3 viewLocalDir = normalize(localPos);
 
-        final = sampleSkyFinal(localPos, viewLocalDir, false);
+        final.rgb = sampleSkyFinal(localPos, viewLocalDir, false);
+        final.a = (half)1.0;
     }
 
-    return half4(final, half2(1.0).x);
+    return final;
 }

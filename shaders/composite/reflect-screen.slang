@@ -8,26 +8,68 @@ import lib.sampling.depth;
 import lib.sampling.IGN;
 import lib.sky.common;
 import lib.sky.sample_final;
-import lib.dda;
+import lib.water.water_depth;
 
+extern static const int RefractMode;
 // extern static const bool Debug_WhiteWorld;
 extern static const bool World_HasSky;
 
-Sampler2D<float> solidDepthTex;
-Sampler2D<half3> texSource;
+Sampler2D<float> mainDepthTex;
 
-Sampler2D<half4> texAlbedoGB;
-Sampler2D<uint2> texNormalGB;
-Sampler2D<uint2> texMatLightGB;
+Sampler2D<half3> texSource;
+Sampler2D<half4> texAlbedoGB_translucent;
+Sampler2D<uint2> texNormalGB_translucent;
+Sampler2D<uint2> texMatLightGB_translucent;
+
+
+float3 projectToScreenBounds(const in float3 screenPos, const in float3 screenDir) {
+    float3 stepDir = sign(screenDir);
+    float3 stepSizes = rcp(abs(screenDir));
+
+    float3 nextDist = stepDir * 0.5 + 0.5;
+    nextDist = (nextDist - fract(screenPos)) / screenDir;
+
+    float closestDist = minOf(nextDist);
+    float3 stepAxis = float3(nextDist <= closestDist);
+
+    nextDist -= closestDist;
+    nextDist = fma(stepSizes, stepAxis, nextDist);
+
+    return fma(screenDir, closestDist, screenPos);
+}
 
 
 [[shader("fragment")]]
 half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
     uint2 uv = uint2(pos);
-    float depth = solidDepthTex[uv];
+    float depth = mainDepthTex[uv];
     half3 finalColor = texSource[uv];
+
+    half4 colorData = texAlbedoGB_translucent[uv];
+
+    float waterDepth;
+    bool isWater = false;
+    if (RefractMode != Refract_WorldSpace) {
+        float waterDepthL = WaterDepth_get(uv);
+        waterDepth = delinearizeDepth(waterDepthL, ap.camera.near, ap.camera.far) * 0.5 + 0.5;
+        isWater = waterDepth < depth;
+    }
     
-    if (depth < 1.0) {
+    if (colorData.a > 0.0 || isWater) {
+        uint normalDataG;
+        uint2 matLitData;
+        if (isWater) {
+            colorData = texAlbedoGB_water[uv];
+            depth = waterDepth;
+
+            normalDataG = texNormalGB_water[uv].g;
+            matLitData = texMatLightGB_water[uv];
+        }
+        else {
+            normalDataG = texNormalGB_translucent[uv].g;
+            matLitData = texMatLightGB_translucent[uv];
+        }
+
         float2 texcoord = pos / ap.game.screenSize;
         if (TAA_Enabled) texcoord += scene[0].taa_jitter;
 
@@ -36,12 +78,10 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         float3 viewPos = project(ap.camera.projectionInv, clipPos);
         float3 localPos = mul3(ap.camera.viewInv, viewPos);
 
-        half4 colorData = texAlbedoGB[uv];
-
-        half3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB[uv].g);
+        half3 tex_normal = ObjectData_Normals.unpackTex(normalDataG);
 
         ObjectData_MatLit mat_lit;
-        mat_lit.unpack(texMatLightGB[uv]);
+        mat_lit.unpack(matLitData);
 
         half3 albedo = RgbToLinear(colorData.rgb);
         half roughness = mat_roughness(mat_lit.specular.r);
@@ -88,7 +128,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
             if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
 
-            float sampleClipDepth = solidDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
+            float sampleClipDepth = mainDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
             float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
             float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
@@ -112,7 +152,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
                 traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
                 if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
 
-                float sampleClipDepth = solidDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
+                float sampleClipDepth = mainDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
                 float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
                 float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
@@ -141,7 +181,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         // imgDebug[uv] = float4(LinearToRgb(reflectColor * 0.008), 1.0);
 
-        finalColor += F_NoV * ((half)1.0 - roughL) * reflectColor * specular_tint;
+        finalColor += F_NoV * ((half)1.0 - roughness) * reflectColor * specular_tint;
     }
 
     return half4(finalColor, (half)1.0);

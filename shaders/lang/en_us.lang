@@ -47,6 +47,9 @@ value.LIGHTING_REFLECT_MODE.1=Sky Only
 value.LIGHTING_REFLECT_MODE.2=Screen-Space
 value.LIGHTING_REFLECT_MODE.3=World-Space
 
+option.LIGHTING_REFLECT_SS_FALLBACK=Hybrid Tracing
+option.LIGHTING_REFLECT_SS_FALLBACK.comment=Allows world-space reflection tracing to also perform a screen-space trace to include entities and non-full blocks.
+
 
 screen.LIGHTING_REFRACTION=Refraction
 

@@ -1,5 +1,5 @@
 import aperture;
-import buffers.OpaqueObject;
+import buffers.ObjectData;
 import lib.common;
 import lib.material.pbr;
 import lib.light.brdf;
@@ -7,7 +7,7 @@ import lib.light.fresnel;
 import lib.sampling.depth;
 import lib.hsv;
 
-extern static const float BLOCK_LUX;
+extern static const half BLOCK_LUX;
 extern static const int PointLight_MaxCount;
 extern static const bool DEBUG_LIGHT_TILES;
 
@@ -27,7 +27,7 @@ RWTexture2D<half3> imgDiffuse;
 [[vk::image_format("rgba16f")]]
 RWTexture2D<half3> imgSpecular;
 
-Sampler2D<float> solidDepthTex;
+Sampler2D<float> texDepth;
 
 Sampler2D<half4> texAlbedoGB;
 Sampler2D<uint2> texNormalGB;
@@ -78,8 +78,10 @@ void applyPointLights(ComputeInput input) {
 
     GroupMemoryBarrierWithGroupSync();
 
-    float depth = solidDepthTex[input.globalPos.xy];
-    if (depth < 1.0) {
+    float depth = texDepth[input.globalPos.xy];
+    half4 colorData = texAlbedoGB[input.globalPos.xy];
+
+    if (depth < 1.0 && colorData.a > 0.0) {
         float depthL = linearizeDepth(depth * 2.0 - 1.0, ap.camera.near, ap.camera.far);
         float depthInt = depthL / ap.camera.far * uint.maxValue;
         depthMinInt.min(uint(floor(depthInt)));
@@ -95,7 +97,7 @@ void applyPointLights(ComputeInput input) {
         PointLight light = ap.lights[input.groupIndex];
 
         if (light.block >= 0) {
-            half lightRange = ap.blocks[light.block].emission + 0.5;
+            half lightRange = (half)ap.blocks[light.block].emission + (half)0.5;
 
             // compute view-space position and collision test
             float3 lightViewPos = mul3(ap.camera.view, light.position);
@@ -140,16 +142,11 @@ void applyPointLights(ComputeInput input) {
     half3 diffuse = half3(0.0);
     half3 specular = half3(0.0);
 
-    if (depth < 1.0 && total > 0) {
-        float4 colorData = texAlbedoGB[input.globalPos.xy];
-        // uint2 normal_data = texNormalGB[input.globalPos.xy];
-        // uint2 mat_light_data = texMatLightGB[input.globalPos.xy];
-
-        OpaqueObject_Normals normals;
+    if (depth < 1.0 && colorData.a > 0.0 && total > 0) {
+        ObjectData_Normals normals;
         normals.unpack(texNormalGB[input.globalPos.xy]);
 
-        OpaqueObject_MatLit mat_lit;
-        mat_lit.unpack(texMatLightGB[input.globalPos.xy]);
+        half4 specularData = ObjectData_MatLit.unpackSpecular(texMatLightGB[input.globalPos.xy].r);
 
         float2 texcoord = (input.globalPos.xy + 0.5) / float2(ap.game.screenSize);
         if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
@@ -160,12 +157,8 @@ void applyPointLights(ComputeInput input) {
 
         float3 viewDir = -normalize(localPos);
 
-        // float3 geo_normal = normalize(unpackUnorm4x8ToFloat(normal_data.r).xyz * 2.0 - 1.0);
-        // float3 tex_normal = normalize(unpackUnorm4x8ToFloat(normal_data.g).xyz * 2.0 - 1.0);
-        // float4 specular_data = unpackUnorm4x8ToFloat(mat_light_data.r);
-
-        half roughness = mat_roughness(mat_lit.specular.r);
-        half f0_metal = mat_f0_metal(mat_lit.specular.g);
+        half roughness = mat_roughness(specularData.r);
+        half f0_metal = mat_f0_metal(specularData.g);
 
         half3 albedo = RgbToLinear(colorData.rgb);
         half roughL = roughness * roughness;
@@ -182,20 +175,20 @@ void applyPointLights(ComputeInput input) {
         for (uint i = 0; i < total; i++) {
             uint lightIndex = sharedLightList[i];
             PointLight light = ap.lights[lightIndex];
-            half3 lightColor = ap.blocks[light.block].lightColor.rgb;
-            uint lightRange = ap.blocks[light.block].emission;
+            half3 lightColor = half3(ap.blocks[light.block].lightColor.rgb);
+            half lightRange = (half)ap.blocks[light.block].emission;
 
             float3 lightOffset = light.position - localSamplePos;
 
-            float lightDist = length(lightOffset);
+            half lightDist = (half)length(lightOffset);
             float3 lightDir = lightOffset / lightDist;
 
-            const float lightRadius = 0.5; // TODO: build a LUT for this
-            float lightAtt = GetLightAttenuation(lightDist, lightRange, lightRadius);
+            const half lightRadius = (half)0.5; // TODO: build a LUT for this
+            half lightAtt = GetLightAttenuation(lightDist, lightRange, lightRadius);
             if (lightAtt < EPSILON) continue;
 
             lightColor = RgbToLinear(lightColor);
-            lightColor *= saturate(lightRange / 15.0) * BLOCK_LUX;
+            lightColor *= saturate(lightRange / (half)15.0) * BLOCK_LUX;
 
             float3 H = normalize(lightDir + viewDir);
             float NoLm = max(dot(normals.tex, lightDir), 0.0);
@@ -204,30 +197,23 @@ void applyPointLights(ComputeInput input) {
             float VoHm = max(dot(viewDir, H), 0.0);
 
             float shadowDepth = unmix(ap.lights.nearPlane, ap.lights.farPlane, lightDist - offsetBias);
-            float shadow = pointLightFiltered.SampleCmp(float4(-lightDir, lightIndex), shadowDepth).r;
+            half shadow = (half)pointLightFiltered.SampleCmp(float4(-lightDir, lightIndex), shadowDepth).r;
             lightColor *= shadow * NoLm * lightAtt;
 
             //float3 F_VoH = material_fresnel(albedo, f0_metal, roughL, VoHm);
             half3 F_VoH = F_schlickRough(VoHm, f0, roughL);
             
-            diffuse += lightColor * SampleLightDiffuse(NoVm, NoLm, LoHm, roughL) * saturate(1.0 - F_VoH);
+            diffuse += lightColor * SampleLightDiffuse(NoVm, NoLm, LoHm, roughL) * saturate((half)1.0 - F_VoH);
             specular += lightColor * SampleLightSpecular(NoLm, NoHm, NoVm, F_VoH, roughL);
         }
 
         diffuse /= half3(PI);
-        
-        // remove diffuse for smooth metals
-        float smoothness = 1.0 - roughness;
-        diffuse *= 1.0 - metalness * smoothness;
-
-        half3 specular_tint = lerp(1.0, albedo, metalness);
-        specular *= specular_tint;
     }
 
     if (DEBUG_LIGHT_TILES) {
         float hue = lerp(0.65, 0.0, total / 256.0);
-        float3 debug_color = HsvToRgb(float3(hue, 1.0, 1.0));
-        imgDebug[input.globalPos.xy] = float4(debug_color, 1.0);
+        half3 debug_color = HsvToRgb(float3(hue, 1.0, 1.0));
+        imgDebug[input.globalPos.xy] = half4(debug_color, (half)1.0);
     }
 
     imgDiffuse[input.globalPos.xy] = src_diffuse + diffuse;

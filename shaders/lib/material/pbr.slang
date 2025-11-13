@@ -12,17 +12,17 @@ static const int MAT_OLDPBR = 1;
 static const int MAT_NONE = 0;
 
 
-float3 mat_normal_lab(const in float2 data) {
-    float2 normal_xy = fma(data.xy, float2(2.0), float2(-1.0));
-    float normal_z = sqrt(max(1.0 - dot(normal_xy, normal_xy), 0.0));
-    return float3(normal_xy, normal_z);
+half3 mat_normal_lab(const in half2 data) {
+    half2 normal_xy = fma(data.xy, half2(2.0), half2(-1.0));
+    half normal_z = sqrt(max((half)1.0 - dot(normal_xy, normal_xy), (half)0.0));
+    return half3(normal_xy, normal_z);
 }
 
-float3 mat_normal_old(const in float3 data) {
-    return normalize(fma(data, float3(2.0), float3(-1.0)));
+half3 mat_normal_old(const in half3 data) {
+    return normalize(fma(data, half3(2.0), half3(-1.0)));
 }
 
-float3 mat_normal(const in float3 normalData) {
+half3 mat_normal(const in half3 normalData) {
     if (MATERIAL_NORMAL_FORMAT == MAT_LABPBR) {
         return mat_normal_lab(normalData.xy);
     }
@@ -30,23 +30,23 @@ float3 mat_normal(const in float3 normalData) {
         return mat_normal_old(normalData);
     }
     else {
-        return 0.0;
+        return half3(0.0);
     }
 }
 
-float mat_roughness(const in float data) {
-    return 1.0 - data;
+half mat_roughness(const in half data) {
+    return (half)1.0 - data;
 }
 
-float mat_emission_lab(const in float data) {
+half mat_emission_lab(const in half data) {
     return fract(data);
 }
 
-float mat_emission_old(const in float data) {
+half mat_emission_old(const in half data) {
     return data;
 }
 
-float mat_emission(const in float4 specularData) {
+half mat_emission(const in half4 specularData) {
     if (MATERIAL_EMISSION_FORMAT == MAT_LABPBR) {
         return mat_emission_lab(specularData.a);
     }
@@ -54,20 +54,20 @@ float mat_emission(const in float4 specularData) {
         return mat_emission_old(specularData.b);
     }
     else {
-        return 0.0;
+        return (half)0.0;
     }
 }
 
-float mat_porosity_lab(const in float data) {
-    return data * (255.0/64.0) * step(data, (64.5/255.0));
+half mat_porosity_lab(const in half data) {
+    return data * (half)(255.0/64.0) * step(data, (half)(64.5/255.0));
 }
 
-float mat_porosity_old(const in float roughness, const in float f0_metal) {
-    float metalInv = 1.0 - saturate(unmix(0.04, (229.0/255.0), f0_metal));
+half mat_porosity_old(const in half roughness, const in half f0_metal) {
+    half metalInv = (half)1.0 - saturate(unmix((half)0.04, (half)(229.0/255.0), f0_metal));
     return sqrt(roughness) * metalInv;
 }
 
-float mat_porosity(const in float data, const in float roughness, const in float f0_metal) {
+float mat_porosity(const in half data, const in half roughness, const in half f0_metal) {
     if (MATERIAL_POROSITY_FORMAT == MAT_LABPBR) {
         return mat_porosity_lab(data);
     }
@@ -76,38 +76,38 @@ float mat_porosity(const in float data, const in float roughness, const in float
     }
 }
 
-float mat_sss_lab(const in float data) {
-    return max(data - (64.0/255.0), 0.0) * (255.0/191.0);
+half mat_sss_lab(const in half data) {
+    return max(data - (half)(64.0/255.0), (half)0.0) * (half)(255.0/191.0);
 }
 
-float mat_sss(const in float data) {
+half mat_sss(const in half data) {
     if (MATERIAL_SSS_FORMAT == MAT_LABPBR) {
         return mat_sss_lab(data);
     }
     else {
-        return 0.0;
+        return (half)0.0;
     }
 }
 
-float mat_f0_metal(const in float data) {
+half mat_f0_metal(const in half data) {
     if (MATERIAL_METALS_FORMAT != MAT_NONE) {
-        if (data == 0.0) return 0.04;
-        return min(data, 0.9);
+        if (data == 0.0) return (half)0.04;
+        return min(data, (half)0.9);
     }
     else {
-        return 0.04;
+        return (half)0.04;
     }
 }
 
-float mat_metalness_lab(const in float f0_metal) {
-    return step((229.5/255.0), f0_metal);
+half mat_metalness_lab(const in half f0_metal) {
+    return step((half)(229.5/255.0), f0_metal);
 }
 
-float mat_metalness_old(const in float f0_metal) {
+half mat_metalness_old(const in half f0_metal) {
     return f0_metal;
 }
 
-float mat_metalness(const in float f0_metal) {
+half mat_metalness(const in half f0_metal) {
     if (MATERIAL_METALS_FORMAT == MAT_LABPBR) {
         return mat_metalness_lab(f0_metal);
     }
@@ -115,27 +115,27 @@ float mat_metalness(const in float f0_metal) {
         return mat_metalness_old(f0_metal);
     }
     else {
-        return 0.0;
+        return (half)0.0;
     }
 }
 
-bool mat_isMetal(const in float f0_metal) {
+bool mat_isMetal(const in half f0_metal) {
     if (MATERIAL_METALS_FORMAT == MAT_LABPBR) {
-        return f0_metal > (229.5/255.0);
+        return f0_metal > (half)(229.5/255.0);
     }
     else if (MATERIAL_METALS_FORMAT == MAT_OLDPBR) {
-        return f0_metal > 0.5;
+        return f0_metal > (half)0.5;
     }
     else {
         return false;
     }
 }
 
-float mat_occlusion(const in float data) {
+half mat_occlusion(const in half data) {
     if (MATERIAL_NORMAL_FORMAT == MAT_LABPBR) {
         return data;
     }
     else {
-        return 1.0;
+        return (half)1.0;
     }
 }

@@ -23,13 +23,13 @@ RWTexture2D<half3> imgShadowFinal;
 [[vk::image_format("rgba8")]]
 RWTexture2D<half3> imgSssFinal;
 
-Sampler2D<float> solidDepthTex;
+Sampler2D<float> texDepth;
 Sampler2D<half3> texShadowGB;
 Sampler2D<half3> texSssGB;
 
 
 void sampleSharedBuffer(const in uint2 uv_base, const in float depthL, out half3 shadow, out half3 sss) {
-    float total = 0.0;
+    half total = (half)0.0;
     half3 accum_shadow = half3(0.0);
     half3 accum_sss = half3(0.0);
     
@@ -46,7 +46,7 @@ void sampleSharedBuffer(const in uint2 uv_base, const in float depthL, out half3
             half3 sample_sss = sharedSss[i_shared];
             float sampleDepthL = sharedDepth[i_shared];
             
-            float depthDiff = abs(sampleDepthL - depthL);
+            half depthDiff = (half)abs(sampleDepthL - depthL);
             half fv = half(Gaussian(g_sigmaV, depthDiff));
             
             half weight = fx*fy*fv;
@@ -57,8 +57,8 @@ void sampleSharedBuffer(const in uint2 uv_base, const in float depthL, out half3
     }
     
     //if (total <= EPSILON) return float4(float3(1.0), 0.0);
-    shadow = accum_shadow / half(total);
-    sss = accum_sss / half(total);
+    shadow = accum_shadow / total;
+    sss = accum_sss / total;
 }
 
 
@@ -96,7 +96,7 @@ void filterShadowSss(ComputeInput input) {
                 shadow = texShadowGB[uv].rgb;
                 sss = texSssGB[uv];
 
-                float depth = solidDepthTex[uv].r * 2.0 - 1.0;
+                float depth = texDepth[uv].r * 2.0 - 1.0;
                 depthL = linearizeDepth(depth, ap.camera.near, ap.camera.far);
             }
 

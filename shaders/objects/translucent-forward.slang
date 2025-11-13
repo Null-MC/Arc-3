@@ -1,0 +1,393 @@
+import aperture;
+import lib.common;
+import lib.light.fresnel;
+import lib.light.floodfill;
+import lib.light.hand;
+import lib.light.brdf;
+import lib.sky.common;
+import lib.sky.sun;
+import lib.sky.moon;
+import lib.sky.sample_transmit;
+import lib.sky.sample_irradiance;
+import lib.sky.sample_view;
+import lib.sky.sample_light;
+import lib.water.waves;
+import lib.water.water_depth;
+import lib.sampling.atlas;
+import lib.sampling.linear;
+import lib.sampling.dfd_normal;
+import lib.shadow;
+import lib.material.pbr;
+import lib.material.parallax;
+import lib.octohedral;
+import lib.tbn;
+
+extern static const bool SmoothNormalsEnabled = true;
+
+// extern static const float BLOCK_LUX;
+extern static const bool RENDER_TERRAIN = false;
+extern static const bool RENDER_PARTICLES = false;
+extern static const int RefractMode;
+extern static const bool Water_WaveEnabled = false;
+extern static const bool FloodFill_Enabled;
+extern static const bool Debug_WhiteWorld;
+extern static const int ReflectMode;
+
+extern static const uint BLOCK_WATER;
+
+static const bool SupportsParallax = Parallax_Enabled && !RENDER_PARTICLES;
+static const bool SupportsTexNormals = !RENDER_PARTICLES;
+
+Sampler2D<float> solidDepthTex;
+
+
+struct VertexOutput {
+    float4 position : SV_Position;
+
+    float2 uv;
+    float2 light;
+    float3 viewPos;
+    float occlusion;
+    float waveStrength;
+    float waveOffset;
+    float3 localPos;
+    nointerpolation uint color;
+    nointerpolation uint normal;
+    nointerpolation uint tangent;
+    nointerpolation uint blockId;
+    nointerpolation uint atlasCoordMin;
+    nointerpolation uint atlasCoordSize;
+};
+
+[[shader("vertex")]]
+VertexOutput vertexMain(Vertex input) {
+    VertexOutput output;
+    output.uv = input.uv();
+    half4 color = half4(input.color());
+    output.light = input.light();
+
+    float3 modelPos = input.pos().xyz;
+    output.viewPos = mul3(input.viewMatrix(), modelPos);
+    output.localPos = mul3(ap.camera.viewInv, output.viewPos);
+
+    output.occlusion = 1.0;
+    if (RENDER_TERRAIN) {
+        output.occlusion = input.ao();
+    }
+
+    float3 normal = 0.0;//mul(float3x3(ap.camera.viewInv), float3(0,0,1));
+    output.normal = 0u;
+    if (let value = input.normal()) {
+        normal = mul(input.normalMatrix(), value);
+        normal = mul(float3x3(ap.camera.viewInv), normal);
+        output.normal = packUnorm4x8(float4(normalize(normal) * 0.5 + 0.5, 1.0));
+    }
+
+    bool isWater = false;
+    output.blockId = -1;
+    output.waveStrength = 0.0;
+    output.waveOffset = 0.0;
+    // uint blockMapId = 0u;
+    if (let value = input.blockId()) {
+        output.blockId = value;
+
+        if (Water_WaveEnabled) {
+            uint blockMapId = ap.blocks[output.blockId].customId;
+            isWater = blockMapId == BLOCK_WATER;
+
+            if (isWater) {
+                output.waveStrength = 1.0;
+
+                // float3 worldPos = output.localPos + input.midBlock().value/64.0 + ap.camera.position;
+                // bool isFacingAir = ap.voxel[int3(floor(worldPos + normal))].blockId == 0;
+
+                // float viewDist = length(output.viewPos);
+                // int octaves = GetWaveOctaveCount(viewDist);
+                // output.waveOffset = GetWaveHeight(ap.camera.position + output.localPos, output.light.y, ap.timing.timeElapsed, octaves).y;
+                // output.localPos.y += output.waveOffset;
+            }
+        }
+    }
+
+    //output.tangent = 0.0;
+    if (SupportsTexNormals) {
+        // output.tangent = 0.0;
+        if (let value = input.tangent()) {
+            float3 tangent = mul(input.normalMatrix(), value.xyz);
+            tangent = mul(float3x3(ap.camera.viewInv), tangent);
+            tangent = normalize(tangent);
+
+            output.tangent = packUnorm4x8(float4(tangent * 0.5 + 0.5, step(0.0, value.w)));
+        }
+    }
+
+    if (let value = input.overlayColor()) {
+        half4 overlay = half4(value);
+        color = lerp(color, overlay, overlay.a);
+    }
+
+    if (let midCoord = input.midCoord()) {
+        AtlasBounds atlas;
+        atlas.Populate(output.uv, midCoord);
+        output.atlasCoordMin = packHalf2x16(atlas.CoordMin);
+        output.atlasCoordSize = packHalf2x16(atlas.CoordSize);
+    }
+
+    output.viewPos = mul3(ap.camera.view, output.localPos);
+    output.position = mul(ap.camera.projection, float4(output.viewPos, 1.0));
+
+    if (TAA_Enabled) {
+        output.position.xy += scene[0].taa_jitter * (2.0 * output.position.w);
+    }
+
+    // if (isWater) {
+    //     output.normal
+    // }
+
+    output.color = packUnorm4x8(color);
+
+    return output;
+}
+
+
+struct FragmentOutput {
+    half4 color : SV_Target0;
+    half4 tint : SV_Target1;
+    uint data : SV_Target2;
+    //float2 velocity : SV_Target2;
+};
+
+[[shader("fragment")]]
+FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
+    FragmentOutput output;
+    //output.velocity = 0.0;
+    output.tint = half4(1.0);
+
+    half LOD = (half)albedoTex.CalculateLevelOfDetail(input.uv);
+    half4 tint = unpackUnorm4x8ToHalf(input.color);
+    half4 albedo = half4(albedoTex.SampleLevel(input.uv, LOD)) * tint;
+    iris_discardIfNeeded(albedo);
+
+    if (RENDER_PARTICLES) {
+        // HACK: aperture discard doesn't include particles
+        if (albedo.a < (half)(0.5/255.0)) discard;
+    }
+
+    albedo.rgb = RgbToLinear(albedo.rgb);
+    if (Debug_WhiteWorld) albedo.rgb = half3(0.85);
+
+    half4 normalData = half4(normalTex.SampleLevel(input.uv, LOD));
+    if (SmoothNormalsEnabled) {
+        float2 atlasSize;
+        normalTex.GetDimensions(0, atlasSize.x, atlasSize.y);
+
+        AtlasBounds atlas;
+        atlas.CoordMin = unpackHalf2x16ToFloat(input.atlasCoordMin);
+        atlas.CoordSize = unpackHalf2x16ToFloat(input.atlasCoordSize);
+
+        float2 uv[4];
+        float2 localCoord = atlas.GetLocalCoord(input.uv);
+        float2 atlasTileSize = atlas.CoordSize * atlasSize;
+        float2 f = GetLinearCoords(localCoord, atlasTileSize, uv);
+
+        uv[0] = atlas.GetAtlasCoord(uv[0]);
+        uv[1] = atlas.GetAtlasCoord(uv[1]);
+        uv[2] = atlas.GetAtlasCoord(uv[2]);
+        uv[3] = atlas.GetAtlasCoord(uv[3]);
+
+        normalData.rg = half2(normalTex.SampleLevelLinearRGB(uv, LOD, f).rg);
+    }
+
+    half4 specularData = half4(specularTex.SampleLevel(input.uv, LOD));
+
+    half3 geo_normal = unpackUnorm4x8ToHalf(input.normal).xyz;
+    geo_normal = normalize(fma(geo_normal, half3(2.0), half3(-1.0)));
+    bool has_normal = input.normal != 0u;
+
+    float viewDist = length(input.localPos);
+
+    uint blockMapId = ap.blocks[input.blockId].customId;
+    bool isWater = blockMapId == BLOCK_WATER;
+
+    half3 tex_normal = geo_normal;
+    if (SupportsTexNormals) {
+        if (Water_WaveEnabled && isWater && input.waveStrength > 0.5) {
+            float3 offsetLocalPos = input.localPos;
+            offsetLocalPos.y -= input.waveOffset;
+
+            int octaves = GetWaveOctaveCount(viewDist);
+            float3 waveOffset = GetWaveHeight(ap.camera.position + offsetLocalPos, input.light.y, ap.timing.timeElapsed, octaves);
+
+            tex_normal = half3(getSurfaceNormal((waveOffset + offsetLocalPos), float3(0,1,0)));
+        }
+        else {
+            tex_normal = mat_normal(normalData.rgb);
+
+            float4 tangent = unpackUnorm4x8ToFloat(input.tangent) * 2.0 - 1.0;
+            float3x3 TBN = GetTBN(geo_normal, normalize(tangent.xyz), tangent.w);
+            tex_normal = half3(normalize(mul(tex_normal, TBN)));
+        }
+    }
+
+    half roughness = mat_roughness(specularData.r);
+    half f0_metal = mat_f0_metal(specularData.g);
+
+    half2 lmcoord = pow2(half2(input.light.rg));
+
+    half tex_ao = mat_occlusion(normalData.b);
+    half occlusion = tex_ao * (half)input.occlusion;
+
+    float3 viewLocalDir = -normalize(input.localPos);
+
+    float geo_NoLm = 1.0;
+    if (has_normal) geo_NoLm = 1.0 - abs(dot(geo_normal, scene[0].SkyLightLocalDir));
+
+    float normal_bias = geo_NoLm * (viewDist * 0.006 + 0.06);
+    float offset_bias = viewDist * 0.002;
+
+    float3 shadowLocalPos = geo_normal * normal_bias + input.localPos;
+    float3 shadowViewPos = mul3(ap.celestial.view, shadowLocalPos);
+    shadowViewPos.z += offset_bias;
+
+    const float paddingBlocks = 0.05;
+    int shadowCascade = GetShadowProjection(shadowViewPos, paddingBlocks);
+
+    half shadow = (half)1.0;
+    if (shadowCascade >= 0) {
+        float3 shadowPos = mul3(ap.celestial.projection[shadowCascade], shadowViewPos).xyz * 0.5 + 0.5;
+        shadow = (half)SampleShadow(shadowPos, shadowCascade);
+    }
+
+    half metalness = mat_metalness(f0_metal);
+
+    if (isWater) {
+        albedo = half4(0, 0, 0, (half)0.02);
+        roughness = (half)0.04;
+        f0_metal = (half)0.02;
+    }
+    else {
+        output.tint.rgb = lerp(half3(1.0), albedo.rgb, albedo.a);
+        output.tint.rgb = LinearToRgb(output.tint.rgb);
+    }
+
+    SurfaceData surface;
+    surface.skyPos = getSkyPosition(input.localPos);
+    surface.normal = tex_normal;
+    surface.roughL = roughness*roughness;
+    surface.f0 = lerp(f0_metal, albedo.rgb, metalness);
+    surface.tint = lerp(half3(1.0), albedo.rgb, metalness);
+
+    CelestialLight sun;
+    sun.localDir = GetAreaLightDir(tex_normal, viewLocalDir, scene[0].SunLocalDir, sun_distanceMm, sun_radiusMm);
+    sun.color = scene[0].SunColor * sampleSkyTransmit(surface.skyPos, sun.localDir);
+
+    CelestialLight moon;
+    moon.localDir = GetAreaLightDir(tex_normal, viewLocalDir, scene[0].MoonLocalDir, moon_distanceKm, moon_radiusKm);
+    moon.color = scene[0].MoonColor * sampleSkyTransmit(surface.skyPos, moon.localDir);
+
+    // float3 sss_ambient = sampleSkyIrradiance(-tex_normal) * lmcoord_y;
+    //float3 sssFinal = texSssFinal[uv] * (sun.color + moon.color) + sss_ambient * sss;
+    // diffuse += sssFinal / PI;
+
+    bool shadowIsSun = dot(ap.celestial.position, ap.celestial.sunPosition) > 0.0;
+    half NoVm = max((half)dot(tex_normal, viewLocalDir), 0.0);
+    half3 diffuse = half3(0.0);
+    half3 specular = half3(0.0);
+
+    sun.color *= shadowIsSun ? shadow : (half)1.0;
+    SampleCelestial(diffuse, specular, sun, surface, viewLocalDir, NoVm);
+
+    moon.color *= shadowIsSun ? (half)1.0 : shadow;
+    SampleCelestial(diffuse, specular, moon, surface, viewLocalDir, NoVm);
+
+    // FloodFill
+    if (FloodFill_Enabled) {
+        float3 lpvPos = FloodFill_GetBufferPosition(input.localPos);
+        lpvPos -= geo_normal * 0.25;
+        lpvPos += tex_normal * 0.75;
+        
+        if (FloodFill_InBounds(lpvPos)) {
+            diffuse += floodfill_sample(lpvPos) * BLOCK_LUX;
+            lmcoord.x = (half)0.0;
+        }
+    }
+
+    diffuse += lmcoord.x * BLOCK_LUX;
+
+    // Hand Held
+    float3 handSampleLocalPos = geo_normal*0.02 + input.localPos;
+
+    if (ap.game.mainHand != 0u) {
+        float3 lightLocalPos = GetHandLightPos(HandLightOffset_main);
+        GetHandLight(diffuse, specular, ap.game.mainHand, lightLocalPos, handSampleLocalPos, viewLocalDir, tex_normal, geo_normal, surface.f0, surface.roughL);
+    }
+
+    if (ap.game.offHand != 0u) {
+        float3 lightLocalPos = GetHandLightPos(HandLightOffset_alt);
+        GetHandLight(diffuse, specular, ap.game.offHand, lightLocalPos, handSampleLocalPos, viewLocalDir, tex_normal, geo_normal, surface.f0, surface.roughL);
+    }
+
+    half3 sky_ambient = sampleSkyIrradiance(tex_normal) * lmcoord.y * occlusion;
+
+    diffuse = diffuse / (half)PI + sky_ambient;
+
+    if (mat_isMetal(f0_metal)) diffuse *= roughness;
+
+    if (ReflectMode == Reflect_SkyOnly) {
+        float3 fragViewDir = normalize(input.viewPos);
+        float3 viewNormal = mul(float3x3(ap.camera.view), tex_normal);
+        float3 reflectViewDir = reflect(fragViewDir, viewNormal);
+        float3 reflectLocalDir = mul(float3x3(ap.camera.viewInv), reflectViewDir);
+        reflectLocalDir = normalize(reflectLocalDir);
+
+        half3 skyColor = sampleSkyView(surface.skyPos, reflectLocalDir, scene[0].SunLocalDir);
+        half3 F_NoV = F_schlickRough(NoVm, surface.f0, surface.roughL);
+        specular += F_NoV * skyColor * (((half)1.0 - roughness) * lmcoord.y);
+        diffuse *= half3(1.0) - F_NoV;
+
+        half F = F_schlickRough(NoVm, f0_metal, surface.roughL);
+        albedo.a = ((half)1.0 - F) * albedo.a + F;
+    }
+
+    specular *= surface.tint;
+    
+    const half3 ambient = half3(0.02);
+    half emission = mat_emission(specularData) * BLOCK_LUX;
+
+    output.color.rgb = albedo.rgb * (diffuse + emission + ambient) * albedo.a + specular;
+    output.color.a = albedo.a;
+
+    // premultiply alpha
+    //output.color.rgb *= output.color.a;
+
+    // clamp to avoid buffer overflow
+    output.color = clamp(output.color, half4(0.0), half4(65000.0));
+
+    half2 packedTexNormal = OctEncode(tex_normal);
+
+    if (RefractMode != Refract_WorldSpace && isWater) {
+        uint2 uv = uint2(fragPos);
+        
+        float opaqueDepth = solidDepthTex[uv];
+        float2 screen_texcoord = fragPos / ap.game.screenSize;
+        if (TAA_Enabled) screen_texcoord += scene[0].taa_jitter;
+
+        float3 opaqueClipPos = float3(screen_texcoord, opaqueDepth) * 2.0 - 1.0;
+        float3 opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);
+        float opaqueDistSq = dot(opaqueViewPos, opaqueViewPos);
+
+        if (pow2(viewDist) < opaqueDistSq) {
+            if (WaterDepth_set(uv, viewDist)) {
+                imgWaterFinal[uv] = output.color;
+                imgWaterNormal[uv] = packHalf2x16(packedTexNormal);
+            }
+            
+            discard;
+        }
+    }
+
+    output.data = packUnorm4x8(half4(packedTexNormal, roughness, 0));
+    output.data = bitfieldInsert(output.data, blockMapId, 24, 8);
+    
+    return output;
+}
