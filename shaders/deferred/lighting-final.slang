@@ -4,10 +4,11 @@ import lib.common;
 import lib.material.pbr;
 import lib.sky.sample_final;
 
+extern static const bool Lighting_GI = false;
+extern static const bool World_HasSky;
+extern static const bool Debug_WhiteWorld;
 extern static const bool RENDER_TRANSLUCENT = false;
 extern static const half BLOCK_LUX;
-extern static const bool Debug_WhiteWorld;
-extern static const bool World_HasSky;
 
 Sampler2D<float> texDepth;
 
@@ -16,6 +17,7 @@ Sampler2D<uint2> texMatLightGB;
 
 Sampler2D<half3> texDiffuse;
 Sampler2D<half3> texSpecular;
+Sampler2D<half3> texGI_final;
 
 
 [[shader("fragment")]]
@@ -32,6 +34,10 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         half3 diffuse = texDiffuse[uv];
         half3 specular = texSpecular[uv];
 
+        if (Lighting_GI && !RENDER_TRANSLUCENT) {
+            diffuse += texGI_final[uv];
+        }
+        
         half roughness = mat_roughness(mat_lit.specular.r);
         half f0_metal = mat_f0_metal(mat_lit.specular.g);
         half emission = mat_emission(mat_lit.specular);

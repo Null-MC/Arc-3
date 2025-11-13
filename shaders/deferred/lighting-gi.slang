@@ -15,11 +15,12 @@ import lib.sky.sample_view;
 import lib.voxel_tex;
 import lib.dda;
 
+extern static const bool GI_SS_Fallback = true;
 // extern static const bool World_HasSky;
 extern static const uint BLOCK_WATER;
 
 Sampler2D<float> solidDepthTex;
-Sampler2D<half3> texSource;
+Sampler2D<half3> texDiffuse;
 
 Sampler2D<half4> texAlbedoGB;
 Sampler2D<uint2> texNormalGB;
@@ -38,8 +39,8 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         float2 texcoord = pos / ap.game.screenSize;
         if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
-        float3 screenPos = float3(texcoord, depth);
-        float3 clipPos = screenPos * 2.0 - 1.0;
+        // float3 screenPos = ;
+        float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
         float3 viewPos = project(ap.camera.projectionInv, clipPos);
         float3 localPos = mul3(ap.camera.viewInv, viewPos);
 
@@ -122,75 +123,89 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         half3 sampleColor = half3(0.0);
 
         bool ss_hit = false;
-        // if (Reflect_SS_Fallback) {
-        //     float3 reflect_viewPos = 0.5 * viewDist * reflect_viewDir + viewPos;
-        //     float3 reflect_clipPos = project(ap.camera.projection, reflect_viewPos);
-        //     float3 reflect_screenPos = reflect_clipPos * 0.5 + 0.5;
+        if (GI_SS_Fallback) {
+            float dither = InterleavedGradientNoiseTime(pos);
 
-        //     float3 screenDir = normalize(reflect_screenPos - screenPos);
+            // float3 traceViewStart = mul3(ap.camera.view, localPos);
+            // float3 traceClipStart = project(ap.camera.projection, traceViewStart);
+            float3 traceClipStart = clipPos;
 
-        //     // project the reflected trace direction to edge of trace bounds
-        //     float3 screenEnd = projectToScreenBounds(screenPos, screenDir);
-        //     float3 traceClipEnd = screenEnd * 2.0 - 1.0;
-        //     float3 traceClipStart = clipPos;
+            float3 traceViewEnd = mul3(ap.camera.view, hit_localPos);
+            float3 traceClipEnd = project(ap.camera.projection, traceViewEnd);
 
-        //     float3 traceClipPos;
-        //     float3 traceClipPos_prev = traceClipStart;
-        //     float2 traceScreenPos;
+            // float3 reflect_viewPos = 0.5 * viewDist * reflect_viewDir + viewPos;
+            // float3 reflect_clipPos = project(ap.camera.projection, reflect_viewPos);
+            // float3 reflect_screenPos = reflect_clipPos * 0.5 + 0.5;
 
-        //     const uint SS_StepCount = 24;
-        //     const uint SS_RefineSteps = 8;
+            // float3 screenDir = normalize(reflect_screenPos - screenPos);
 
-        //     // bool hit = false;
-        //     float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
-        //     for (uint i = 1; i < SS_StepCount; i++) {
-        //         float f = (i + dither) / SS_StepCount;
-        //         traceClipPos = lerp(traceClipStart, traceClipEnd, f);
-        //         traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
-        //         if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
+            // // project the reflected trace direction to edge of trace bounds
+            // float3 screenEnd = projectToScreenBounds(screenPos, screenDir);
+            // float3 traceClipEnd = screenEnd * 2.0 - 1.0;
+            // float3 traceClipStart = clipPos;
 
-        //         float sampleClipDepth = solidDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
-        //         float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
-        //         float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
+            float3 traceClipPos;
+            float3 traceClipPos_prev = traceClipStart;
+            float2 traceScreenPos;
 
-        //         if (screenDepthL < traceDepthL) {
-        //             ss_hit = true;
-        //             hit = true;
-        //             break;
-        //         }
+            const uint SS_StepCount = 16;
+            const uint SS_RefineSteps = 4;
 
-        //         traceClipPos_prev = traceClipPos;
-        //         traceDepthL_prev = traceDepthL;
-        //     }
+            // bool hit = false;
+            float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
+            for (uint i = 1; i < SS_StepCount; i++) {
+                float f = (i + dither) / SS_StepCount;
+                traceClipPos = lerp(traceClipStart, traceClipEnd, f);
+                traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
+                if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
 
-        //     if (ss_hit) {
-        //         traceClipStart = traceClipPos_prev;
-        //         traceClipEnd = traceClipPos;
+                float sampleClipDepth = solidDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
+                float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
+                float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
-        //         // traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
-        //         for (uint i = 0; i < SS_RefineSteps; i++) {
-        //             float f = (i + dither) / SS_RefineSteps;
-        //             traceClipPos = lerp(traceClipStart, traceClipEnd, f);
-        //             traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
-        //             if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
+                if (screenDepthL < traceDepthL) {
+                    ss_hit = true;
+                    hit = true;
+                    break;
+                }
 
-        //             float sampleClipDepth = solidDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
-        //             float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
-        //             float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
+                traceClipPos_prev = traceClipPos;
+                traceDepthL_prev = traceDepthL;
+            }
 
-        //             if (screenDepthL < traceDepthL) {
-        //                 break;
-        //             }
-        //         }
-        //     }
+            if (ss_hit) {
+                traceClipStart = traceClipPos_prev;
+                traceClipEnd = traceClipPos;
 
-        //     if (ss_hit) sampleColor = texSource.Sample(traceScreenPos);
-        // }
+                // traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
+                for (uint i = 0; i < SS_RefineSteps; i++) {
+                    float f = (i + dither) / SS_RefineSteps;
+                    traceClipPos = lerp(traceClipStart, traceClipEnd, f);
+                    traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
+                    if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
+
+                    float sampleClipDepth = solidDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
+                    float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
+                    float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
+
+                    if (screenDepthL < traceDepthL) {
+                        break;
+                    }
+                }
+            }
+
+            if (ss_hit) {
+                // traceScreenPos.xy -= scene[0].taa_jitter;
+                half4 color = texAlbedoGB.Sample(traceScreenPos);
+                sampleColor = RgbToLinear(color.rgb) * texDiffuse.Sample(traceScreenPos);
+            }
+        }
+
+        float cos_sample = 1.0; // TODO: set when SS hit?
 
         if (!ss_hit) {
             // recreate final sample
             float3 skyPos = getSkyPosition(hit_localPos);
-            float cos_sample;
 
             if (hit) {
                 float3 hit_normal = -stepAxis * sign(trace_localDir);
@@ -206,7 +221,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                     float2 hitCoord;
                     if (abs(hit_normal.y) > 0.5)      hitCoord = currPos.xz;
                     else if (abs(hit_normal.z) > 0.5) hitCoord = currPos.xy;
-                    else                             hitCoord = currPos.zy;
+                    else                              hitCoord = currPos.zy;
                     hitCoord = 1.0 - fract(hitCoord);
 
                     uint3 atlasSize;
@@ -256,12 +271,10 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 sampleColor = sampleSkyView(skyPos, trace_localDir, scene[0].SunLocalDir);
                 cos_sample = lmcoord_y;
             }
-
-            diffuse += cos_trace * cos_sample * sampleColor;
         }
+
+        diffuse += cos_trace * cos_sample * sampleColor;
     }
 
-    imgDebug[uv] = half4(diffuse * 0.1, (half)1.0);
-
-    return half4(diffuse * PI, (half)1.0);
+    return half4(diffuse, (half)1.0);
 }
