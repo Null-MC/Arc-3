@@ -42,6 +42,7 @@ export function setupOptions() {
                 .add(asInt('LIGHTING_FLOODFILL_SIZE', 64, 128, 256).needsReload(true).build(128))
                 .build())
             .add(EMPTY)
+            .add(asBool('LIGHTING_GI', false, true))
             .add(asBool('LIGHTING_COLOR_CANDLES', true, true))
             .build())
         .add(new Page('SHADOWS')

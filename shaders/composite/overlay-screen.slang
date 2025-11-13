@@ -78,8 +78,10 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     float transDist = length(transViewPos);
     half3 opaque_color = texFinal_opaque[uv];
 
-    bool hasRefract = translucent.a > 0.0 || waterDist < min(transDist, ap.camera.far);
-    if (RefractMode != Refract_None && hasRefract) {
+    bool hasOverlay = translucent.a > 0.0 || waterDist < min(transDist, ap.camera.far);
+    bool hasRefract = RefractMode != Refract_None && hasOverlay;
+
+    if (hasRefract) {
         float3 waterNormal = ObjectData_Normals.unpackTex(texNormalGB_water[uv].g);
         
         // half4 packedTransData = unpackUnorm4x8ToHalf(transData);
@@ -144,7 +146,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     half4 waterColor = texFinal_water[water_uv];
 
     opaqueViewPos = transViewPos;
-    if (hasRefract && all(refract_texcoord >= 0.0)) {
+    if (hasOverlay && all(refract_texcoord >= 0.0)) {
         // float opaqueDepth = solidDepthTex.Sample(refract_texcoord);
         float3 opaqueClipPos = float3(refract_texcoord, opaqueDepth) * 2.0 - 1.0;
         opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);

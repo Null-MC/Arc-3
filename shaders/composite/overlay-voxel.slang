@@ -254,8 +254,8 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                     diffuse += NoLm_sun * shadow * sunTransmit * scene[0].SunColor;
 
                     var hitVoxel = ap.voxel[hitVoxelPos];
-                    float lmcoord_y = 1.0;//saturate(hitVoxel.lightData.y / 15.0);
-                    float3 sky_ambient = sampleSkyIrradiance(hitNormal) * lmcoord_y;// * occlusion;
+                    float hit_lmcoord_y = saturate(hitVoxel.lightData.y / 15.0);
+                    float3 sky_ambient = sampleSkyIrradiance(hitNormal) * hit_lmcoord_y;// * occlusion;
 
                     opaque_color *= diffuse / PI + sky_ambient;
                 }

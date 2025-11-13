@@ -9,7 +9,7 @@ import lib.material.pbr;
 import lib.material.parallax;
 import lib.tbn;
 
-extern static const bool Material_SmoothNormals = true;
+extern static const bool Material_SmoothNormals;
 extern static const bool RENDER_TERRAIN = false;
 extern static const bool RENDER_PARTICLES = false;
 

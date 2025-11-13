@@ -15,6 +15,7 @@ export class Options {
     get Material_Parallax_Optimize(): boolean {return getBoolSetting('MATERIAL_PARALLAX_OPTIMIZE');}
     
     get Lighting_ColorCandles(): boolean {return getBoolSetting('LIGHTING_COLOR_CANDLES');}
+    get Lighting_GI(): boolean {return getBoolSetting('LIGHTING_GI');}
 
     // get Lighting_Reflection_Enabled(): boolean {return getBoolSetting('LIGHTING_REFLECT_ENABLED');}
     get Lighting_Reflection_Mode(): number {return getIntSetting('LIGHTING_REFLECT_MODE');}

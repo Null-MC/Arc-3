@@ -12,6 +12,7 @@ import lib.sky.common;
 import lib.sky.sample_transmit;
 import lib.sky.sample_irradiance;
 import lib.sky.sample_final;
+import lib.water.common;
 import lib.water.water_depth;
 import lib.voxel_tex;
 import lib.dda;
@@ -110,6 +111,8 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         int3 hit_voxelTexPos = -1;
         int3 hit_voxelPos = 0;
         float3 hit_localPos;
+
+        if (ap.camera.fluid == 1) traceWaterDist += viewDist;
 
         for (uint i = 0; i < 64; i++) {
             float3 stepAxisNext;
@@ -243,7 +246,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
                     if (voxelTex_data == 0) {
                         // debug missing data with red albedo
-                        reflectColor = half3(1, 0, 0);
+                        reflectColor = half3(0.0);//half3(1, 0, 0);
                     }
                 }
 
@@ -276,6 +279,8 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
                 reflectColor = sampleSkyFinal(hit_localPos, reflect_localDir, false);
             }
         }
+
+        reflectColor *= half3(exp(-traceWaterDist * Water_AbsorbColor));
 
         half3 f0 = lerp(half3(f0_metal), albedo.rgb, metalness);
 

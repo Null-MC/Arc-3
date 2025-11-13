@@ -220,7 +220,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
                     if (voxelTex_data == 0) {
                         // debug missing data with red albedo
-                        reflectColor = half3(1, 0, 0);
+                        reflectColor = half3(0.0);// half3(1, 0, 0);
                     }
                 }
 

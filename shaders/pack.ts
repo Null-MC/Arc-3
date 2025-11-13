@@ -536,6 +536,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .exportInt('Parallax_Type', options.Material_Parallax_Type)
             .exportInt('Parallax_SampleCount', options.Material_Parallax_SampleCount)
             .exportBool('Parallax_Optimize', options.Material_Parallax_Optimize)
+            .exportBool('Material_SmoothNormals', options.Material_SmoothNormals)
             .target(0, texAlbedoGB_translucent).blendOff(0)//.blendFunc(0, Func.SRC_ALPHA, Func.ONE_MINUS_SRC_ALPHA, Func.ONE, Func.ZERO)
             .target(1,  texTintTranslucent).blendOff(1)
             .target(2, texNormalGB_translucent).blendOff(2)
@@ -615,6 +616,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
                     .overrideObject('texNormalGB', texNormalGB_opaque.name())
                     .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
+                    .exportBool('Lighting_GI', options.Lighting_GI)
                     .compile();
             }
 
@@ -630,6 +632,18 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .overrideObject('texNormalGB', texNormalGB_opaque.name())
                     .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                     .exportBool('DEBUG_LIGHT_TILES', DEBUG_LIGHT_TILES)
+                    .compile();
+            }
+
+            // TODO: GI from diffuse only?
+            if (options.Lighting_GI) {
+                opaqueStage.createComposite("opaque-gi")
+                    .location('deferred/lighting-gi', "applyGI")
+                    .target(0, texDiffuse).blendFunc(0, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
+                    .overrideObject('texSource', finalFlipper.getReadTexture().name())
+                    .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
+                    .overrideObject('texNormalGB', texNormalGB_opaque.name())
+                    .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                     .compile();
             }
 
@@ -705,6 +719,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .overrideObject('texAlbedoGB', texAlbedoGB_translucent.name())
                     .overrideObject('texNormalGB', texNormalGB_translucent.name())
                     .overrideObject('texMatLightGB', texMatLightGB_translucent.name())
+                    .exportBool('Lighting_GI', options.Lighting_GI)
                     .compile();
             }
 
@@ -747,6 +762,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         .target(0, texDiffuse).blendFunc(0, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
                         .target(1, texSpecular).blendFunc(1, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
                         .exportFloat('Shadow_MaxRadius', options.Shadow_MaxRadius)
+                        .exportBool('Lighting_GI', options.Lighting_GI)
                         .compile();
                 }
 

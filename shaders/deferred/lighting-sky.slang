@@ -14,6 +14,7 @@ import lib.sky.sample_view;
 import lib.sky.sample_light;
 
 extern static const int ReflectMode;
+extern static const bool Lighting_GI;
 
 Sampler2D<float> texDepth;
 
@@ -97,11 +98,14 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         SampleCelestial(output.diffuse, output.specular, moon, surface, viewLocalDir, NoVm);
 
         // DEBUG
-        imgDebug[uv] = half4(texSssFinal[uv], (half)1.0);
+        // imgDebug[uv] = half4(texSssFinal[uv], (half)1.0);
 
-        half3 sky_ambient = sampleSkyIrradiance(tex_normal) * lmcoord_y * mat_lit.occlusion;
-        output.diffuse = output.diffuse / (half)PI + sky_ambient;
-        // output.specular = output.specular;
+        output.diffuse /= PI;
+
+        if (!Lighting_GI) {
+            half3 sky_ambient = sampleSkyIrradiance(tex_normal) * lmcoord_y * mat_lit.occlusion;
+            output.diffuse = output.diffuse / (half)PI + sky_ambient;
+        }
 
         output.diffuse *= (half)1.0 - (half)0.66*sss;
 

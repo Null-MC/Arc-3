@@ -13,7 +13,7 @@ import lib.water.waves;
 import lib.tbn;
 
 extern static const int RefractMode;
-extern static const bool Material_SmoothNormals = true;
+extern static const bool Material_SmoothNormals;
 extern static const bool Water_WaveEnabled = false;
 extern static const bool RENDER_TERRAIN = false;
 extern static const bool RENDER_PARTICLES = false;
