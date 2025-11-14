@@ -59,6 +59,7 @@ export function configureRenderer(config: RendererConfig): void {
     config.shadow.enabled = dimension.World_HasSky;
     config.shadow.resolution = options.Shadow_Resolution;
     config.shadow.distance = options.Shadow_Distance;
+    // config.shadow.safeZone[0] = 32;
     config.shadow.safeZone[1] = 128;
     config.shadow.near = -800;
     config.shadow.far = 800;
@@ -354,13 +355,15 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     }
 
     if (VOXEL_TEX_ENABLED) {
-        pipeline.createImageTexture('texVoxelTexId', 'imgVoxelTexId')
-            .width(256)
-            .height(256)
-            .depth(256)
-            .format(Format.R32UI)
-            .clearColor(0, 0, 0, 0)
-            .build();
+        // pipeline.createImageTexture('texVoxelTexId', 'imgVoxelTexId')
+        //     .width(256)
+        //     .height(256)
+        //     .depth(256)
+        //     .format(Format.R32UI)
+        //     .clearColor(0, 0, 0, 0)
+        //     .build();
+
+        pipeline.createBuffer('voxelTexBuffer', (256*256*256)*8, true);
     }
 
     const texDiffuse = pipeline.createImageTexture('texDiffuse', 'imgDiffuse')
@@ -715,44 +718,46 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             }
 
             if (options.Lighting_GI_Enabled) {
-                opaqueStage.createComposite("deferred-gi")
-                    .location('deferred/gi/gi', "applyGI")
-                    .target(0, texGI)
-                    .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
-                    .overrideObject('texNormalGB', texNormalGB_opaque.name())
-                    .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
-                    .exportBool('GI_ScreenTrace', options.Lighting_GI_ScreenTrace)
-                    .compile();
+                withSubList(opaqueStage, 'opaque-deferred-gi', stage_opaque_gi => {
+                    stage_opaque_gi.createComposite("deferred-gi")
+                        .location('deferred/gi/gi', "applyGI")
+                        .target(0, texGI)
+                        .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
+                        .overrideObject('texNormalGB', texNormalGB_opaque.name())
+                        .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
+                        .exportBool('GI_ScreenTrace', options.Lighting_GI_ScreenTrace)
+                        .compile();
 
-                opaqueStage.createComposite("deferred-gi-atrous-1")
-                    .location('deferred/gi/gi-atrous', "atrousFilter")
-                    .target(0, texGI_atrous1)
-                    .overrideObject('texSource', 'texGI')
-                    .exportInt('AtrousLevel', 0)
-                    .compile();
+                    stage_opaque_gi.createComposite("deferred-gi-atrous-1")
+                        .location('deferred/gi/gi-atrous', "atrousFilter")
+                        .target(0, texGI_atrous1)
+                        .overrideObject('texSource', 'texGI')
+                        .exportInt('AtrousLevel', 0)
+                        .compile();
 
-                opaqueStage.createComposite("deferred-gi-atrous-2")
-                    .location('deferred/gi/gi-atrous', "atrousFilter")
-                    .target(0, texGI_atrous2)
-                    .overrideObject('texSource', 'texGI_atrous1')
-                    .exportInt('AtrousLevel', 1)
-                    .compile();
+                    stage_opaque_gi.createComposite("deferred-gi-atrous-2")
+                        .location('deferred/gi/gi-atrous', "atrousFilter")
+                        .target(0, texGI_atrous2)
+                        .overrideObject('texSource', 'texGI_atrous1')
+                        .exportInt('AtrousLevel', 1)
+                        .compile();
 
-                opaqueStage.createComposite("deferred-gi-atrous-3")
-                    .location('deferred/gi/gi-atrous', "atrousFilter")
-                    .target(0, texGI_atrous1)
-                    .overrideObject('texSource', 'texGI_atrous2')
-                    .exportInt('AtrousLevel', 3)
-                    .compile();
+                    stage_opaque_gi.createComposite("deferred-gi-atrous-3")
+                        .location('deferred/gi/gi-atrous', "atrousFilter")
+                        .target(0, texGI_atrous1)
+                        .overrideObject('texSource', 'texGI_atrous2')
+                        .exportInt('AtrousLevel', 3)
+                        .compile();
 
-                opaqueStage.createComposite("deferred-gi-accumulate")
-                    .location('deferred/gi/gi-accumulate', "accumulateGI")
-                    .target(0, texGI_final)
-                    .overrideObject('texSource', 'texGI_atrous1')
-                    .exportInt('GI_MaxFrames', options.Lighting_GI_MaxFrames)
-                    .compile();
+                    stage_opaque_gi.createComposite("deferred-gi-accumulate")
+                        .location('deferred/gi/gi-accumulate', "accumulateGI")
+                        .target(0, texGI_final)
+                        .overrideObject('texSource', 'texGI_atrous1')
+                        .exportInt('GI_MaxFrames', options.Lighting_GI_MaxFrames)
+                        .compile();
 
-                opaqueStage.copy(texGI_final, texGI_prev, screenWidth, screenHeight);
+                    stage_opaque_gi.copy(texGI_final, texGI_prev, screenWidth, screenHeight);
+                });
             }
 
             finalFlipper.flip();

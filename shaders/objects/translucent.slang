@@ -156,6 +156,8 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
     ObjectData_Normals normals;
     ObjectData_MatLit mat_lit;
 
+    mat_lit.blockId = input.blockId;
+
     half4 tint = unpackUnorm4x8ToHalf(input.color);
     half4 color = (half4)albedoTex.SampleLevel(tex_uv, LOD) * tint;
     half4 normalData = (half4)normalTex.SampleLevel(tex_uv, LOD);

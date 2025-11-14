@@ -2,19 +2,17 @@ import aperture;
 import buffers.ObjectData;
 import lib.common;
 import lib.water.common;
-// import lib.water.water_depth;
 import lib.material.pbr;
 import lib.material.rough_normal;
-import lib.octohedral;
 
 extern static const int RefractMode;
+extern static const int BLOCK_WATER;
 
 Sampler2D<float> mainDepthTex;
 Sampler2D<float> solidDepthTex;
 
 Sampler2D<half3> texFinal_opaque;
 Sampler2D<half4> texFinal_translucent;
-Sampler2D<half4> texFinal_water;
 
 Sampler2D<half3> texTintTranslucent;
 Sampler2D<uint2> texNormalGB_translucent;
@@ -53,7 +51,6 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     half4 weather = texWeather[uv];
     half3 tint = texTintTranslucent[uv];
     half4 translucent = texFinal_translucent[uv];
-    // uint transData = texDataTranslucent[uv];
 
     float2 texcoord = pos / ap.game.screenSize;
     if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
@@ -63,7 +60,6 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
 
     float3 opaqueClipPos = float3(texcoord, opaqueDepth) * 2.0 - 1.0;
     float3 opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);
-    // // float3 localPos = mul3(ap.camera.viewInv, viewPos);
 
     float3 transClipPos = float3(texcoord, transDepth) * 2.0 - 1.0;
     float3 transViewPos = project(ap.camera.projectionInv, transClipPos);
@@ -74,25 +70,25 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
 
     uint2 water_uv = uv;
     float2 refract_texcoord = texcoord;
-    // float waterDist = WaterDepth_get(uv);
     float transDist = length(transViewPos);
     half3 opaque_color = texFinal_opaque[uv];
 
     bool hasOverlay = translucent.a > 0.0;// || waterDist < min(transDist, ap.camera.far);
     bool hasRefract = RefractMode != Refract_None && hasOverlay;
 
+    ObjectData_MatLit mat_lit;
     if (hasRefract) {
         // float3 waterNormal = ObjectData_Normals.unpackTex(texNormalGB_water[uv].g);
         
         float3 transNormal = ObjectData_Normals.unpackTex(texNormalGB_translucent[uv].g);
 
-        half4 specularData = ObjectData_MatLit.unpackSpecular(texMatLightGB_translucent[uv].r);
-        half trans_roughness = mat_roughness(specularData.r);
+        mat_lit.unpack(texMatLightGB_translucent[uv]);
+        // half4 specularData = ObjectData_MatLit.unpackSpecular(texMatLightGB_translucent[uv].r);
+        half trans_roughness = mat_roughness(mat_lit.specular.r);
         half trans_roughL = pow2(trans_roughness);
 
-        half roughL = trans_roughL;// transDist < waterDist ? trans_roughL : (half)0.02;
-        float3 refract_normal = transNormal;// transDist < waterDist ? transNormal : waterNormal;
-        refract_normal = randomizeNormal(uv, refract_normal, roughL);
+        half roughL = trans_roughL;
+        float3 refract_normal = randomizeNormal(uv, transNormal, roughL);
 
         const float IOR_AIR   = 1.0003;
         const float IOR_WATER   = 1.333;
@@ -104,7 +100,6 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
 
         float3 refract_viewNormal = mul(float3x3(ap.camera.view), refract_normal);
         float3 refract_viewDir = refract(viewDir, refract_viewNormal, eta);
-        // float3 refract_viewPos = min(transDist, waterDist) * viewDir;
         float3 refract_viewPos = transDist * viewDir;
 
         if (dot(refract_viewDir, refract_viewDir) < EPSILON) {
@@ -113,8 +108,6 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
         }
         else {
             if (RefractMode == Refract_ScreenSpace) {
-                // float3 refract_viewPos = min(transDist, waterDist) * viewDir;
-
                 ss_refract(refract_texcoord, refract_viewPos, refract_viewDir);
                 refract_texcoord = saturate(refract_texcoord) + scene[0].taa_jitter;
 
@@ -124,77 +117,38 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
         }
     }
 
-    uint2 refract_uv = uint2(refract_texcoord * ap.game.screenSize);
-
-    // TODO: debug water depths
-
-    // if (hasRefract && waterDist > transDist) {
-    //     water_uv = refract_uv;
-    //     waterDist = WaterDepth_get(refract_uv);
-    // }
-
-    // if (hasRefract && transDist > waterDist && translucent.a > 0.0) {
-    //     // WARN: causes fuckery
-    //     // float transDepth = mainDepthTex[refract_uv];
-    //     translucent = texFinal_translucent[refract_uv];
-    //     tint = texTintTranslucent[refract_uv];
-
-    //     // TODO: update trans pos/dist?
-    // }
-
-    tint = RgbToLinear(tint);
-    half4 waterColor = texFinal_water[water_uv];
-
-    opaqueViewPos = transViewPos;
-    if (hasOverlay && all(refract_texcoord >= 0.0)) {
-        // float opaqueDepth = solidDepthTex.Sample(refract_texcoord);
-        float3 opaqueClipPos = float3(refract_texcoord, opaqueDepth) * 2.0 - 1.0;
-        opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);
-        // float3 localPos = mul3(ap.camera.viewInv, viewPos);
-
-        // opaque_color = texSource.Sample(refract_texcoord);
-
-        // if (waterDist > transDist)
-        //     waterColor.rgb *= tint;
+    bool isWater = false;
+    if (mat_lit.blockId > 0) {
+        uint customId = ap.blocks[mat_lit.blockId].customId;
+        isWater = customId == BLOCK_WATER;
     }
 
-    if (translucent.a > 0.0)
-        opaque_color *= tint;
+    uint2 refract_uv = uint2(refract_texcoord * ap.game.screenSize);
 
-    float opaqueDist = length(opaqueViewPos);
+    if (translucent.a > 0.0 && !isWater)
+        opaque_color *= RgbToLinear(tint);
 
-    // float waterMin, waterMax;
-    // if (ap.camera.fluid == 1) {
-    //     waterMin = 0.0;
-    //     waterMax = min(waterDist, opaqueDist);
-    // }
-    // else {
-    //     waterMin = waterDist;
-    //     waterMax = min(ap.camera.far, opaqueDist);
-    // }
+    float waterDepthL;
+    if (ap.camera.fluid == 1) {
+        waterDepthL = transDist;
+    }
+    else if (isWater) {
+        float3 opaqueClipPos = float3(refract_texcoord, opaqueDepth) * 2.0 - 1.0;
+        opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);
+        float opaqueDist = length(opaqueViewPos);
 
-    float waterDepthL = 0.0;//max(waterMax - waterMin, 0.0);
+        waterDepthL = max(opaqueDist - transDist, 0.0);
+    }
 
-    // float opaqueWaterDepthL = max(waterMax - waterMin, 0.0);
     half3 opaqueWaterTint = half3(exp(-(waterDepthL + EPSILON) * Water_AbsorbColor));
 
     if (ap.camera.fluid == 0 && waterDepthL > 0.0) {
         opaque_color *= opaqueWaterTint;
 
-        opaque_color += fma(opaque_color, half3(1.0 - waterColor.a), waterColor.rgb);
+        // opaque_color += fma(opaque_color, half3(1.0 - waterColor.a), waterColor.rgb);
     }
 
     half3 final_color = fma(opaque_color, half3(1.0 - translucent.a), translucent.rgb);
-
-    // if (ap.camera.fluid == 0 && translucent.a > 0.0 && transDist > waterDist) {
-    //     // tint translucent under water
-    //     float transWaterDist = max(transDist - waterDist, EPSILON);
-    //     half3 transWaterTint = half3(exp(-transWaterDist * Water_AbsorbColor));
-    //     final_color *= transWaterTint;
-    // }
-
-    // if (ap.camera.fluid == 1 || (translucent.a > 0.0 && transDist > waterDist))
-    //     final_color = fma(final_color, half3(1.0 - waterColor.a), waterColor.rgb);
 
     if (ap.camera.fluid == 1) {
         final_color *= opaqueWaterTint;

@@ -146,7 +146,8 @@ void applyPointLights(ComputeInput input) {
         ObjectData_Normals normals;
         normals.unpack(texNormalGB[input.globalPos.xy]);
 
-        half4 specularData = ObjectData_MatLit.unpackSpecular(texMatLightGB[input.globalPos.xy].r);
+        half4 specularData;
+        ObjectData_MatLit.unpackSpecular(texMatLightGB[input.globalPos.xy].r, specularData);
 
         float2 texcoord = (input.globalPos.xy + 0.5) / float2(ap.game.screenSize);
         if (TAA_Enabled) texcoord -= scene[0].taa_jitter;

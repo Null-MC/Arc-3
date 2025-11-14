@@ -8,6 +8,8 @@ extern static const bool VOXEL_TEX_ENABLED = true;
 extern static const bool ALPHATEST_ENABLED = false;
 extern static const uint BLOCK_WATER;
 
+RWStructuredBuffer<uint2> voxelTexBuffer;
+
 
 struct VertexOutput {
     float4 position : SV_Position;
@@ -42,7 +44,7 @@ VertexOutput vertexMain(Vertex input) {
         }
     }
 
-    if (VOXEL_TEX_ENABLED && RENDER_TERRAIN && !isFluidBlock && input.currentInstance() == 1) {
+    if (VOXEL_TEX_ENABLED && RENDER_TERRAIN && isFullBlock && !isFluidBlock && input.currentInstance() == 1) {
         float3 origin = modelPos;// mul3(ap.celestial.viewInv, shadowViewPos);
         if (let value = input.midBlock()) origin += value;
         int3 voxelPos = int3(floor(VoxelTex_GetBufferPosition(origin)));
@@ -57,10 +59,15 @@ VertexOutput vertexMain(Vertex input) {
             float2 atlasSize;
             albedoTex.GetDimensions(0, atlasSize.x, atlasSize.y);
 
-            uint2 uv_min = uint2(atlas.CoordMin * atlasSize);
-            uint2 uv_size = uint2(atlas.CoordSize * atlasSize);
-            uint data = VoxelTex_pack(uv_min, uv_size, normal);
-            InterlockedMax(imgVoxelTexId[voxelPos], data);
+            VoxelTex voxel;
+            voxel.uv_min = uint2(atlas.CoordMin * atlasSize);
+            voxel.uv_size = uint2(atlas.CoordSize * atlasSize);
+            voxel.tint = color.rgb;
+
+            uint2 voxelData = voxel.pack(normal);
+            uint voxelIndex = VoxelTex_GetBufferIndex(voxelPos);
+            InterlockedMax(voxelTexBuffer[voxelIndex].r, voxelData.r);
+            InterlockedMax(voxelTexBuffer[voxelIndex].g, voxelData.g);
         }
     }
 

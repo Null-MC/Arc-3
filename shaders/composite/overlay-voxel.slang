@@ -17,6 +17,8 @@ import lib.voxel_tex;
 extern static const bool Refract_SS_Fallback;
 extern static const uint BLOCK_WATER;
 
+StructuredBuffer<uint2> voxelTexBuffer;
+
 Sampler2D<float> mainDepthTex;
 Sampler2D<float> solidDepthTex;
 
@@ -73,7 +75,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
         float3 refract_viewDir = refract(viewDir, refract_viewNormal, eta);
         float3 refract_viewPos = transDist * viewDir;
 
-        int3 hitVoxelTexPos = -1;
+        int3 hit_voxelTexPos = -1;
         int3 hitVoxelPos = 0;
 
         if (dot(refract_viewDir, refract_viewDir) < EPSILON) {
@@ -99,27 +101,26 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                 float3 step = dda_step(stepAxisNext, nextDist, stepSizes, refract_localDir);
 
                 hitVoxelPos = int3(floor(fma(step, float3(0.5), currPos))) + cameraFloor;
-                hitVoxelTexPos = int3(floor(VoxelTex_GetBufferPosition(currPos + 0.5*step - cameraFract)));
+                hit_voxelTexPos = int3(floor(VoxelTex_GetBufferPosition(currPos + 0.5*step - cameraFract)));
 
-                var voxel = ap.voxel[hitVoxelPos];
-                if (voxel.blockId > 0) {
-                    if (voxel.block.isFullBlock) {
-                        hit = true;
-                        break;
-                    }
-                    else if (voxel.block.customId == BLOCK_WATER) {
-                        traceWaterDist += length(step);
-                    }
-                }
+                // var voxel = ap.voxel[hitVoxelPos];
+                // if (voxel.blockId > 0) {
+                //     if (voxel.block.isFullBlock) {
+                //         hit = true;
+                //         break;
+                //     }
+                //     else if (voxel.block.customId == BLOCK_WATER) {
+                //         traceWaterDist += length(step);
+                //     }
+                // }
 
                 // TODO: use custom voxelTex lookup to verify builtin is broken
 
-                // hitVoxel = int3(floor(VoxelTex_GetBufferPosition(currPos + 0.5*step - cameraFract)));
-
-                // if (texVoxelTexId[hitVoxel] != 0) {
-                //     hit = true;
-                //     break;
-                // }
+                uint voxelIndex = VoxelTex_GetBufferIndex(hit_voxelTexPos);
+                if (voxelTexBuffer[voxelIndex].r != 0) {
+                    hit = true;
+                    break;
+                }
 
                 currPos += step;
                 stepAxis = stepAxisNext;
@@ -206,10 +207,10 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                     float3 hit_screenPos = project(ap.camera.projection, hit_viewPos) * 0.5 + 0.5;
                     float hit_depth = solidDepthTex.Sample(hit_screenPos.xy);
 
-                    if (VoxelTex_InBounds(hitVoxelTexPos)) {
-                        uint2 uv_min, uv_size;
-                        uint voxelTex_data = texVoxelTexId[hitVoxelTexPos];
-                        VoxelTex_unpack(voxelTex_data, uv_min, uv_size);
+                    if (VoxelTex_InBounds(hit_voxelTexPos)) {
+                        VoxelTex voxel;
+                        uint voxelIndex = VoxelTex_GetBufferIndex(hit_voxelTexPos);
+                        voxel.unpack(voxelTexBuffer[voxelIndex]);
 
                         float2 hitCoord;
                         if (abs(hitNormal.y) > 0.5)      hitCoord = currPos.xz;
@@ -221,14 +222,14 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                         blockAtlas.GetDimensions(0, atlasSize.x, atlasSize.y, atlasSize.z);
 
                         AtlasBounds atlas;
-                        atlas.CoordMin = uv_min / float2(atlasSize.xy);
-                        atlas.CoordSize = uv_size / float2(atlasSize.xy);
+                        atlas.CoordMin = voxel.uv_min / float2(atlasSize.xy);
+                        atlas.CoordSize = voxel.uv_size / float2(atlasSize.xy);
                         float2 uv = atlas.GetAtlasCoord(hitCoord);
 
-                        opaque_color = blockAtlas.Sample(uv).rgb;
+                        opaque_color = blockAtlas.Sample(uv).rgb * voxel.tint;
                         opaque_color = RgbToLinear(opaque_color);
 
-                        if (voxelTex_data == 0) {
+                        if (voxelTexBuffer[voxelIndex].r == 0) {
                             // debug missing data with red albedo
                             opaque_color = half3(1, 0, 0);
                         }

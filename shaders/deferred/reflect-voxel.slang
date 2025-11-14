@@ -20,6 +20,8 @@ extern static const bool Reflect_SS_Fallback = false;
 extern static const bool World_HasSky;
 extern static const uint BLOCK_WATER;
 
+StructuredBuffer<uint2> voxelTexBuffer;
+
 Sampler2D<float> solidDepthTex;
 Sampler2D<half3> texSource;
 
@@ -95,25 +97,24 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             hit_voxelPos = int3(floor(fma(step, float3(0.5), currPos))) + cameraFloor;
             hit_voxelTexPos = int3(floor(VoxelTex_GetBufferPosition(currPos + 0.5*step - cameraFract)));
 
-            var voxel = ap.voxel[hit_voxelPos];
-            if (voxel.blockId > 0) {
-                if (voxel.block.isFullBlock) {
-                    hit = true;
-                    break;
-                }
-                else if (voxel.block.customId == BLOCK_WATER) {
-                    traceWaterDist += length(step);
-                }
-            }
+            // var voxel = ap.voxel[hit_voxelPos];
+            // if (voxel.blockId > 0) {
+            //     if (voxel.block.isFullBlock) {
+            //         hit = true;
+            //         break;
+            //     }
+            //     else if (voxel.block.customId == BLOCK_WATER) {
+            //         traceWaterDist += length(step);
+            //     }
+            // }
 
             // TODO: use custom voxelTex lookup to verify builtin is broken
 
-            // hitVoxel = int3(floor(VoxelTex_GetBufferPosition(currPos + 0.5*step - cameraFract)));
-
-            // if (texVoxelTexId[hitVoxel] != 0) {
-            //     hit = true;
-            //     break;
-            // }
+            uint voxelIndex = VoxelTex_GetBufferIndex(hit_voxelTexPos);
+            if (voxelTexBuffer[voxelIndex].r != 0) {
+                hit = true;
+                break;
+            }
 
             currPos += step;
             stepAxis = stepAxisNext;
@@ -197,9 +198,13 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
                 float hit_depth = solidDepthTex.Sample(hit_screenPos.xy);
 
                 if (VoxelTex_InBounds(hit_voxelTexPos)) {
-                    uint2 uv_min, uv_size;
-                    uint voxelTex_data = texVoxelTexId[hit_voxelTexPos];
-                    VoxelTex_unpack(voxelTex_data, uv_min, uv_size);
+                    // uint2 uv_min, uv_size;
+                    // uint voxelTex_data = texVoxelTexId[hit_voxelTexPos];
+                    // VoxelTex_unpack(voxelTex_data, uv_min, uv_size);
+
+                    VoxelTex voxel;
+                    uint voxelIndex = VoxelTex_GetBufferIndex(hit_voxelTexPos);
+                    voxel.unpack(voxelTexBuffer[voxelIndex]);
 
                     float2 hitCoord;
                     if (abs(hitNormal.y) > 0.5)      hitCoord = currPos.xz;
@@ -211,14 +216,14 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
                     blockAtlas.GetDimensions(0, atlasSize.x, atlasSize.y, atlasSize.z);
 
                     AtlasBounds atlas;
-                    atlas.CoordMin = uv_min / float2(atlasSize.xy);
-                    atlas.CoordSize = uv_size / float2(atlasSize.xy);
+                    atlas.CoordMin = voxel.uv_min / float2(atlasSize.xy);
+                    atlas.CoordSize = voxel.uv_size / float2(atlasSize.xy);
                     float2 uv = atlas.GetAtlasCoord(hitCoord);
 
-                    reflectColor = blockAtlas.Sample(uv).rgb;
+                    reflectColor = blockAtlas.Sample(uv).rgb * voxel.tint;
                     reflectColor = RgbToLinear(reflectColor);
 
-                    if (voxelTex_data == 0) {
+                    if (voxelTexBuffer[voxelIndex].r == 0) {
                         // debug missing data with red albedo
                         reflectColor = half3(0.0);// half3(1, 0, 0);
                     }
