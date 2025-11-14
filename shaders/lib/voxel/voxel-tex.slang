@@ -1,3 +1,5 @@
+public module voxel_tex;
+
 import aperture;
 import lib.common;
 

@@ -1,7 +1,7 @@
 import aperture;
 import lib.common;
 import lib.sampling.atlas;
-import lib.voxel_tex;
+import lib.voxel.voxel_tex;
 
 extern static const bool RENDER_TERRAIN = false;
 extern static const bool VOXEL_TEX_ENABLED = true;

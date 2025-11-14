@@ -1,3 +1,5 @@
+public module hash;
+
 static const float4 U = float4(0.1031, 0.1030, 0.0973, 0.1099);
 
 float hash11(const in float seed) {

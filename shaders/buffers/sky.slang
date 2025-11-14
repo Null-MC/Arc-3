@@ -1,3 +1,5 @@
+public module sky;
+
 struct SkyParameters {
     // These are per megameter.
     float3 ozoneAbsorptionBase;

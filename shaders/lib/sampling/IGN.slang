@@ -1,3 +1,5 @@
+public module IGN;
+
 import aperture;
 
 static const float3 IGN_magic = float3(0.06711056, 0.00583715, 52.9829189);

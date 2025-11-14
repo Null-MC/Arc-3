@@ -1,3 +1,5 @@
+public module sample_view;
+
 import lib.common;
 import lib.sky.common;
 

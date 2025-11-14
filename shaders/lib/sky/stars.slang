@@ -1,3 +1,5 @@
+public module stars;
+
 import aperture;
 
 // https://www.shadertoy.com/view/tdSXzD

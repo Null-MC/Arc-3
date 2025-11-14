@@ -1,3 +1,5 @@
+public module octohedral;
+
 import lib.common;
 
 

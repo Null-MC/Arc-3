@@ -1,3 +1,5 @@
+public module voxel;
+
 import aperture;
 import lib.common;
 

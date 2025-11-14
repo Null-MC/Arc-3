@@ -480,13 +480,13 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .overrideObject('scene_writer', 'scene')
             .compile();
 
-        beginStage.createCompute("clear-screen")
-            .location("pre/clear-screen", "clearScreen")
-            .workGroups(
-                Math.ceil(screenWidth / 16),
-                Math.ceil(screenHeight / 16),
-                1)
-            .compile();
+        // beginStage.createCompute("clear-screen")
+        //     .location("pre/clear-screen", "clearScreen")
+        //     .workGroups(
+        //         Math.ceil(screenWidth / 16),
+        //         Math.ceil(screenHeight / 16),
+        //         1)
+        //     .compile();
 
         if (dimension.World_HasSky) {
             beginStage.createComposite('sky-view')

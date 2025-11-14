@@ -1,3 +1,5 @@
+public module lmcoord;
+
 import lib.common;
 
 static const float lmCoordMin = ( 0.5/16.0);

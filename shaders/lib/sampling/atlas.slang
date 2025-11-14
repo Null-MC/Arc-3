@@ -1,5 +1,6 @@
-struct AtlasBounds
-{
+public module atlas;
+
+struct AtlasBounds {
     float2 CoordMin = 0;
     float2 CoordSize = 0;
 

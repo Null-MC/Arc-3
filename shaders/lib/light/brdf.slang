@@ -1,3 +1,5 @@
+public module BRDF;
+
 import lib.common;
 import lib.light.fresnel;
 

@@ -1,3 +1,5 @@
+public module HG;
+
 import lib.common;
 
 static const float phaseIso = rcp(4.0 * PI);

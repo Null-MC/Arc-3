@@ -1,3 +1,5 @@
+public module hand;
+
 import aperture;
 import lib.common;
 import lib.material.pbr;

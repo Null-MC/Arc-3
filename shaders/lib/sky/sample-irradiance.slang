@@ -1,3 +1,5 @@
+public module sample_irradiance;
+
 import lib.common;
 import lib.sky.common;
 import lib.sampling.ERP;

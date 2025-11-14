@@ -1,3 +1,5 @@
+public module sun;
+
 import lib.common;
 
 extern static const float SUN_SIZE = 1.2;

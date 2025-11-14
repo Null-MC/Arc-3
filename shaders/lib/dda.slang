@@ -1,6 +1,8 @@
+public module DDA;
+
 import lib.common;
 
-void dda_init(out float3 stepSizes, out float3 nextDist, const in float3 currPos, const in float3 localDir) {
+void DDA_init(out float3 stepSizes, out float3 nextDist, const in float3 currPos, const in float3 localDir) {
     float3 stepDir = sign(localDir);
     stepSizes = rcp(abs(localDir));
 
@@ -8,7 +10,7 @@ void dda_init(out float3 stepSizes, out float3 nextDist, const in float3 currPos
     nextDist = (nextDist - fract(currPos)) / localDir;
 }
 
-float3 dda_step(out float3 stepAxis, inout float3 nextDist, const in float3 stepSizes, const in float3 localDir) {
+float3 DDA_step(out float3 stepAxis, inout float3 nextDist, const in float3 stepSizes, const in float3 localDir) {
     float closestDist = minOf(nextDist);
     stepAxis = float3(nextDist <= closestDist);
 

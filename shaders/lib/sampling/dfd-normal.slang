@@ -1,3 +1,5 @@
+public module dfd_normal;
+
 import lib.common;
 
 float3 getSurfaceNormal(const in float3 position, const in float3 fallbackNormal) {

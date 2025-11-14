@@ -1,3 +1,5 @@
+public module rough_normal;
+
 import aperture;
 
 Sampler2D<float3> texBlueNoise;

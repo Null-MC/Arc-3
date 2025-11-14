@@ -1,3 +1,5 @@
+public module object_data;
+
 import lib.octohedral;
 
 

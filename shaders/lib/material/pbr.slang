@@ -1,3 +1,5 @@
+public module PBR;
+
 import lib.common;
 
 extern static const int MATERIAL_FORMAT;

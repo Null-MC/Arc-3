@@ -1,3 +1,5 @@
+public module matrix;
+
 float4x4 BuildOrthoProjectionMatrix(const in float width, const in float height, const in float zNear, const in float zFar) {
     return float4x4(
         float4(2.0 / width, 0.0, 0.0, 0.0),

@@ -4,23 +4,15 @@ import lib.common;
 import lib.material.pbr;
 import lib.material.rough_normal;
 import lib.light.fresnel;
-import lib.sampling.atlas;
 import lib.sampling.depth;
 import lib.sampling.IGN;
-import lib.shadow;
-import lib.sky.common;
-import lib.sky.sample_transmit;
-import lib.sky.sample_irradiance;
 import lib.sky.sample_final;
-import lib.voxel_tex;
+import lib.voxel.voxel_tex;
+import lib.voxel.voxel_sample;
 import lib.dda;
 
 extern static const bool Reflect_SS_Fallback = false;
-// extern static const bool Debug_WhiteWorld;
-extern static const bool World_HasSky;
 extern static const uint BLOCK_WATER;
-
-StructuredBuffer<uint2> voxelTexBuffer;
 
 Sampler2D<float> solidDepthTex;
 Sampler2D<half3> texSource;
@@ -28,8 +20,6 @@ Sampler2D<half3> texSource;
 Sampler2D<half4> texAlbedoGB;
 Sampler2D<uint2> texNormalGB;
 Sampler2D<uint2> texMatLightGB;
-
-Sampler2D<half3> blockAtlas;
 
 
 [[shader("fragment")]]
@@ -74,7 +64,6 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         float3 reflect_localDir = mul(float3x3(ap.camera.viewInv), reflect_viewDir);
 
 
-
         float3 cameraFract = fract(ap.camera.position);
         int3 cameraFloor = int3(floor(ap.camera.position));
 
@@ -82,7 +71,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         // float3 traceLocalStart = localPos;
         float3 localDir = normalize(localPos);
         float3 currPos = localPos + cameraFract - localDir*0.02;
-        dda_init(stepSizes, nextDist, currPos, reflect_localDir);
+        DDA_init(stepSizes, nextDist, currPos, reflect_localDir);
 
         bool hit = false;
         float traceWaterDist = EPSILON;
@@ -92,7 +81,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         for (uint i = 0; i < 64; i++) {
             float3 stepAxisNext;
-            float3 step = dda_step(stepAxisNext, nextDist, stepSizes, reflect_localDir);
+            float3 step = DDA_step(stepAxisNext, nextDist, stepSizes, reflect_localDir);
 
             hit_voxelPos = int3(floor(fma(step, float3(0.5), currPos))) + cameraFloor;
             hit_voxelTexPos = int3(floor(VoxelTex_GetBufferPosition(currPos + 0.5*step - cameraFract)));
@@ -169,7 +158,6 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
                 traceClipStart = traceClipPos_prev;
                 traceClipEnd = traceClipPos;
 
-                // traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
                 for (uint i = 0; i < SS_RefineSteps; i++) {
                     float f = (i + dither) / SS_RefineSteps;
                     traceClipPos = lerp(traceClipStart, traceClipEnd, f);
@@ -192,67 +180,13 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         if (!ss_hit) {
             // recreate final sample
             if (hit) {
-                float3 hitNormal = -stepAxis * sign(reflect_localDir);
+                float3 hit_normal = -stepAxis * sign(reflect_localDir);
                 float3 hit_viewPos = mul3(ap.camera.view, hit_localPos);
                 float3 hit_screenPos = project(ap.camera.projection, hit_viewPos) * 0.5 + 0.5;
                 float hit_depth = solidDepthTex.Sample(hit_screenPos.xy);
 
-                if (VoxelTex_InBounds(hit_voxelTexPos)) {
-                    // uint2 uv_min, uv_size;
-                    // uint voxelTex_data = texVoxelTexId[hit_voxelTexPos];
-                    // VoxelTex_unpack(voxelTex_data, uv_min, uv_size);
-
-                    VoxelTex voxel;
-                    uint voxelIndex = VoxelTex_GetBufferIndex(hit_voxelTexPos);
-                    voxel.unpack(voxelTexBuffer[voxelIndex]);
-
-                    float2 hitCoord;
-                    if (abs(hitNormal.y) > 0.5)      hitCoord = currPos.xz;
-                    else if (abs(hitNormal.z) > 0.5) hitCoord = currPos.xy;
-                    else                             hitCoord = currPos.zy;
-                    hitCoord = 1.0 - fract(hitCoord);
-
-                    uint3 atlasSize;
-                    blockAtlas.GetDimensions(0, atlasSize.x, atlasSize.y, atlasSize.z);
-
-                    AtlasBounds atlas;
-                    atlas.CoordMin = voxel.uv_min / float2(atlasSize.xy);
-                    atlas.CoordSize = voxel.uv_size / float2(atlasSize.xy);
-                    float2 uv = atlas.GetAtlasCoord(hitCoord);
-
-                    reflectColor = blockAtlas.Sample(uv).rgb * voxel.tint;
-                    reflectColor = RgbToLinear(reflectColor);
-
-                    if (voxelTexBuffer[voxelIndex].r == 0) {
-                        // debug missing data with red albedo
-                        reflectColor = half3(0.0);// half3(1, 0, 0);
-                    }
-                }
-
-                half3 diffuse = half3(0.0);
-                float3 skyPos = getSkyPosition(hit_localPos);
-
-                float3 shadowLocalPos = hitNormal * 0.04 + hit_localPos;
-                float3 shadowViewPos = mul3(ap.celestial.view, shadowLocalPos);
-                shadowViewPos.z += 0.008;
-
-                int shadowCascade = GetShadowProjection(shadowViewPos, 0.05);
-
-                float shadow = 1.0;
-                if (shadowCascade >= 0) {
-                    float3 shadowPos = mul3(ap.celestial.projection[shadowCascade], shadowViewPos);
-                    shadow = SampleShadow(shadowPos * 0.5 + 0.5, shadowCascade);
-                }
-
-                float NoLm_sun = max(dot(hitNormal, scene[0].SunLocalDir), 0.0);
-                half3 sunTransmit = sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
-                diffuse += NoLm_sun * shadow * sunTransmit * scene[0].SunColor;
-
-                var hitVoxel = ap.voxel[hit_voxelPos];
-                float lmcoord_y = 1.0; //saturate(hitVoxel.lightData.y / 15.0);
-                float3 sky_ambient = sampleSkyIrradiance(hitNormal) * lmcoord_y;// * occlusion;
-
-                reflectColor *= diffuse / PI + sky_ambient;
+                float2 voxelTexCoord = GetVoxelTexCoord(hit_normal, currPos);
+                reflectColor = SampleVoxel(hit_localPos, hit_normal, hit_voxelTexPos, voxelTexCoord);
             }
             else {
                 reflectColor = sampleSkyFinal(hit_localPos, reflect_localDir, false);

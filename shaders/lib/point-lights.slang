@@ -1,3 +1,5 @@
+public module point_Lights;
+
 import aperture;
 
 static const int3 pointBoundsMax = int2(4, 3).xyx;

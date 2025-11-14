@@ -1,3 +1,5 @@
+public module moon;
+
 import aperture;
 import lib.common;
 import lib.matrix;

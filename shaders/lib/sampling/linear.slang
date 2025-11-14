@@ -1,3 +1,5 @@
+public module linear;
+
 import aperture;
 
 float2 GetLinearCoords(const in float2 texcoord, const in float2 texSize, out float2 uv[4]) {

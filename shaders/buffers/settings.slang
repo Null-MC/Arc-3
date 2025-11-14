@@ -1,3 +1,5 @@
+public module settings;
+
 struct SettingsBuffer {
     float Sky_SeaLevel;
     int Water_WaveDetail;

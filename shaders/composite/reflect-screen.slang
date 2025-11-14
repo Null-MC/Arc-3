@@ -8,7 +8,7 @@ import lib.sampling.depth;
 import lib.sampling.IGN;
 import lib.sky.common;
 import lib.sky.sample_final;
-import lib.water.water_depth;
+// import lib.water.water_depth;
 
 extern static const int RefractMode;
 // extern static const bool Debug_WhiteWorld;
@@ -47,29 +47,15 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
     half4 colorData = texAlbedoGB_translucent[uv];
 
-    float waterDepth;
-    bool isWater = false;
-    if (RefractMode != Refract_WorldSpace) {
-        float waterDepthL = WaterDepth_get(uv);
-        waterDepth = delinearizeDepth(waterDepthL, ap.camera.near, ap.camera.far) * 0.5 + 0.5;
-        isWater = waterDepth < depth;
-    }
+    // float waterDepth;
+    // bool isWater = false;
+    // if (RefractMode != Refract_WorldSpace) {
+    //     float waterDepthL = WaterDepth_get(uv);
+    //     waterDepth = delinearizeDepth(waterDepthL, ap.camera.near, ap.camera.far) * 0.5 + 0.5;
+    //     isWater = waterDepth < depth;
+    // }
     
-    if (colorData.a > 0.0 || isWater) {
-        uint normalDataG;
-        uint2 matLitData;
-        if (isWater) {
-            colorData = texAlbedoGB_water[uv];
-            depth = waterDepth;
-
-            normalDataG = texNormalGB_water[uv].g;
-            matLitData = texMatLightGB_water[uv];
-        }
-        else {
-            normalDataG = texNormalGB_translucent[uv].g;
-            matLitData = texMatLightGB_translucent[uv];
-        }
-
+    if (colorData.a > 0.0) {
         float2 texcoord = pos / ap.game.screenSize;
         if (TAA_Enabled) texcoord += scene[0].taa_jitter;
 
@@ -78,8 +64,10 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         float3 viewPos = project(ap.camera.projectionInv, clipPos);
         float3 localPos = mul3(ap.camera.viewInv, viewPos);
 
+        uint normalDataG = texNormalGB_translucent[uv].g;
         half3 tex_normal = ObjectData_Normals.unpackTex(normalDataG);
 
+        uint2 matLitData = texMatLightGB_translucent[uv];
         ObjectData_MatLit mat_lit;
         mat_lit.unpack(matLitData);
 

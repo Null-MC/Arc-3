@@ -1,3 +1,5 @@
+public module common;
+
 import aperture;
 import buffers.scene;
 import buffers.settings;

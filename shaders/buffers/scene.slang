@@ -1,3 +1,5 @@
+public module scene_buffer;
+
 import buffers.sky;
 
 extern static const int Shadow_CascadeCount;

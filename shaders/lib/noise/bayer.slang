@@ -1,3 +1,5 @@
+public module bayer;
+
 static const float4x4 BayerSamples = float4x4(
     0.0000, 0.5000, 0.1250, 0.6250,
     0.7500, 0.2200, 0.8750, 0.3750,

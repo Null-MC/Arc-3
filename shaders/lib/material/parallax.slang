@@ -1,3 +1,5 @@
+public module parallax;
+
 import aperture;
 import lib.common;
 import lib.sampling.atlas;

@@ -1,3 +1,5 @@
+public module shadow;
+
 import aperture;
 import buffers.scene;
 import lib.common;

@@ -1,3 +1,5 @@
+public module catmull_rom;
+
 half4 sample_CatmullRom_RGBA(const in Sampler2D<half4> texSampler, const in float2 uv, const in float2 bufferSize) {
     float2 samplePos = uv * bufferSize;
     float2 texPos1 = floor(samplePos - 0.5) + 0.5;

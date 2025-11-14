@@ -4,34 +4,28 @@ import lib.common;
 import lib.material.pbr;
 import lib.material.rough_normal;
 import lib.light.fresnel;
-import lib.sampling.atlas;
+// import lib.sampling.atlas;
 import lib.sampling.depth;
 import lib.sampling.IGN;
 import lib.sampling.R2;
-import lib.shadow;
+// import lib.shadow;
 import lib.sky.common;
-import lib.sky.sample_transmit;
-import lib.sky.sample_irradiance;
+// import lib.sky.sample_transmit;
+// import lib.sky.sample_irradiance;
 import lib.sky.sample_view;
-import lib.voxel_tex;
+import lib.voxel.voxel_tex;
+import lib.voxel.voxel_sample;
 import lib.dda;
 
 extern static const bool GI_ScreenTrace;
-extern static const bool World_HasSky;
 extern static const uint BLOCK_WATER;
 
-StructuredBuffer<uint2> voxelTexBuffer;
-
 Sampler2D<float> solidDepthTex;
-// Sampler2D<half3> texReprojection;
-// Sampler2D<half4> texGI_prev;
 Sampler2D<half3> texDiffuse;
 
 Sampler2D<half4> texAlbedoGB;
 Sampler2D<uint2> texNormalGB;
 Sampler2D<uint2> texMatLightGB;
-
-Sampler2D<half3> blockAtlas;
 
 
 [[shader("fragment")]]
@@ -66,7 +60,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
         float3 stepSizes, nextDist, stepAxis;
         float3 currPos = offsetLocalPos + cameraFract;
-        dda_init(stepSizes, nextDist, currPos, trace_localDir);
+        DDA_init(stepSizes, nextDist, currPos, trace_localDir);
 
         bool hit = false;
         float traceWaterDist = EPSILON;
@@ -75,7 +69,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
         for (uint i = 0; i < 16; i++) {
             float3 stepAxisNext;
-            float3 step = dda_step(stepAxisNext, nextDist, stepSizes, trace_localDir);
+            float3 step = DDA_step(stepAxisNext, nextDist, stepSizes, trace_localDir);
 
             hit_voxelPos = int3(floor(fma(step, float3(0.5), currPos))) + cameraFloor;
             hit_voxelTexPos = int3(floor(VoxelTex_GetBufferPosition(currPos + 0.5*step - cameraFract)));
@@ -186,75 +180,77 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
         if (!ss_hit) {
             // recreate final sample
-            float3 skyPos = getSkyPosition(hit_localPos);
-
             if (hit) {
                 float3 hit_normal = -stepAxis * sign(trace_localDir);
                 float3 hit_viewPos = mul3(ap.camera.view, hit_localPos);
                 float3 hit_screenPos = project(ap.camera.projection, hit_viewPos) * 0.5 + 0.5;
                 float hit_depth = solidDepthTex.Sample(hit_screenPos.xy);
 
-                if (VoxelTex_InBounds(hit_voxelTexPos)) {
-                    // uint2 uv_min, uv_size;
-                    // uint voxelTex_data = texVoxelTexId[hit_voxelTexPos];
-                    // VoxelTex_unpack(voxelTex_data, uv_min, uv_size);
+                float2 voxelTexCoord = GetVoxelTexCoord(hit_normal, currPos);
+                sampleColor = SampleVoxel(hit_localPos, hit_normal, hit_voxelTexPos, voxelTexCoord);
 
-                    VoxelTex voxel;
-                    uint voxelIndex = VoxelTex_GetBufferIndex(hit_voxelTexPos);
-                    voxel.unpack(voxelTexBuffer[voxelIndex]);
+                // if (VoxelTex_InBounds(hit_voxelTexPos)) {
+                //     // uint2 uv_min, uv_size;
+                //     // uint voxelTex_data = texVoxelTexId[hit_voxelTexPos];
+                //     // VoxelTex_unpack(voxelTex_data, uv_min, uv_size);
 
-                    float2 hitCoord;
-                    if (abs(hit_normal.y) > 0.5)      hitCoord = currPos.xz;
-                    else if (abs(hit_normal.z) > 0.5) hitCoord = currPos.xy;
-                    else                              hitCoord = currPos.zy;
-                    hitCoord = 1.0 - fract(hitCoord);
+                //     VoxelTex voxel;
+                //     uint voxelIndex = VoxelTex_GetBufferIndex(hit_voxelTexPos);
+                //     voxel.unpack(voxelTexBuffer[voxelIndex]);
 
-                    uint3 atlasSize;
-                    blockAtlas.GetDimensions(0, atlasSize.x, atlasSize.y, atlasSize.z);
+                //     float2 hitCoord;
+                //     if (abs(hit_normal.y) > 0.5)      hitCoord = currPos.xz;
+                //     else if (abs(hit_normal.z) > 0.5) hitCoord = currPos.xy;
+                //     else                              hitCoord = currPos.zy;
+                //     hitCoord = 1.0 - fract(hitCoord);
 
-                    AtlasBounds atlas;
-                    atlas.CoordMin = voxel.uv_min / float2(atlasSize.xy);
-                    atlas.CoordSize = voxel.uv_size / float2(atlasSize.xy);
-                    float2 uv = atlas.GetAtlasCoord(hitCoord);
+                //     uint3 atlasSize;
+                //     blockAtlas.GetDimensions(0, atlasSize.x, atlasSize.y, atlasSize.z);
 
-                    sampleColor = blockAtlas.Sample(uv).rgb * voxel.tint;
-                    sampleColor = RgbToLinear(sampleColor);
+                //     AtlasBounds atlas;
+                //     atlas.CoordMin = voxel.uv_min / float2(atlasSize.xy);
+                //     atlas.CoordSize = voxel.uv_size / float2(atlasSize.xy);
+                //     float2 uv = atlas.GetAtlasCoord(hitCoord);
 
-                    if (voxelTexBuffer[voxelIndex].r == 0) {
-                        // debug missing data with red albedo
-                        sampleColor = half3(0.0);// half3(1, 0, 0);
-                    }
-                }
+                //     sampleColor = blockAtlas.Sample(uv).rgb * voxel.tint;
+                //     sampleColor = RgbToLinear(sampleColor);
 
-                half3 diffuse = half3(0.0);
+                //     if (voxelTexBuffer[voxelIndex].r == 0) {
+                //         // debug missing data with red albedo
+                //         sampleColor = half3(0.0);// half3(1, 0, 0);
+                //     }
+                // }
 
-                float3 shadowLocalPos = hit_normal * 0.04 + hit_localPos;
-                float3 shadowViewPos = mul3(ap.celestial.view, shadowLocalPos);
-                shadowViewPos.z += 0.008;
+                // half3 diffuse = half3(0.0);
 
-                int shadowCascade = GetShadowProjection(shadowViewPos, 0.05);
+                // float3 shadowLocalPos = hit_normal * 0.04 + hit_localPos;
+                // float3 shadowViewPos = mul3(ap.celestial.view, shadowLocalPos);
+                // shadowViewPos.z += 0.008;
 
-                half3 shadow = half3(1.0);
-                if (shadowCascade >= 0) {
-                    float3 shadowPos = mul3(ap.celestial.projection[shadowCascade], shadowViewPos);
-                    shadow = SampleShadowColor(shadowPos * 0.5 + 0.5, shadowCascade);
-                }
+                // int shadowCascade = GetShadowProjection(shadowViewPos, 0.05);
 
-                if (World_HasSky) {
-                    float NoLm_sun = max(dot(hit_normal, scene[0].SunLocalDir), 0.0);
-                    half3 sunTransmit = sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
-                    diffuse += NoLm_sun * shadow * sunTransmit * scene[0].SunColor;
+                // half3 shadow = half3(1.0);
+                // if (shadowCascade >= 0) {
+                //     float3 shadowPos = mul3(ap.celestial.projection[shadowCascade], shadowViewPos);
+                //     shadow = SampleShadowColor(shadowPos * 0.5 + 0.5, shadowCascade);
+                // }
 
-                    var hitVoxel = ap.voxel[hit_voxelPos];
-                    float hit_lmcoord_y = saturate(hitVoxel.lightData.y / 15.0);
-                    float3 sky_ambient = sampleSkyIrradiance(hit_normal) * hit_lmcoord_y;
-                }
+                // if (World_HasSky) {
+                //     float NoLm_sun = max(dot(hit_normal, scene[0].SunLocalDir), 0.0);
+                //     half3 sunTransmit = sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
+                //     diffuse += NoLm_sun * shadow * sunTransmit * scene[0].SunColor;
 
-                sampleColor *= diffuse;
+                //     var hitVoxel = ap.voxel[hit_voxelPos];
+                //     float hit_lmcoord_y = saturate(hitVoxel.lightData.y / 15.0);
+                //     float3 sky_ambient = sampleSkyIrradiance(hit_normal) * hit_lmcoord_y;
+                // }
+
+                // sampleColor *= diffuse;
 
                 cos_sample = max(dot(hit_normal, -trace_localDir), 0.0);
             }
             else {
+                float3 skyPos = getSkyPosition(hit_localPos);
                 sampleColor = sampleSkyView(skyPos, trace_localDir, scene[0].SunLocalDir);
                 cos_sample = lmcoord_y;
             }

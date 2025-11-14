@@ -1,3 +1,5 @@
+public module ERP;
+
 import aperture;
 import lib.common;
 

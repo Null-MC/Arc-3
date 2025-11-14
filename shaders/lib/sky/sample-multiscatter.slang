@@ -1,3 +1,5 @@
+public module sample_multiscatter;
+
 import lib.common;
 import lib.sky.common;
 

@@ -1,3 +1,5 @@
+public module sample_light;
+
 import lib.light.fresnel;
 import lib.light.brdf;
 

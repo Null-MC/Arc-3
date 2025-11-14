@@ -1,3 +1,5 @@
+public module sample_transmit;
+
 import lib.common;
 import lib.sky.common;
 

@@ -1,3 +1,5 @@
+public module fresnel;
+
 import lib.common;
 
 float3 F0ToIor(const in float3 f0, const in float3 medium) {

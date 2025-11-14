@@ -1,3 +1,5 @@
+public module scattering;
+
 import lib.common;
 import lib.sky.common;
 

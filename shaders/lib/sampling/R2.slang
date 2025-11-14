@@ -1,3 +1,5 @@
+public module R2;
+
 // https://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/
 
 float2 GetR2_1D(const in float seed) {

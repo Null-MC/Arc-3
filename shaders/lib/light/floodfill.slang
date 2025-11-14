@@ -1,3 +1,5 @@
+public module floodfill;
+
 import aperture;
 
 extern static const int FloodFill_BufferSize;

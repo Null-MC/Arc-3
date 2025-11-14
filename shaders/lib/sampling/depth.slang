@@ -1,3 +1,5 @@
+public module depth;
+
 // These expect NDC[-1:+1] depth in/out
 
 float linearizeDepth(const in float ndcDepth, const in float zNear, const in float zFar) {

@@ -1,3 +1,5 @@
+public module HSV;
+
 float3 RgbToHsv(const in float3 c) {
     static const float4 K = float4(0.0, -1.0, 2.0, -3.0) / 3.0;
     static const float e = 1.0e-10;
