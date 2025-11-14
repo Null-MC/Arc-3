@@ -97,12 +97,12 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .map('water', 'BLOCK_WATER')
         .map('lava', 'BLOCK_LAVA');
 
-    const tagMap = new TagBuilder(pipeline, globalExports)
+    new TagBuilder(pipeline, globalExports)
         // .map("TAG_LEAVES", new NamespacedId("minecraft", "leaves"))
         .map("TAG_STAIRS", new NamespacedId("minecraft", "stairs"))
         .map("TAG_SLABS", new NamespacedId("minecraft", "slabs"));
         // .map("TAG_SNOW", new NamespacedId("minecraft", "snow"));
-        
+    
     pipeline.setGlobalExport(globalExports.build());
 
     ApplyLightColors(options.Lighting_ColorCandles);
@@ -114,12 +114,14 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .width(screenWidth)
         .height(screenHeight)
         .format(Format.RGBA16F)
+        .clear(false)
         .build();
 
     const texFinalB = pipeline.createImageTexture("texFinalB", "imgFinalB")
         .width(screenWidth)
         .height(screenHeight)
         .format(Format.RGBA16F)
+        .clear(false)
         .build();
 
     const texFinal_translucent = pipeline.createTexture("texFinal_translucent")
@@ -127,6 +129,30 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .height(screenHeight)
         .format(Format.RGBA16F)
         .clearColor(0, 0, 0, 0)
+        .build();
+
+    const texReprojection = pipeline.createTexture("texReprojection")
+        .width(screenWidth)
+        .height(screenHeight)
+        .format(Format.RGB16F)
+        // .clearColor(0, 0, 0, 0)
+        .clear(false)
+        .build();
+
+    const texPosition = pipeline.createTexture("texPosition")
+        .width(screenWidth)
+        .height(screenHeight)
+        .format(Format.RGB16F)
+        // .clearColor(0, 0, 0, 0)
+        .clear(false)
+        .build();
+
+    const texPositionPrev = pipeline.createTexture("texPositionPrev")
+        .width(screenWidth)
+        .height(screenHeight)
+        .format(Format.RGB16F)
+        // .clearColor(0, 0, 0, 0)
+        .clear(false)
         .build();
 
     // const texFinal_water = pipeline.createTexture("texFinal_water")
@@ -256,24 +282,28 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .width(screenWidth)
             .height(screenHeight)
             .format(Format.RGB8)
+            .clear(false)
             .build();
 
         pipeline.createImageTexture('texShadowFinal', 'imgShadowFinal')
             .width(screenWidth)
             .height(screenHeight)
             .format(Format.RGBA8)
+            .clear(false)
             .build();
 
         texSssGB = pipeline.createTexture('texSssGB')
             .width(screenWidth)
             .height(screenHeight)
             .format(Format.RGB8)
+            .clear(false)
             .build();
 
         pipeline.createImageTexture('texSssFinal', 'imgSssFinal')
             .width(screenWidth)
             .height(screenHeight)
             .format(Format.RGBA8)
+            .clear(false)
             .build();
 
         texShadowColor = pipeline.createArrayTexture('texShadowColor')
@@ -348,6 +378,10 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .build();
 
     let texGI: BuiltTexture | undefined;
+    let texGI_atrous1: BuiltTexture | undefined;
+    let texGI_atrous2: BuiltTexture | undefined;
+    let texGI_prev: BuiltTexture | undefined;
+    let texGI_final: BuiltTexture | undefined;
     if (options.Lighting_GI) {
         texGI = pipeline.createTexture('texGI')
             .width(screenWidth)
@@ -356,11 +390,31 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .clearColor(0, 0, 0, 0)
             .build();
 
-        pipeline.createImageTexture('texGI_final', 'imgGI_final')
+        texGI_atrous1 = pipeline.createTexture('texGI_atrous1')
             .width(screenWidth)
             .height(screenHeight)
             .format(Format.RGBA16F)
-            // .clearColor(0, 0, 0, 0)
+            .clear(false)
+            .build();
+
+        texGI_atrous2 = pipeline.createTexture('texGI_atrous2')
+            .width(screenWidth)
+            .height(screenHeight)
+            .format(Format.RGBA16F)
+            .clear(false)
+            .build();
+
+        texGI_final = pipeline.createTexture('texGI_final')
+            .width(screenWidth)
+            .height(screenHeight)
+            .format(Format.RGBA16F)
+            .clear(false)
+            .build();
+
+        texGI_prev = pipeline.createTexture('texGI_prev')
+            .width(screenWidth)
+            .height(screenHeight)
+            .format(Format.RGBA16F)
             .clear(false)
             .build();
     }
@@ -587,6 +641,15 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     }
     
     withStage(pipeline, Stage.POST_RENDER, postRenderStage => {
+        postRenderStage.createComposite("reprojection-opaque")
+            .location("composite/reproject", "reprojectScene")
+            .target(0, texReprojection)
+            .target(1, texPosition)
+            .overrideObject('texDepth', 'solidDepthTex')
+            .compile();
+        
+        postRenderStage.copy(texPosition, texPositionPrev, screenWidth, screenHeight);
+
         withSubList(postRenderStage, 'opaque-deferred', opaqueStage => {
             opaqueStage.createComposite("deferred-lighting-block-hand")
                 .location("deferred/lighting-block-hand", "lightingBlockHand")
@@ -651,27 +714,51 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .compile();
             }
 
-            // TODO: GI from diffuse only?
             if (options.Lighting_GI) {
                 opaqueStage.createComposite("deferred-gi")
                     .location('deferred/lighting-gi', "applyGI")
-                    // .target(0, texDiffuse).blendFunc(0, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
                     .target(0, texGI)
-                    // .overrideObject('texSource', finalFlipper.getReadTexture().name())
                     .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
                     .overrideObject('texNormalGB', texNormalGB_opaque.name())
                     .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                     .compile();
-                
-                // TODO: filter and accumulate GI
-                opaqueStage.createCompute("deferred-gi-filter")
-                    .location("deferred/lighting-gi-filter", "filterGI")
-                    .workGroups(
-                        Math.ceil(screenWidth / 16),
-                        Math.ceil(screenHeight / 16),
-                        1)
-                    .overrideObject('texDepth', 'solidDepthTex')
+
+                // opaqueStage.copy(texGI, texGI_prev, screenWidth, screenHeight);
+
+                opaqueStage.createComposite("deferred-gi-atrous")
+                    .location('deferred/lighting-gi-atrous', "atrousFilter")
+                    .target(0, texGI_atrous1)
+                    .overrideObject('texSource', 'texGI')
+                    .exportInt('AtrousLevel', 0)
                     .compile();
+
+                opaqueStage.createComposite("deferred-gi-atrous")
+                    .location('deferred/lighting-gi-atrous', "atrousFilter")
+                    .target(0, texGI_atrous2)
+                    .overrideObject('texSource', 'texGI')
+                    .exportInt('AtrousLevel', 1)
+                    .compile();
+
+                opaqueStage.createComposite("deferred-gi-accumulate")
+                    .location('deferred/lighting-gi-accumulate', "accumulateGI")
+                    .target(0, texGI_final)
+                    .overrideObject('texSource', 'texGI_atrous2')
+                    // .overrideObject('texDepth', 'solidDepthTex')
+                    // .overrideObject('texNormalGB', texNormalGB_opaque.name())
+                    .compile();
+
+                // opaqueStage.createCompute("deferred-gi-filter")
+                //     .location("deferred/lighting-gi-filter", "filterGI")
+                //     .workGroups(
+                //         Math.ceil(screenWidth / 16),
+                //         Math.ceil(screenHeight / 16),
+                //         1)
+                //     .overrideObject('texDepth', 'solidDepthTex')
+                //     .compile();
+
+                // TODO: accumulate
+
+                opaqueStage.copy(texGI_final, texGI_prev, screenWidth, screenHeight);
             }
 
             finalFlipper.flip();

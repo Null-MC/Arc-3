@@ -103,8 +103,8 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         output.diffuse /= PI;
 
         if (!Lighting_GI) {
-            half3 sky_ambient = sampleSkyIrradiance(tex_normal) * lmcoord_y * mat_lit.occlusion;
-            output.diffuse = output.diffuse / (half)PI + sky_ambient;
+            half3 sky_ambient = sampleSkyIrradiance(tex_normal);
+            output.diffuse += sky_ambient * lmcoord_y * mat_lit.occlusion;
         }
 
         output.diffuse *= (half)1.0 - (half)0.66*sss;

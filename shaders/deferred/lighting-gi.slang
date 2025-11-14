@@ -7,6 +7,7 @@ import lib.light.fresnel;
 import lib.sampling.atlas;
 import lib.sampling.depth;
 import lib.sampling.IGN;
+import lib.sampling.R2;
 import lib.shadow;
 import lib.sky.common;
 import lib.sky.sample_transmit;
@@ -15,11 +16,14 @@ import lib.sky.sample_view;
 import lib.voxel_tex;
 import lib.dda;
 
-extern static const bool GI_SS_Fallback = true;
+// static const float GI_MaxFrames = 60;
+extern static const bool GI_SS_Fallback = false;
 // extern static const bool World_HasSky;
 extern static const uint BLOCK_WATER;
 
 Sampler2D<float> solidDepthTex;
+// Sampler2D<half3> texReprojection;
+// Sampler2D<half4> texGI_prev;
 Sampler2D<half3> texDiffuse;
 
 Sampler2D<half4> texAlbedoGB;
@@ -39,45 +43,24 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         float2 texcoord = pos / ap.game.screenSize;
         if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
-        // float3 screenPos = ;
         float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
         float3 viewPos = project(ap.camera.projectionInv, clipPos);
         float3 localPos = mul3(ap.camera.viewInv, viewPos);
-
-        // half4 colorData = texAlbedoGB[uv];
 
         half3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB[uv].g);
 
         ObjectData_MatLit mat_lit;
         mat_lit.unpack(texMatLightGB[uv]);
 
-        // half3 albedo = RgbToLinear(colorData.rgb);
-        // half roughness = mat_roughness(mat_lit.specular.r);
-        // half f0_metal = mat_f0_metal(mat_lit.specular.g);
-        // half metalness = (half)mat_metalness(f0_metal);
-
         half lmcoord_y = pow2(mat_lit.lmcoord.y);
-        // half roughL = pow2(roughness);
-
-        // float dither = InterleavedGradientNoiseTime(pos);
-
-        // get reflection direction
-        // float3 roughNormal = randomizeNormal(uv, tex_normal, roughL);
-        
-        // float viewDist = length(viewPos);
-        // float3 viewDir = viewPos / viewDist;
-        // float3 viewNormal = mul(float3x3(ap.camera.view), roughNormal);
-        // float3 reflect_viewDir = reflect(viewDir, viewNormal);
-        // float3 reflect_localDir = mul(float3x3(ap.camera.viewInv), reflect_viewDir);
 
         float3 trace_localDir = randomNormal(uv, tex_normal);
         float cos_trace = dot(trace_localDir, tex_normal);
 
         float3 cameraFract = fract(ap.camera.position);
-        uint3 cameraFloor = uint3(floor(ap.camera.position));
+        int3 cameraFloor = int3(floor(ap.camera.position));
 
         float3 stepSizes, nextDist, stepAxis;
-        // float3 traceLocalStart = localPos;
         float3 localDir = normalize(localPos);
         float3 currPos = localPos + cameraFract - localDir*0.02;
         dda_init(stepSizes, nextDist, currPos, trace_localDir);
@@ -86,7 +69,6 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         float traceWaterDist = EPSILON;
         int3 hit_voxelTexPos = -1;
         int3 hit_voxelPos = 0;
-        float3 hit_localPos;
 
         for (uint i = 0; i < 16; i++) {
             float3 stepAxisNext;
@@ -119,37 +101,27 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             stepAxis = stepAxisNext;
         }
 
-        hit_localPos = currPos - cameraFract;
+        float3 hit_localPos = currPos - cameraFract;
         half3 sampleColor = half3(0.0);
+        float cos_sample = 1.0;
 
         bool ss_hit = false;
         if (GI_SS_Fallback) {
-            float dither = InterleavedGradientNoiseTime(pos);
+            // float dither = InterleavedGradientNoiseTime(pos);
 
-            // float3 traceViewStart = mul3(ap.camera.view, localPos);
-            // float3 traceClipStart = project(ap.camera.projection, traceViewStart);
+            float seed = InterleavedGradientNoise(pos);
+            float dither = GetR2_1D(seed * 13.0 + ap.timing.frameCounter * 137.0).x;
+
             float3 traceClipStart = clipPos;
-
             float3 traceViewEnd = mul3(ap.camera.view, hit_localPos);
             float3 traceClipEnd = project(ap.camera.projection, traceViewEnd);
-
-            // float3 reflect_viewPos = 0.5 * viewDist * reflect_viewDir + viewPos;
-            // float3 reflect_clipPos = project(ap.camera.projection, reflect_viewPos);
-            // float3 reflect_screenPos = reflect_clipPos * 0.5 + 0.5;
-
-            // float3 screenDir = normalize(reflect_screenPos - screenPos);
-
-            // // project the reflected trace direction to edge of trace bounds
-            // float3 screenEnd = projectToScreenBounds(screenPos, screenDir);
-            // float3 traceClipEnd = screenEnd * 2.0 - 1.0;
-            // float3 traceClipStart = clipPos;
 
             float3 traceClipPos;
             float3 traceClipPos_prev = traceClipStart;
             float2 traceScreenPos;
 
-            const uint SS_StepCount = 16;
-            const uint SS_RefineSteps = 4;
+            const uint SS_StepCount = 24;
+            const uint SS_RefineSteps = 6;
 
             // bool hit = false;
             float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
@@ -163,7 +135,9 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
                 float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
-                if (screenDepthL < traceDepthL) {
+                float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
+
+                if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
                     ss_hit = true;
                     hit = true;
                     break;
@@ -177,7 +151,6 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 traceClipStart = traceClipPos_prev;
                 traceClipEnd = traceClipPos;
 
-                // traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
                 for (uint i = 0; i < SS_RefineSteps; i++) {
                     float f = (i + dither) / SS_RefineSteps;
                     traceClipPos = lerp(traceClipStart, traceClipEnd, f);
@@ -188,20 +161,24 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                     float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
                     float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
-                    if (screenDepthL < traceDepthL) {
+                    float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
+
+                    if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
                         break;
                     }
                 }
             }
 
             if (ss_hit) {
-                // traceScreenPos.xy -= scene[0].taa_jitter;
-                half4 color = texAlbedoGB.Sample(traceScreenPos);
-                sampleColor = RgbToLinear(color.rgb) * texDiffuse.Sample(traceScreenPos);
+                half3 ss_color = texAlbedoGB.Sample(traceScreenPos).rgb;
+                sampleColor = RgbToLinear(ss_color) * texDiffuse.Sample(traceScreenPos);
+
+                // TODO: this should help but made worse
+                // uint2 uv2 = uint2(traceScreenPos * ap.game.screenSize);
+                // half3 sample_normal = ObjectData_Normals.unpackTex(texNormalGB[uv2].g);
+                // cos_sample = max(dot(sample_normal, -trace_localDir), 0.0);
             }
         }
-
-        float cos_sample = 1.0; // TODO: set when SS hit?
 
         if (!ss_hit) {
             // recreate final sample
@@ -249,10 +226,10 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
                 int shadowCascade = GetShadowProjection(shadowViewPos, 0.05);
 
-                float shadow = 1.0;
+                half3 shadow = half3(1.0);
                 if (shadowCascade >= 0) {
                     float3 shadowPos = mul3(ap.celestial.projection[shadowCascade], shadowViewPos);
-                    shadow = SampleShadow(shadowPos * 0.5 + 0.5, shadowCascade);
+                    shadow = SampleShadowColor(shadowPos * 0.5 + 0.5, shadowCascade);
                 }
 
                 float NoLm_sun = max(dot(hit_normal, scene[0].SunLocalDir), 0.0);
@@ -261,9 +238,9 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
                 var hitVoxel = ap.voxel[hit_voxelPos];
                 float hit_lmcoord_y = saturate(hitVoxel.lightData.y / 15.0);
-                float3 sky_ambient = sampleSkyIrradiance(hit_normal) * hit_lmcoord_y;// * occlusion;
+                float3 sky_ambient = sampleSkyIrradiance(hit_normal) * hit_lmcoord_y;
 
-                sampleColor *= diffuse / PI;// + sky_ambient;
+                sampleColor *= diffuse;// + sky_ambient;
 
                 cos_sample = max(dot(hit_normal, -trace_localDir), 0.0);
             }
@@ -275,6 +252,17 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
         diffuse += cos_trace * cos_sample * sampleColor;
     }
+
+    // half3 reproj = texReprojection[uv];
+    // float2 prev_texcoord = (pos + reproj.xy) / ap.game.screenSize;
+
+    // float4 gi_prev = texGI_prev.Sample(prev_texcoord);
+
+    // float counter = clamp(gi_prev.a * reproj.b, 0, GI_MaxFrames);
+    // diffuse = lerp(gi_prev.rgb, diffuse, rcp(counter + 1));
+
+    // DEBUG
+    // imgDebug[uv] = half4(diffuse * 0.02, (half)1.0);
 
     return half4(diffuse, (half)1.0);
 }

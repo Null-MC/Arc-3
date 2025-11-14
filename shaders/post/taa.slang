@@ -16,7 +16,8 @@ RWTexture2D<half4> imgFinalPrev;
 
 Sampler2D<half3> texSource;
 Sampler2D<half4> texFinalPrev;
-Sampler2D<half2> texVelocity;
+// Sampler2D<half2> texVelocity;
+Sampler2D<half3> texReprojection;
 Sampler2D<float> texDepth;
 
 static const uint sharedBufferResX = groupResX+2;
@@ -25,27 +26,27 @@ static const uint sharedBufferSize = sharedBufferResX*sharedBufferResY;
 groupshared half3 sharedBuffer[sharedBufferSize];
 
 
-static const float3x3 RGB_TO_YUV = float3x3(
-     0.29900,  0.58700,  0.11400,
-    -0.14713, -0.28886,  0.43600,
-     0.61500, -0.51499, -0.10001);
+// static const float3x3 RGB_TO_YUV = float3x3(
+//      0.29900,  0.58700,  0.11400,
+//     -0.14713, -0.28886,  0.43600,
+//      0.61500, -0.51499, -0.10001);
 
-static const float3x3 YUV_TO_RGB = float3x3(
-    1.00000,  0.00000,  1.13983,
-    1.00000, -0.39465, -0.58060,
-    1.00000,  2.03211,  0.00000);
+// static const float3x3 YUV_TO_RGB = float3x3(
+//     1.00000,  0.00000,  1.13983,
+//     1.00000, -0.39465, -0.58060,
+//     1.00000,  2.03211,  0.00000);
 
-float2 getReprojectedClipPos(const in float2 texcoord, const in float depthNow, const in float2 velocity) {
-    float3 clipPos = float3(texcoord, depthNow) * 2.0 - 1.0;
-    float3 viewPos = project(ap.camera.projectionInv, clipPos);
-    float3 localPos = mul3(ap.camera.viewInv, viewPos.xyz);
+// float2 getReprojectedClipPos(const in float2 texcoord, const in float depthNow, const in float2 velocity) {
+//     float3 clipPos = float3(texcoord, depthNow) * 2.0 - 1.0;
+//     float3 viewPos = project(ap.camera.projectionInv, clipPos);
+//     float3 localPos = mul3(ap.camera.viewInv, viewPos.xyz);
 
-    float3 localPosPrev = localPos + (ap.camera.position - ap.temporal.position);
+//     float3 localPosPrev = localPos + (ap.camera.position - ap.temporal.position);
 
-    float3 viewPosPrev = mul3(ap.temporal.view, localPosPrev);
-    float3 clipPosPrev = project(ap.temporal.projection, viewPosPrev);
-    return clipPosPrev.xy * 0.5 + 0.5 - velocity;
-}
+//     float3 viewPosPrev = mul3(ap.temporal.view, localPosPrev);
+//     float3 clipPosPrev = project(ap.temporal.projection, viewPosPrev);
+//     return clipPosPrev.xy * 0.5 + 0.5 - velocity;
+// }
 
 uint2 getSharedUV(const in uint z) {
     return uint2(
@@ -88,10 +89,11 @@ void applyTaa(ComputeInput input) {
 
     if (all(input.globalPos.xy < ap.game.screenSize)) {
         float depth = texDepth[input.globalPos.xy].r;
-        float2 velocity = float2(0.0);//texVelocity[input.globalPos.xy];
+        // float2 velocity = float2(0.0);//texVelocity[input.globalPos.xy];
 
-        float2 texcoord = (input.globalPos.xy + 0.5) / float2(ap.game.screenSize);
-        float2 uv_prev = getReprojectedClipPos(texcoord, depth, velocity);
+        half3 reproj = texReprojection[input.globalPos.xy];
+        float2 uv_prev = (input.globalPos.xy + 0.5) / float2(ap.game.screenSize) + reproj.xy;
+        // float2 uv_prev = getReprojectedClipPos(texcoord, depth, velocity);
 
         half4 lastColor;
         if (SharpenHistory) {
@@ -101,7 +103,7 @@ void applyTaa(ComputeInput input) {
             lastColor = texFinalPrev.SampleLevel(uv_prev, 0);
         }
 
-        float mixRate = clamp(lastColor.a, 0.0, EFFECT_TAA_MAX_ACCUM);
+        float mixRate = clamp(lastColor.a * step(0.1, reproj.z), 0.0, EFFECT_TAA_MAX_ACCUM);
 
         if (any(saturate(uv_prev) != uv_prev)) mixRate = 0.0;
         
@@ -116,7 +118,7 @@ void applyTaa(ComputeInput input) {
         half3 in7 = sharedBuffer[getSharedIndex(uv + int2(+1, -1))];
         half3 in8 = sharedBuffer[getSharedIndex(uv + int2(-1, -1))];
 
-        half3 antialiased = lerp(lastColor.rgb * lastColor.rgb, in0 * in0, rcp(1.0 + mixRate));
+        float3 antialiased = lerp(lastColor.rgb * lastColor.rgb, in0 * in0, rcp(1.0 + mixRate));
         antialiased = sqrt(antialiased);
 
         // antialiased = mul(RGB_TO_YUV, antialiased);        
@@ -136,7 +138,7 @@ void applyTaa(ComputeInput input) {
         half3 maxColor = maxOf(maxOf(in0, in1, in2), in3, in4);
         maxColor = maxOf(maxOf(in5, in6, in7), in8, maxColor);
         
-        half3 preclamping = antialiased;
+        float3 preclamping = antialiased;
         antialiased = clamp(antialiased, minColor, maxColor);
             
         float3 diff = antialiased - preclamping;
@@ -145,7 +147,7 @@ void applyTaa(ComputeInput input) {
         
         //antialiased = mul(YUV_TO_RGB, antialiased);
         
-        imgFinal[input.globalPos.xy] = half4(antialiased, 1.0);
-        imgFinalPrev[input.globalPos.xy] = half4(antialiased, mixRate + 1.0);
+        imgFinal[input.globalPos.xy] = half4(half3(antialiased), (half)1.0);
+        imgFinalPrev[input.globalPos.xy] = half4(half3(antialiased), (half)(mixRate + 1.0));
     }
 }

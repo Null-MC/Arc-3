@@ -46,7 +46,7 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         half3 albedo = RgbToLinear(color.rgb);
         half3 tint = lerp(half3(1.0), albedo, metalness);
 
-        half3 ambient = (half)0.2 * mat_lit.occlusion;
+        half3 ambient = 0.0;// (half)0.2 * mat_lit.occlusion;
         diffuse += ambient + emission * BLOCK_LUX;
 
         // remove diffuse for smooth metals

@@ -9,8 +9,8 @@ static const int sharedBufferResX = groupResX+4;
 static const int sharedBufferResY = groupResY+4;
 static const int sharedBufferSize = sharedBufferResX*sharedBufferResY;
 
-static const float g_sigmaXY = 6.0;
-static const float g_sigmaV = 0.008;
+static const float g_sigmaXY = 27.0;
+static const float g_sigmaV = 0.08;
 
 groupshared half sharedGaussian[5];
 groupshared half3 sharedGI[sharedBufferSize];
@@ -105,12 +105,6 @@ void filterGI(ComputeInput input) {
     	float3 gi;
         sampleSharedBuffer(uv_shared, depthL, gi);
 
-        float4 gi_prev = imgGI_final[uv];
-        float counter = clamp(gi_prev.a, 0, 20);
-        gi = lerp(gi_prev.rgb, gi, rcp(counter + 1));
-    	imgGI_final[uv] = half4(gi, counter + 1);
-
-        // DEBUG
-        imgDebug[uv] = half4(gi * 0.02, (half)1.0);
+    	imgGI_final[uv] = half4(gi, (half)1.0);
     }
 }

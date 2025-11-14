@@ -98,7 +98,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
 
         float3 cameraFract = fract(ap.camera.position);
-        uint3 cameraFloor = uint3(floor(ap.camera.position));
+        int3 cameraFloor = int3(floor(ap.camera.position));
 
         float3 stepSizes, nextDist, stepAxis;
         // float3 traceLocalStart = localPos;

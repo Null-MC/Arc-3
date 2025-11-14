@@ -68,8 +68,8 @@ void sharpen(ComputeInput input) {
         half3 f = sharedBuffer[getSharedIndex(uv + int2( 1, 0))];
         half3 h = sharedBuffer[getSharedIndex(uv + int2( 0, 1))];
 
-        float3 area_min = minOf(minOf(d, e, f), b, h);
-        float3 area_max = maxOf(maxOf(d, e, f), b, h);
+        half3 area_min = minOf(minOf(d, e, f), b, h);
+        half3 area_max = maxOf(maxOf(d, e, f), b, h);
 
         float3 amp = min(area_min, 1.0 - area_max) * rcp(area_max);
         float3 w = sqrt(saturate(amp)) * peak;
