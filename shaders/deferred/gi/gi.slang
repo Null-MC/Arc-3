@@ -16,9 +16,8 @@ import lib.sky.sample_view;
 import lib.voxel_tex;
 import lib.dda;
 
-// static const float GI_MaxFrames = 60;
-extern static const bool GI_SS_Fallback = false;
-// extern static const bool World_HasSky;
+extern static const bool GI_ScreenTrace;
+extern static const bool World_HasSky;
 extern static const uint BLOCK_WATER;
 
 Sampler2D<float> solidDepthTex;
@@ -47,6 +46,9 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         float3 viewPos = project(ap.camera.projectionInv, clipPos);
         float3 localPos = mul3(ap.camera.viewInv, viewPos);
 
+        float3 localDir = normalize(localPos);
+        float3 offsetLocalPos = localPos - localDir*0.02;
+
         half3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB[uv].g);
 
         ObjectData_MatLit mat_lit;
@@ -61,8 +63,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         int3 cameraFloor = int3(floor(ap.camera.position));
 
         float3 stepSizes, nextDist, stepAxis;
-        float3 localDir = normalize(localPos);
-        float3 currPos = localPos + cameraFract - localDir*0.02;
+        float3 currPos = offsetLocalPos + cameraFract;
         dda_init(stepSizes, nextDist, currPos, trace_localDir);
 
         bool hit = false;
@@ -106,13 +107,15 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         float cos_sample = 1.0;
 
         bool ss_hit = false;
-        if (GI_SS_Fallback) {
+        if (GI_ScreenTrace) {
             // float dither = InterleavedGradientNoiseTime(pos);
 
             float seed = InterleavedGradientNoise(pos);
             float dither = GetR2_1D(seed * 13.0 + ap.timing.frameCounter * 137.0).x;
 
-            float3 traceClipStart = clipPos;
+            float3 traceViewStart = mul3(ap.camera.view, offsetLocalPos);
+            float3 traceClipStart = project(ap.camera.projection, traceViewStart);
+
             float3 traceViewEnd = mul3(ap.camera.view, hit_localPos);
             float3 traceClipEnd = project(ap.camera.projection, traceViewEnd);
 
@@ -147,27 +150,27 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 traceDepthL_prev = traceDepthL;
             }
 
-            if (ss_hit) {
-                traceClipStart = traceClipPos_prev;
-                traceClipEnd = traceClipPos;
+            // if (ss_hit) {
+            //     traceClipStart = traceClipPos_prev;
+            //     traceClipEnd = traceClipPos;
 
-                for (uint i = 0; i < SS_RefineSteps; i++) {
-                    float f = (i + dither) / SS_RefineSteps;
-                    traceClipPos = lerp(traceClipStart, traceClipEnd, f);
-                    traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
-                    if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
+            //     for (uint i = 0; i < SS_RefineSteps; i++) {
+            //         float f = (i + dither) / SS_RefineSteps;
+            //         traceClipPos = lerp(traceClipStart, traceClipEnd, f);
+            //         traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
+            //         if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
 
-                    float sampleClipDepth = solidDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
-                    float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
-                    float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
+            //         float sampleClipDepth = solidDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
+            //         float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
+            //         float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
-                    float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
+            //         float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
 
-                    if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
-                        break;
-                    }
-                }
-            }
+            //         if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
+            //             break;
+            //         }
+            //     }
+            // }
 
             if (ss_hit) {
                 half3 ss_color = texAlbedoGB.Sample(traceScreenPos).rgb;
@@ -232,15 +235,17 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                     shadow = SampleShadowColor(shadowPos * 0.5 + 0.5, shadowCascade);
                 }
 
-                float NoLm_sun = max(dot(hit_normal, scene[0].SunLocalDir), 0.0);
-                half3 sunTransmit = sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
-                diffuse += NoLm_sun * shadow * sunTransmit * scene[0].SunColor;
+                if (World_HasSky) {
+                    float NoLm_sun = max(dot(hit_normal, scene[0].SunLocalDir), 0.0);
+                    half3 sunTransmit = sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
+                    diffuse += NoLm_sun * shadow * sunTransmit * scene[0].SunColor;
 
-                var hitVoxel = ap.voxel[hit_voxelPos];
-                float hit_lmcoord_y = saturate(hitVoxel.lightData.y / 15.0);
-                float3 sky_ambient = sampleSkyIrradiance(hit_normal) * hit_lmcoord_y;
+                    var hitVoxel = ap.voxel[hit_voxelPos];
+                    float hit_lmcoord_y = saturate(hitVoxel.lightData.y / 15.0);
+                    float3 sky_ambient = sampleSkyIrradiance(hit_normal) * hit_lmcoord_y;
+                }
 
-                sampleColor *= diffuse;// + sky_ambient;
+                sampleColor *= diffuse;
 
                 cos_sample = max(dot(hit_normal, -trace_localDir), 0.0);
             }

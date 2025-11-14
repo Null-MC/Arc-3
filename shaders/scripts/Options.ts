@@ -15,24 +15,25 @@ export class Options {
     get Material_Parallax_Optimize(): boolean {return getBoolSetting('MATERIAL_PARALLAX_OPTIMIZE');}
     
     get Lighting_ColorCandles(): boolean {return getBoolSetting('LIGHTING_COLOR_CANDLES');}
-    get Lighting_GI(): boolean {return getBoolSetting('LIGHTING_GI');}
 
-    // get Lighting_Reflection_Enabled(): boolean {return getBoolSetting('LIGHTING_REFLECT_ENABLED');}
-    get Lighting_Reflection_Mode(): number {return getIntSetting('LIGHTING_REFLECT_MODE');}
-    get Lighting_Reflection_ScreenSpaceFallback(): boolean {return getBoolSetting('LIGHTING_REFLECT_SS_FALLBACK');}
-
-    // get Lighting_Refraction_Enabled(): boolean {return getBoolSetting('LIGHTING_REFRACT_ENABLED');}
     get Lighting_Refraction_Mode(): number {return getIntSetting('LIGHTING_REFRACT_MODE');}
     get Lighting_Refraction_ScreenSpaceFallback(): boolean {return getBoolSetting('LIGHTING_REFRACT_SS_FALLBACK');}
 
-    get Lighting_FloodFill_Enabled(): boolean {return getBoolSetting('LIGHTING_FLOODFILL_ENABLED');}
-    get Lighting_FloodFill_Size(): number {return getIntSetting('LIGHTING_FLOODFILL_SIZE');}
+    get Lighting_Reflection_Mode(): number {return getIntSetting('LIGHTING_REFLECT_MODE');}
+    get Lighting_Reflection_ScreenSpaceFallback(): boolean {return getBoolSetting('LIGHTING_REFLECT_SS_FALLBACK');}
+
+    get Lighting_GI_Enabled(): boolean {return getBoolSetting('LIGHTING_GI_ENABLED');}
+    get Lighting_GI_ScreenTrace(): boolean {return getBoolSetting('LIGHTING_GI_SS_TRACE');}
+    get Lighting_GI_MaxFrames(): number {return getIntSetting('LIGHTING_GI_MAXFRAMES');}
 
     get Lighting_Point_Enabled(): boolean {return getBoolSetting('LIGHTING_POINT_ENABLED');}
     get Lighting_Point_EmissionMask(): boolean {return getBoolSetting('LIGHTING_POINT_EMISSION_MASK');}
     get Lighting_Point_MaxCount(): number {return getIntSetting('LIGHTING_POINT_MAXCOUNT');}
     get Lighting_Point_Resolution(): number {return getIntSetting('LIGHTING_POINT_RESOLUTION');}
     get Lighting_Point_RealTime(): number {return getIntSetting('LIGHTING_POINT_REALTIME');}
+
+    get Lighting_FloodFill_Enabled(): boolean {return getBoolSetting('LIGHTING_FLOODFILL_ENABLED');}
+    get Lighting_FloodFill_Size(): number {return getIntSetting('LIGHTING_FLOODFILL_SIZE');}
 
     get Shadow_Resolution(): number {return getIntSetting('SHADOW_RESOLUTION');}
     get Shadow_Distance(): number {return getIntSetting('SHADOW_DISTANCE');}

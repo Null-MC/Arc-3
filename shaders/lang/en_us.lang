@@ -37,6 +37,19 @@ screen.LIGHTING=Lighting
 option.LIGHTING_COLOR_CANDLES=Colored Candles
 
 
+screen.LIGHTING_REFRACTION=Refraction
+
+# option.LIGHTING_REFRACT_ENABLED=Enabled
+
+option.LIGHTING_REFRACT_MODE=Mode
+value.LIGHTING_REFRACT_MODE.0=None
+value.LIGHTING_REFRACT_MODE.1=Screen-Space
+value.LIGHTING_REFRACT_MODE.2=World-Space
+
+option.LIGHTING_REFRACT_SS_FALLBACK=Hybrid Tracing
+option.LIGHTING_REFRACT_SS_FALLBACK.comment=Allows world-space refraction tracing to also perform a screen-space trace to include entities and non-full blocks.
+
+
 screen.LIGHTING_REFLECTIONS=Reflections
 
 option.LIGHTING_REFLECT_ENABLED=Enabled
@@ -51,17 +64,13 @@ option.LIGHTING_REFLECT_SS_FALLBACK=Hybrid Tracing
 option.LIGHTING_REFLECT_SS_FALLBACK.comment=Allows world-space reflection tracing to also perform a screen-space trace to include entities and non-full blocks.
 
 
-screen.LIGHTING_REFRACTION=Refraction
+screen.LIGHTING_GI=Global Illumination
 
-# option.LIGHTING_REFRACT_ENABLED=Enabled
+option.LIGHTING_GI_ENABLED=Enabled
 
-option.LIGHTING_REFRACT_MODE=Mode
-value.LIGHTING_REFRACT_MODE.0=None
-value.LIGHTING_REFRACT_MODE.1=Screen-Space
-value.LIGHTING_REFRACT_MODE.2=World-Space
+option.LIGHTING_GI_SS_TRACE=ScreenSpace Trace
 
-option.LIGHTING_REFRACT_SS_FALLBACK=Hybrid Tracing
-option.LIGHTING_REFRACT_SS_FALLBACK.comment=Allows world-space refraction tracing to also perform a screen-space trace to include entities and non-full blocks.
+option.LIGHTING_GI_MAXFRAMES=Max Frames
 
 
 screen.LIGHTING_POINT=Point Lights

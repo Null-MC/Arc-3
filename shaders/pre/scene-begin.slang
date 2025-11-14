@@ -15,6 +15,8 @@ RWStructuredBuffer<SceneBuffer> scene_writer;
 [numthreads(1,1,1)]
 void beginScene() {
     if (TAA_Enabled) {
+        // scene_writer[0].taa_jitter_prev = scene_writer[0].taa_jitter;
+        
         scene_writer[0].taa_jitter = GetR2_2D(ap.timing.frameCounter) - 0.5;
         scene_writer[0].taa_jitter /= ap.game.screenSize;
     }

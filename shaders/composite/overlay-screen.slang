@@ -2,7 +2,7 @@ import aperture;
 import buffers.ObjectData;
 import lib.common;
 import lib.water.common;
-import lib.water.water_depth;
+// import lib.water.water_depth;
 import lib.material.pbr;
 import lib.material.rough_normal;
 import lib.octohedral;
@@ -74,25 +74,24 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
 
     uint2 water_uv = uv;
     float2 refract_texcoord = texcoord;
-    float waterDist = WaterDepth_get(uv);
+    // float waterDist = WaterDepth_get(uv);
     float transDist = length(transViewPos);
     half3 opaque_color = texFinal_opaque[uv];
 
-    bool hasOverlay = translucent.a > 0.0 || waterDist < min(transDist, ap.camera.far);
+    bool hasOverlay = translucent.a > 0.0;// || waterDist < min(transDist, ap.camera.far);
     bool hasRefract = RefractMode != Refract_None && hasOverlay;
 
     if (hasRefract) {
-        float3 waterNormal = ObjectData_Normals.unpackTex(texNormalGB_water[uv].g);
+        // float3 waterNormal = ObjectData_Normals.unpackTex(texNormalGB_water[uv].g);
         
-        // half4 packedTransData = unpackUnorm4x8ToHalf(transData);
         float3 transNormal = ObjectData_Normals.unpackTex(texNormalGB_translucent[uv].g);
 
         half4 specularData = ObjectData_MatLit.unpackSpecular(texMatLightGB_translucent[uv].r);
         half trans_roughness = mat_roughness(specularData.r);
         half trans_roughL = pow2(trans_roughness);
 
-        half roughL = transDist < waterDist ? trans_roughL : (half)0.02;
-        float3 refract_normal = transDist < waterDist ? transNormal : waterNormal;
+        half roughL = trans_roughL;// transDist < waterDist ? trans_roughL : (half)0.02;
+        float3 refract_normal = transNormal;// transDist < waterDist ? transNormal : waterNormal;
         refract_normal = randomizeNormal(uv, refract_normal, roughL);
 
         const float IOR_AIR   = 1.0003;
@@ -105,7 +104,8 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
 
         float3 refract_viewNormal = mul(float3x3(ap.camera.view), refract_normal);
         float3 refract_viewDir = refract(viewDir, refract_viewNormal, eta);
-        float3 refract_viewPos = min(transDist, waterDist) * viewDir;
+        // float3 refract_viewPos = min(transDist, waterDist) * viewDir;
+        float3 refract_viewPos = transDist * viewDir;
 
         if (dot(refract_viewDir, refract_viewDir) < EPSILON) {
             refract_texcoord = -1.0;
@@ -128,19 +128,19 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
 
     // TODO: debug water depths
 
-    if (hasRefract && waterDist > transDist) {
-        water_uv = refract_uv;
-        waterDist = WaterDepth_get(refract_uv);
-    }
+    // if (hasRefract && waterDist > transDist) {
+    //     water_uv = refract_uv;
+    //     waterDist = WaterDepth_get(refract_uv);
+    // }
 
-    if (hasRefract && transDist > waterDist && translucent.a > 0.0) {
-        // WARN: causes fuckery
-        // float transDepth = mainDepthTex[refract_uv];
-        translucent = texFinal_translucent[refract_uv];
-        tint = texTintTranslucent[refract_uv];
+    // if (hasRefract && transDist > waterDist && translucent.a > 0.0) {
+    //     // WARN: causes fuckery
+    //     // float transDepth = mainDepthTex[refract_uv];
+    //     translucent = texFinal_translucent[refract_uv];
+    //     tint = texTintTranslucent[refract_uv];
 
-        // TODO: update trans pos/dist?
-    }
+    //     // TODO: update trans pos/dist?
+    // }
 
     tint = RgbToLinear(tint);
     half4 waterColor = texFinal_water[water_uv];
@@ -154,8 +154,8 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
 
         // opaque_color = texSource.Sample(refract_texcoord);
 
-        if (waterDist > transDist)
-            waterColor.rgb *= tint;
+        // if (waterDist > transDist)
+        //     waterColor.rgb *= tint;
     }
 
     if (translucent.a > 0.0)
@@ -163,19 +163,19 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
 
     float opaqueDist = length(opaqueViewPos);
 
-    float waterMin, waterMax;
-    if (ap.camera.fluid == 1) {
-        waterMin = 0.0;
-        waterMax = min(waterDist, opaqueDist);
-    }
-    else {
-        waterMin = waterDist;
-        waterMax = min(ap.camera.far, opaqueDist);
-    }
+    // float waterMin, waterMax;
+    // if (ap.camera.fluid == 1) {
+    //     waterMin = 0.0;
+    //     waterMax = min(waterDist, opaqueDist);
+    // }
+    // else {
+    //     waterMin = waterDist;
+    //     waterMax = min(ap.camera.far, opaqueDist);
+    // }
 
-    float waterDepthL = max(waterMax - waterMin, 0.0);
+    float waterDepthL = 0.0;//max(waterMax - waterMin, 0.0);
 
-    float opaqueWaterDepthL = max(waterMax - waterMin, 0.0);
+    // float opaqueWaterDepthL = max(waterMax - waterMin, 0.0);
     half3 opaqueWaterTint = half3(exp(-(waterDepthL + EPSILON) * Water_AbsorbColor));
 
     if (ap.camera.fluid == 0 && waterDepthL > 0.0) {
@@ -186,15 +186,15 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
 
     half3 final_color = fma(opaque_color, half3(1.0 - translucent.a), translucent.rgb);
 
-    if (ap.camera.fluid == 0 && translucent.a > 0.0 && transDist > waterDist) {
-        // tint translucent under water
-        float transWaterDist = max(transDist - waterDist, EPSILON);
-        half3 transWaterTint = half3(exp(-transWaterDist * Water_AbsorbColor));
-        final_color *= transWaterTint;
-    }
+    // if (ap.camera.fluid == 0 && translucent.a > 0.0 && transDist > waterDist) {
+    //     // tint translucent under water
+    //     float transWaterDist = max(transDist - waterDist, EPSILON);
+    //     half3 transWaterTint = half3(exp(-transWaterDist * Water_AbsorbColor));
+    //     final_color *= transWaterTint;
+    // }
 
-    if (ap.camera.fluid == 1 || (translucent.a > 0.0 && transDist > waterDist))
-        final_color = fma(final_color, half3(1.0 - waterColor.a), waterColor.rgb);
+    // if (ap.camera.fluid == 1 || (translucent.a > 0.0 && transDist > waterDist))
+    //     final_color = fma(final_color, half3(1.0 - waterColor.a), waterColor.rgb);
 
     if (ap.camera.fluid == 1) {
         final_color *= opaqueWaterTint;

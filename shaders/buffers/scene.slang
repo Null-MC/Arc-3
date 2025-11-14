@@ -4,6 +4,7 @@ extern static const int Shadow_CascadeCount;
 
 struct SceneBuffer {
     float2 taa_jitter;
+    // float2 taa_jitter_prev;
     float exposure;
 
     half3 SunColor;

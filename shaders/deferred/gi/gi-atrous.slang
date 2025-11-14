@@ -63,7 +63,7 @@ float3 atrous(float2 sampleUV, float c_phi, float n_phi, float p_phi, float step
         float3 ptmp = atrous_GetViewPosition(uv);
         t = pval - ptmp;
         dist2 = dot(t,t);
-        float p_w = 1.0;//min(exp(-(dist2)/p_phi),1.0);
+        float p_w = min(exp(-(dist2)/p_phi),1.0);
 
         float kernel_weight = c_w * n_w * p_w * atrousKernel[i];
         sum += ctmp * kernel_weight;
@@ -84,8 +84,8 @@ half4 atrousFilter(float2 pos : SV_Position) : SV_Target0 {
         float2 texcoord = pos / ap.game.screenSize;
         // if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
-        const float w_color = 0.00001;
-        const float w_normal = 0.1;
+        const float w_color = 0.1;
+        const float w_normal = 0.5;
         const float w_pos = 0.3;
         const float step_width = exp2(AtrousLevel);
 

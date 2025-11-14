@@ -2,7 +2,7 @@ import aperture;
 import buffers.ObjectData;
 import lib.common;
 
-static const float GI_MaxFrames = 60;
+extern static const int GI_MaxFrames;
 
 Sampler2D<float> texDepth;
 Sampler2D<half3> texSource;
@@ -18,9 +18,6 @@ half4 accumulateGI(float2 pos : SV_Position) : SV_Target0 {
     float counter = 0.0;
     
     if (depth < 1.0) {
-        // float2 texcoord = pos / ap.game.screenSize;
-        // if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
-
         diffuse = texSource[uv];
 
         float3 reproj = texReprojection[uv];
