@@ -6,6 +6,7 @@ import lib.material.pbr;
 import lib.material.rough_normal;
 
 extern static const int RefractMode;
+extern static const bool Refract_Rough;
 extern static const int BLOCK_WATER;
 
 Sampler2D<float> mainDepthTex;
@@ -73,22 +74,20 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     float transDist = length(transViewPos);
     half3 opaque_color = texFinal_opaque[uv];
 
-    bool hasOverlay = translucent.a > 0.0;// || waterDist < min(transDist, ap.camera.far);
+    bool hasOverlay = translucent.a > 0.0;
     bool hasRefract = RefractMode != Refract_None && hasOverlay;
 
     ObjectData_MatLit mat_lit;
     if (hasRefract) {
-        // float3 waterNormal = ObjectData_Normals.unpackTex(texNormalGB_water[uv].g);
-        
-        float3 transNormal = ObjectData_Normals.unpackTex(texNormalGB_translucent[uv].g);
+        float3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB_translucent[uv].g);
 
         mat_lit.unpack(texMatLightGB_translucent[uv]);
-        // half4 specularData = ObjectData_MatLit.unpackSpecular(texMatLightGB_translucent[uv].r);
-        half trans_roughness = mat_roughness(mat_lit.specular.r);
-        half trans_roughL = pow2(trans_roughness);
+        half roughness = mat_roughness(mat_lit.specular.r);
+        half roughL = pow2(roughness);
 
-        half roughL = trans_roughL;
-        float3 refract_normal = randomizeNormal(uv, transNormal, roughL);
+        float3 refract_normal = Refract_Rough
+            ? randomizeNormal(uv, tex_normal, roughL)
+            : tex_normal;
 
         const float IOR_AIR   = 1.0003;
         const float IOR_WATER   = 1.333;

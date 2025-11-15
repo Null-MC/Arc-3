@@ -13,6 +13,7 @@ import lib.voxel.voxel_sample;
 import lib.dda;
 
 extern static const int RefractMode;
+extern static const bool Reflect_Rough;
 extern static const bool Reflect_SS_Fallback;
 extern static const uint BLOCK_WATER;
 
@@ -58,12 +59,13 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         float dither = InterleavedGradientNoiseTime(pos);
 
-        // get reflection direction
-        float3 roughNormal = randomizeNormal(uv, tex_normal, roughL);
+        float3 reflectNormal = Reflect_Rough
+            ? randomizeNormal(uv, tex_normal, roughL)
+            : tex_normal;
         
         float viewDist = length(viewPos);
         float3 viewDir = viewPos / viewDist;
-        float3 viewNormal = mul(float3x3(ap.camera.view), roughNormal);
+        float3 viewNormal = mul(float3x3(ap.camera.view), reflectNormal);
         float3 reflect_viewDir = reflect(viewDir, viewNormal);
         float3 reflect_localDir = mul(float3x3(ap.camera.viewInv), reflect_viewDir);
 
@@ -205,7 +207,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         half3 f0 = lerp(half3(f0_metal), albedo.rgb, metalness);
 
         // half3 localDir = half3(normalize(localPos));
-        half NoVm = max(dot(tex_normal, -localDir), (half)0.0);
+        half NoVm = max(dot(reflectNormal, -localDir), (half)0.0);
         half3 F_NoV = F_schlickRough(NoVm, f0, roughL);
         half3 specular_tint = lerp((half)1.0, albedo, metalness);
 

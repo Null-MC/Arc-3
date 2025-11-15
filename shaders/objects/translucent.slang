@@ -8,7 +8,6 @@ import lib.sampling.linear;
 import lib.sampling.dfd_normal;
 import lib.material.pbr;
 import lib.material.parallax;
-import lib.water.water_depth;
 import lib.water.waves;
 import lib.tbn;
 
@@ -253,32 +252,6 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
     output.normals = normals.pack();
     output.mat_lit = mat_lit.pack();
     // output.velocity = half2(0.0);
-
-    // if (RENDER_TERRAIN) {
-    //     if (RefractMode != Refract_WorldSpace && isWater) {
-    //         uint2 frag_uv = uint2(fragPos);
-
-    //         float opaqueDepth = solidDepthTex[frag_uv];
-    //         float2 screen_texcoord = fragPos / ap.game.screenSize;
-    //         if (TAA_Enabled) screen_texcoord += scene[0].taa_jitter;
-
-    //         float3 opaqueClipPos = float3(screen_texcoord, opaqueDepth) * 2.0 - 1.0;
-    //         float3 opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);
-
-    //         float opaqueDistSq = dot(opaqueViewPos, opaqueViewPos);
-    //         float transDistSq = dot(input.localPos, input.localPos);
-
-    //         if (transDistSq < opaqueDistSq) {
-    //             if (WaterDepth_set(frag_uv, sqrt(transDistSq))) {
-    //                 imgAlbedoGB_water[frag_uv] = output.albedo;
-    //                 imgNormalGB_water[frag_uv] = output.normals;
-    //                 imgMatLightGB_water[frag_uv] = output.mat_lit;
-    //             }
-    //         }
-
-    //         discard;
-    //     }
-    // }
 
     return output;
 }

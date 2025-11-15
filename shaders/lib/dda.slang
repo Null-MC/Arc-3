@@ -28,3 +28,12 @@ float3 projectToScreenBounds(const in float3 screenPos, const in float3 screenDi
     float closestDist = minOf(nextDist);
     return fma(screenDir, closestDist, screenPos);
 }
+
+float3 projectToScreenBounds(const in float3 screenPos, const in float3 screenDir, float maxLen) {
+    float3 stepDir = sign(screenDir);
+    float3 nextDist = stepDir * 0.5 + 0.5;
+    nextDist = (nextDist - fract(screenPos)) / screenDir;
+
+    float closestDist = min(minOf(nextDist), maxLen);
+    return fma(screenDir, closestDist, screenPos);
+}

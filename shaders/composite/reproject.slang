@@ -39,9 +39,11 @@ FragmentOutput reprojectScene(float2 pos : SV_Position) {
         // prev_screenPos.xy -= texVelocity[uv];
         offset = prev_screenPos.xy - screenPos.xy;
 
+        float viewDist = length(viewPos);
+        float distThreshold = 0.004 * viewDist;
         float3 last_localPos = texPositionPrev.Sample(prev_screenPos.xy);
         float3 localOffset = last_localPos - prev_localPos;
-        if (dot(localOffset, localOffset) > 0.2) weight = 0.5;
+        if (dot(localOffset, localOffset) > distThreshold) weight = 0.5;
 
         if (!all(saturate(prev_screenPos.xy) == prev_screenPos.xy)) weight = 0.0;
     }

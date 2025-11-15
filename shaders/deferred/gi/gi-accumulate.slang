@@ -6,6 +6,7 @@ extern static const int GI_MaxFrames;
 
 Sampler2D<float> texDepth;
 Sampler2D<half3> texSource;
+// Sampler2D<half3> texGI;
 Sampler2D<half4> texGI_prev;
 Sampler2D<half3> texReprojection;
 
@@ -26,6 +27,8 @@ half4 accumulateGI(float2 pos : SV_Position) : SV_Target0 {
 
         diffuse = texSource[uv];
         // TODO:  try mixing atrous with raw sample based on history
+        // diffuse = lerp(texGI[uv], diffuse, rcp(1.0 + counter));
+        
         diffuse = lerp(gi_prev.rgb, diffuse, rcp(counter + 1.0));
     }
 

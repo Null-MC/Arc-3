@@ -7,9 +7,12 @@ import lib.water.common;
 import lib.sky.sample_final;
 import lib.voxel.voxel_tex;
 import lib.voxel.voxel_sample;
+import lib.material.pbr;
+import lib.material.rough_normal;
 import lib.dda;
 
 extern static const bool Refract_SS_Fallback;
+extern static const bool Refract_Rough;
 extern static const uint BLOCK_WATER;
 
 Sampler2D<float> mainDepthTex;
@@ -18,6 +21,7 @@ Sampler2D<float> solidDepthTex;
 Sampler2D<half3> texFinal_opaque;
 Sampler2D<half4> texFinal_translucent;
 Sampler2D<uint2> texNormalGB_translucent;
+Sampler2D<uint2> texMatLightGB_translucent;
 Sampler2D<half3> texTintTranslucent;
 
 Sampler2D<half4> texWeather;
@@ -52,8 +56,17 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
         tint = RgbToLinear(texTintTranslucent[uv]);
 
         // half4 packedTransData = unpackUnorm4x8ToHalf(transData);
-        float3 refract_normal = ObjectData_Normals.unpackTex(texNormalGB_translucent[uv].g);
+        float3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB_translucent[uv].g);
         // uint blockMapId = bitfieldExtract(transData, 24, 8);
+
+        ObjectData_MatLit mat_lit;
+        mat_lit.unpack(texMatLightGB_translucent[uv]);
+        half roughness = mat_roughness(mat_lit.specular.r);
+        half roughL = pow2(roughness);
+
+        float3 refract_normal = Refract_Rough
+            ? randomizeNormal(uv, tex_normal, roughL)
+            : tex_normal;
 
         const float IOR_AIR   = 1.0003;
         const float IOR_WATER   = 1.333;

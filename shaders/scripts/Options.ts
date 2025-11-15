@@ -6,7 +6,9 @@ export class Options {
     get Water_WaveDetail(): number {return 18;}
 
     get Material_Format(): number {return getIntSetting('MATERIAL_FORMAT');}
-    get Material_SmoothNormals(): boolean {return getBoolSetting('MATERIAL_SMOOTH_NORMALS');}
+
+    // get Material_Normals_Rough(): boolean {return getBoolSetting('MATERIAL_NORMALS_ROUGH');}
+    get Material_Normals_Smooth(): boolean {return getBoolSetting('MATERIAL_NORMALS_SMOOTH');}
 
     get Material_Parallax_Enabled(): boolean {return getBoolSetting('MATERIAL_PARALLAX_ENABLED');}
     get Material_Parallax_Type(): number {return getIntSetting('MATERIAL_PARALLAX_TYPE');}
@@ -18,9 +20,11 @@ export class Options {
 
     get Lighting_Refraction_Mode(): number {return getIntSetting('LIGHTING_REFRACT_MODE');}
     get Lighting_Refraction_ScreenSpaceFallback(): boolean {return getBoolSetting('LIGHTING_REFRACT_SS_FALLBACK');}
+    get Lighting_Refraction_Rough(): boolean {return getBoolSetting('LIGHTING_REFRACT_ROUGH');}
 
     get Lighting_Reflection_Mode(): number {return getIntSetting('LIGHTING_REFLECT_MODE');}
     get Lighting_Reflection_ScreenSpaceFallback(): boolean {return getBoolSetting('LIGHTING_REFLECT_SS_FALLBACK');}
+    get Lighting_Reflection_Rough(): boolean {return getBoolSetting('LIGHTING_REFLECT_ROUGH');}
 
     get Lighting_GI_Enabled(): boolean {return getBoolSetting('LIGHTING_GI_ENABLED');}
     get Lighting_GI_ScreenTrace(): boolean {return getBoolSetting('LIGHTING_GI_SS_TRACE');}

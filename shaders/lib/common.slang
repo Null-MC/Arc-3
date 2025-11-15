@@ -138,13 +138,13 @@ float3 LinearToRgb(const in float3 color) {
     return lerp(lower, higher, is_high);
 }
 
-half3 LinearToRgb(const in half3 color) {
-    half3 is_high = step((half)0.00313066844250063, color);
-    half3 higher = (half)1.055 * pow(color, half3(1.0/2.4)) - (half)0.055;
-    half3 lower = color * (half)12.92;
+// half3 LinearToRgb(const in half3 color) {
+//     half3 is_high = step((half)0.00313066844250063, color);
+//     half3 higher = (half)1.055 * pow(color, half3(1.0/2.4)) - (half)0.055;
+//     half3 lower = color * (half)12.92;
 
-    return lerp(lower, higher, is_high);
-}
+//     return lerp(lower, higher, is_high);
+// }
 
 float3 RgbToLinear(const in float3 color) {
     float3 is_high = step(0.0404482362771082, color);
@@ -154,10 +154,10 @@ float3 RgbToLinear(const in float3 color) {
     return lerp(lower, higher, is_high);
 }
 
-half3 RgbToLinear(const in half3 color) {
-    half3 is_high = step(half3(0.0404482362771082), color);
-    half3 higher = pow((color + half3(0.055)) / half3(1.055), half3(2.4));
-    half3 lower = color / half3(12.92);
+// half3 RgbToLinear(const in half3 color) {
+//     half3 is_high = step(half3(0.0404482362771082), color);
+//     half3 higher = pow((color + half3(0.055)) / half3(1.055), half3(2.4));
+//     half3 lower = color / half3(12.92);
 
-    return lerp(lower, higher, is_high);
-}
+//     return lerp(lower, higher, is_high);
+// }

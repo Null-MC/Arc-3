@@ -14,6 +14,11 @@ value.MATERIAL_FORMAT.1=Old PBR
 value.MATERIAL_FORMAT.2=Lab PBR
 
 
+screen.MATERIAL_NORMALS=Normals
+
+option.MATERIAL_NORMALS_SMOOTH=Smooth
+
+
 screen.MATERIAL_PARALLAX=Parallax
 
 option.MATERIAL_PARALLAX_ENABLED=Enabled
@@ -49,6 +54,8 @@ value.LIGHTING_REFRACT_MODE.2=World-Space
 option.LIGHTING_REFRACT_SS_FALLBACK=Hybrid Tracing
 option.LIGHTING_REFRACT_SS_FALLBACK.comment=Allows world-space refraction tracing to also perform a screen-space trace to include entities and non-full blocks.
 
+option.LIGHTING_REFRACT_ROUGH=Roughness
+
 
 screen.LIGHTING_REFLECTIONS=Reflections
 
@@ -62,6 +69,8 @@ value.LIGHTING_REFLECT_MODE.3=World-Space
 
 option.LIGHTING_REFLECT_SS_FALLBACK=Hybrid Tracing
 option.LIGHTING_REFLECT_SS_FALLBACK.comment=Allows world-space reflection tracing to also perform a screen-space trace to include entities and non-full blocks.
+
+option.LIGHTING_REFLECT_ROUGH=Roughness
 
 
 screen.LIGHTING_GI=Global Illumination

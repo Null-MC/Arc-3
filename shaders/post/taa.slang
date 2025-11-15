@@ -16,9 +16,7 @@ RWTexture2D<half4> imgFinalPrev;
 
 Sampler2D<half3> texSource;
 Sampler2D<half4> texFinalPrev;
-// Sampler2D<half2> texVelocity;
 Sampler2D<half3> texReprojection;
-Sampler2D<float> texDepth;
 
 static const uint sharedBufferResX = groupResX+2;
 static const uint sharedBufferResY = groupResY+2;
@@ -35,18 +33,6 @@ groupshared half3 sharedBuffer[sharedBufferSize];
 //     1.00000,  0.00000,  1.13983,
 //     1.00000, -0.39465, -0.58060,
 //     1.00000,  2.03211,  0.00000);
-
-// float2 getReprojectedClipPos(const in float2 texcoord, const in float depthNow, const in float2 velocity) {
-//     float3 clipPos = float3(texcoord, depthNow) * 2.0 - 1.0;
-//     float3 viewPos = project(ap.camera.projectionInv, clipPos);
-//     float3 localPos = mul3(ap.camera.viewInv, viewPos.xyz);
-
-//     float3 localPosPrev = localPos + (ap.camera.position - ap.temporal.position);
-
-//     float3 viewPosPrev = mul3(ap.temporal.view, localPosPrev);
-//     float3 clipPosPrev = project(ap.temporal.projection, viewPosPrev);
-//     return clipPosPrev.xy * 0.5 + 0.5 - velocity;
-// }
 
 uint2 getSharedUV(const in uint z) {
     return uint2(
@@ -88,12 +74,8 @@ void applyTaa(ComputeInput input) {
     GroupMemoryBarrierWithGroupSync();
 
     if (all(input.globalPos.xy < ap.game.screenSize)) {
-        float depth = texDepth[input.globalPos.xy].r;
-        // float2 velocity = float2(0.0);//texVelocity[input.globalPos.xy];
-
         half3 reproj = texReprojection[input.globalPos.xy];
         float2 uv_prev = (input.globalPos.xy + 0.5) / float2(ap.game.screenSize) + reproj.xy;
-        // float2 uv_prev = getReprojectedClipPos(texcoord, depth, velocity);
 
         half4 lastColor;
         if (SharpenHistory) {

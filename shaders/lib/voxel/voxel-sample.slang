@@ -87,7 +87,7 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
         half3 moonTransmit = sampleSkyTransmit(skyPos, scene[0].MoonLocalDir);
         diffuse += NoLm_moon * shadow * moonTransmit * scene[0].MoonColor;
 
-        // diffuse /= PI;
+        diffuse /= PI;
 
         // TODO: recalc from local-pos + normal offset
         int3 voxelPos = int3(floor(localPos + 0.04*normal + ap.camera.position));

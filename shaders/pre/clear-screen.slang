@@ -1,5 +1,4 @@
 import aperture;
-import lib.water.water_depth;
 
 
 [[shader("compute")]]
@@ -7,5 +6,5 @@ import lib.water.water_depth;
 void clearScreen(uint3 globalPos : SV_DispatchThreadID) {
     if (!all(globalPos.xy < ap.game.screenSize)) return;
 
-    WaterDepth_clear(globalPos.xy);
+    // TODO
 }

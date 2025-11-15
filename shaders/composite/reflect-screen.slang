@@ -8,11 +8,9 @@ import lib.sampling.depth;
 import lib.sampling.IGN;
 import lib.sky.common;
 import lib.sky.sample_final;
-// import lib.water.water_depth;
 
 extern static const int RefractMode;
-// extern static const bool Debug_WhiteWorld;
-extern static const bool World_HasSky;
+extern static const bool Reflect_Rough;
 
 Sampler2D<float> mainDepthTex;
 
@@ -81,12 +79,13 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         float dither = InterleavedGradientNoiseTime(pos);
 
-        // get reflection direction
-        float3 roughNormal = randomizeNormal(uv, tex_normal, roughL);
+        float3 reflectNormal = Reflect_Rough
+            ? randomizeNormal(uv, tex_normal, roughL)
+            : tex_normal;
         
         float viewDist = length(viewPos);
         float3 viewDir = viewPos / viewDist;
-        float3 viewNormal = mul(float3x3(ap.camera.view), roughNormal);
+        float3 viewNormal = mul(float3x3(ap.camera.view), reflectNormal);
         float3 reflect_viewDir = reflect(viewDir, viewNormal);
         float3 reflect_localDir = mul(float3x3(ap.camera.viewInv), reflect_viewDir);
 
@@ -163,13 +162,13 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         half3 f0 = lerp(half3(f0_metal), albedo.rgb, metalness);
 
         half3 localDir = half3(normalize(localPos));
-        half NoVm = max(dot(tex_normal, -localDir), (half)0.0);
+        half NoVm = max(dot(reflectNormal, -localDir), (half)0.0);
         half3 F_NoV = F_schlickRough(NoVm, f0, roughL);
         half3 specular_tint = lerp((half)1.0, albedo, metalness);
 
         // imgDebug[uv] = float4(LinearToRgb(reflectColor * 0.008), 1.0);
 
-        finalColor += F_NoV * ((half)1.0 - roughness) * reflectColor * specular_tint;
+        finalColor += F_NoV * ((half)1.0 - roughL) * reflectColor * specular_tint;
     }
 
     return half4(finalColor, (half)1.0);

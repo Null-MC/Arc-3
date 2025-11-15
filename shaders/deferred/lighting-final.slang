@@ -35,7 +35,7 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         half3 specular = texSpecular[uv];
 
         if (Lighting_GI && !RENDER_TRANSLUCENT) {
-            diffuse += texGI_final[uv];
+            diffuse += PI * texGI_final[uv] * mat_lit.occlusion;
         }
         
         half roughness = mat_roughness(mat_lit.specular.r);
