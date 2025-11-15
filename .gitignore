@@ -421,3 +421,17 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+
+*.md
+!README.md
+Other
+.iris
+.idea
+.git
+shaders/*.js
+!LICENSE.md
+!CHANGELOG.md
+*.js.map
+
+
