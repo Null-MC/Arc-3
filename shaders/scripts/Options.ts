@@ -32,10 +32,12 @@ export class Options {
     get Lighting_Reflection_ScreenSteps(): number {return getIntSetting('LIGHTING.REFLECT.SCREEN_STEPS');}
     get Lighting_Reflection_RefineSteps(): number {return getIntSetting('LIGHTING.REFLECT.REFINE_STEPS');}
 
-    get Lighting_GI_Enabled(): boolean {return getBoolSetting('LIGHTING_GI_ENABLED');}
-    get Lighting_GI_ScreenTrace(): boolean {return getBoolSetting('LIGHTING_GI_SS_TRACE');}
-    get Lighting_GI_VoxelSteps(): number {return getIntSetting('LIGHTING_GI_VOXEL_STEPS');}
-    get Lighting_GI_MaxFrames(): number {return getIntSetting('LIGHTING_GI_MAXFRAMES');}
+    get Lighting_GI_Enabled(): boolean {return getBoolSetting('LIGHTING.GI.ENABLED');}
+    get Lighting_GI_ScreenTrace(): boolean {return getBoolSetting('LIGHTING.GI.SS_TRACE');}
+    get Lighting_GI_MaxFrames(): number {return getIntSetting('LIGHTING.GI.MAXFRAMES');}
+    get Lighting_GI_VoxelSteps(): number {return getIntSetting('LIGHTING.GI.VOXEL_STEPS');}
+    get Lighting_GI_ScreenSteps(): number {return getIntSetting('LIGHTING.GI.SCREEN_STEPS');}
+    get Lighting_GI_RefineSteps(): number {return getIntSetting('LIGHTING.GI.REFINE_STEPS');}
 
     get Lighting_Point_Enabled(): boolean {return getBoolSetting('LIGHTING_POINT_ENABLED');}
     get Lighting_Point_EmissionMask(): boolean {return getBoolSetting('LIGHTING_POINT_EMISSION_MASK');}

@@ -12,8 +12,9 @@ import lib.tbn;
 extern static const bool Material_SmoothNormals;
 extern static const bool RENDER_TERRAIN = false;
 extern static const bool RENDER_PARTICLES = false;
+extern static const bool RENDER_TEXT = false;
 
-static const bool SupportsParallax = Parallax_Enabled && !RENDER_PARTICLES;
+static const bool SupportsParallax = Parallax_Enabled && !(RENDER_PARTICLES || RENDER_TEXT);
 static const bool SupportsTexNormals = !RENDER_PARTICLES;
 
 

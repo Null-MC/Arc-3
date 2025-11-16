@@ -583,6 +583,10 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
     opaqueObjectShader("hand", Usage.HAND).compile();
 
+    opaqueObjectShader("text", Usage.TEXT)
+        .exportBool('RENDER_TEXT', true)
+        .compile();
+
     // opaqueObjectShader("basic-opaque", Usage.PARTICLES_TRANSLUCENT)
     //     .exportBool('RENDER_PARTICLES', true)
     //     .compile();
@@ -615,7 +619,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
     translucentObjectShader("hand-translucent", Usage.TRANSLUCENT_HAND).compile();
 
-    translucentObjectShader("text", Usage.TEXT).compile();
+    // translucentObjectShader("text", Usage.TEXT).compile();
 
     translucentObjectShader("particles", Usage.PARTICLES)
         .exportBool('RENDER_PARTICLES', true)

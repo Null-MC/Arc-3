@@ -85,13 +85,19 @@ option.LIGHTING.REFLECT.SCREEN_STEPS=Screen Steps
 option.LIGHTING.REFLECT.REFINE_STEPS=Refine Steps
 
 
-screen.LIGHTING_GI=Global Illumination
+screen.LIGHTING.GI=Global Illumination
 
-option.LIGHTING_GI_ENABLED=Enabled
+option.LIGHTING.GI.ENABLED=Enabled
 
-option.LIGHTING_GI_SS_TRACE=ScreenSpace Trace
+option.LIGHTING.GI.SS_TRACE=ScreenSpace Trace
 
-option.LIGHTING_GI_MAXFRAMES=Max Frames
+option.LIGHTING.GI.MAXFRAMES=Max Frames
+
+option.LIGHTING.GI.VOXEL_STEPS=Voxel Steps
+
+option.LIGHTING.GI.SCREEN_STEPS=Screen Steps
+
+option.LIGHTING.GI.REFINE_STEPS=Refine Steps
 
 
 screen.LIGHTING_POINT=Point Lights
