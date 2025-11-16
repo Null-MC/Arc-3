@@ -32,14 +32,14 @@ struct ObjectData_MatLit {
     half4 specular;
     half occlusion;
     half2 lmcoord;
-    int blockId;
+    uint blockMapId;
 
     uint2 pack() {
         uint2 data = uint2(
             packUnorm4x8(specular),
             packUnorm4x8(half4(lmcoord, occlusion, (half)0.0)));
 
-        data.g = bitfieldInsert(data.g, blockId, 24, 8);
+        data.g = bitfieldInsert(data.g, blockMapId, 24, 8);
 
         return data;
     }
@@ -47,7 +47,7 @@ struct ObjectData_MatLit {
     [mutating]
     void unpack(const in uint2 data) {
         unpackSpecular(data.r, specular);
-        unpackLightOcclusion(data.g, lmcoord, occlusion, blockId);
+        unpackLightOcclusion(data.g, lmcoord, occlusion, blockMapId);
     }
 
     static void unpackSpecular(const in uint data_r, out half4 specularData) {

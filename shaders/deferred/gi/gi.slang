@@ -173,8 +173,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 hit_voxelMaskPos = int3(floor(VoxelMask_GetBufferPosition(currPos + 0.5*step - cameraFract)));
 
                 if (i > 0) {
-                    // TODO: check exit face mask
-                    // uint faceMask = VoxelMask.BuildFaceMask(stepAxis * sign(trace_localDir));
+                    // check exit face mask
                     float3 axisNormal = stepAxis * sign(trace_localDir);
                     if (voxelMask.testFace(axisNormal)) {hit = true; break;}
                 }
@@ -192,8 +191,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 }
 
                 if (!all(stepAxis == 0)) {
-                    // TODO: check enter face mask
-                    // uint faceMask = VoxelMask.BuildFaceMask(-stepAxis * sign(trace_localDir));
+                    // check enter face mask
                     float3 axisNormal = -stepAxis * sign(trace_localDir);
                     if (voxelMask.testFace(axisNormal)) {hit = true; break;}
                 }

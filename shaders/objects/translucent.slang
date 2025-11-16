@@ -155,7 +155,8 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
     ObjectData_Normals normals;
     ObjectData_MatLit mat_lit;
 
-    mat_lit.blockId = input.blockId;
+    // mat_lit.blockMapId = input.blockId;
+    mat_lit.blockMapId = 0;
 
     half4 tint = unpackUnorm4x8ToHalf(input.color);
     half4 color = (half4)albedoTex.SampleLevel(tex_uv, LOD) * tint;
@@ -197,8 +198,8 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
 
     bool isWater;
     if (RENDER_TERRAIN) {
-        uint blockMapId = ap.blocks[input.blockId].customId;
-        isWater = blockMapId == BLOCK_WATER;
+        mat_lit.blockMapId = ap.blocks[input.blockId].customId;
+        isWater = mat_lit.blockMapId == BLOCK_WATER;
 
         if (isWater) {
             color = half4(0, 0, 0, (half)0.02);

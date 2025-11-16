@@ -44,36 +44,12 @@ struct VoxelMask {
         data = (uint8_t)bitfieldInsert(data, faces, 2, 6);
     }
 
-    // bool testFaces(const in uint faces) {
-    //     // return (getFaces() | faces) == 0;
-    //     return (getFaces() & faces) != 0;
-    //     // return getFaces() != 0;
-    // }
-
-    // static uint BuildFaceMask(float3 axisNormal) {
-    //     const uint BLOCK_FACE_DOWN = 1;
-    //     const uint BLOCK_FACE_UP = 2;
-    //     const uint BLOCK_FACE_NORTH = 4;
-    //     const uint BLOCK_FACE_SOUTH = 8;
-    //     const uint BLOCK_FACE_WEST = 16;
-    //     const uint BLOCK_FACE_EAST = 32;
-
-    //     uint mask = 0;
-    //     if (axisNormal.y >  EPSILON) mask = BLOCK_FACE_UP;
-    //     if (axisNormal.y < -EPSILON) mask = BLOCK_FACE_DOWN;
-    //     if (axisNormal.x >  EPSILON) mask = BLOCK_FACE_EAST;
-    //     if (axisNormal.x < -EPSILON) mask = BLOCK_FACE_WEST;
-    //     if (axisNormal.z >  EPSILON) mask = BLOCK_FACE_SOUTH;
-    //     if (axisNormal.z < -EPSILON) mask = BLOCK_FACE_NORTH;
-    //     return mask;
-    // }
-
     bool testFace(const in float3 normal) {
         // Builder magic
         int index = int(round(dot(normal, float3(3.0, 6.0, 9.0)))) + 9;
         index = (05370624 >> index) & 7;
 
-        return false;//bitfieldExtract(data, index, 1) != 0;
+        return bitfieldExtract(data, index, 1) != 0;
     }
 }
 

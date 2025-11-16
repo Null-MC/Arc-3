@@ -118,9 +118,8 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     }
 
     bool isWater = false;
-    if (mat_lit.blockId > 0) {
-        uint customId = ap.blocks[mat_lit.blockId].customId;
-        isWater = customId == BLOCK_WATER;
+    if (mat_lit.blockMapId > 0) {
+        isWater = mat_lit.blockMapId == BLOCK_WATER;
     }
 
     // uint2 refract_uv = uint2(refract_texcoord * ap.game.screenSize);
