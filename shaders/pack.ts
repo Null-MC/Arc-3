@@ -827,6 +827,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .overrideObject('texNormalGB', texNormalGB_translucent.name())
                     .overrideObject('texMatLightGB', texMatLightGB_translucent.name())
                     .exportBool('Lighting_GI', options.Lighting_GI_Enabled)
+                    .exportBool('RENDER_TRANSLUCENT', true)
                     .compile();
             }
 

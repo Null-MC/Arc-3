@@ -15,6 +15,7 @@ import lib.sky.sample_light;
 
 extern static const int ReflectMode;
 extern static const bool Lighting_GI;
+extern static const bool RENDER_TRANSLUCENT = false;
 
 Sampler2D<float> texDepth;
 
@@ -102,7 +103,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
 
         output.diffuse /= PI;
 
-        if (!Lighting_GI) {
+        if (!Lighting_GI || RENDER_TRANSLUCENT) {
             half3 sky_ambient = sampleSkyIrradiance(tex_normal);
             output.diffuse += sky_ambient * lmcoord_y * mat_lit.occlusion;
         }
