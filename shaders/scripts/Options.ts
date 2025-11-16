@@ -18,13 +18,19 @@ export class Options {
     
     get Lighting_ColorCandles(): boolean {return getBoolSetting('LIGHTING_COLOR_CANDLES');}
 
-    get Lighting_Refraction_Mode(): number {return getIntSetting('LIGHTING_REFRACT_MODE');}
-    get Lighting_Refraction_ScreenSpaceFallback(): boolean {return getBoolSetting('LIGHTING_REFRACT_SS_FALLBACK');}
-    get Lighting_Refraction_Rough(): boolean {return getBoolSetting('LIGHTING_REFRACT_ROUGH');}
+    get Lighting_Refraction_Mode(): number {return getIntSetting('LIGHTING.REFRACT.MODE');}
+    get Lighting_Refraction_ScreenSpaceFallback(): boolean {return getBoolSetting('LIGHTING.REFRACT.SS_FALLBACK');}
+    get Lighting_Refraction_Rough(): boolean {return getBoolSetting('LIGHTING.REFRACT.ROUGH');}
+    get Lighting_Refraction_VoxelSteps(): number {return getIntSetting('LIGHTING.REFRACT.VOXEL_STEPS');}
+    get Lighting_Refraction_ScreenSteps(): number {return getIntSetting('LIGHTING.REFRACT.SCREEN_STEPS');}
+    get Lighting_Refraction_RefineSteps(): number {return getIntSetting('LIGHTING.REFRACT.REFINE_STEPS');}
 
-    get Lighting_Reflection_Mode(): number {return getIntSetting('LIGHTING_REFLECT_MODE');}
-    get Lighting_Reflection_ScreenSpaceFallback(): boolean {return getBoolSetting('LIGHTING_REFLECT_SS_FALLBACK');}
-    get Lighting_Reflection_Rough(): boolean {return getBoolSetting('LIGHTING_REFLECT_ROUGH');}
+    get Lighting_Reflection_Mode(): number {return getIntSetting('LIGHTING.REFLECT.MODE');}
+    get Lighting_Reflection_ScreenSpaceFallback(): boolean {return getBoolSetting('LIGHTING.REFLECT.SS_FALLBACK');}
+    get Lighting_Reflection_Rough(): boolean {return getBoolSetting('LIGHTING.REFLECT.ROUGH');}
+    get Lighting_Reflection_VoxelSteps(): number {return getIntSetting('LIGHTING.REFLECT.VOXEL_STEPS');}
+    get Lighting_Reflection_ScreenSteps(): number {return getIntSetting('LIGHTING.REFLECT.SCREEN_STEPS');}
+    get Lighting_Reflection_RefineSteps(): number {return getIntSetting('LIGHTING.REFLECT.REFINE_STEPS');}
 
     get Lighting_GI_Enabled(): boolean {return getBoolSetting('LIGHTING_GI_ENABLED');}
     get Lighting_GI_ScreenTrace(): boolean {return getBoolSetting('LIGHTING_GI_SS_TRACE');}
@@ -64,4 +70,25 @@ export class Options {
     get Debug_Material(): number {return getIntSetting('DEBUG_MATERIAL');}
     get Debug_WhiteWorld(): boolean {return getBoolSetting('DEBUG_WHITEWORLD');}
     get Debug_Histogram(): boolean {return getBoolSetting('DEBUG_HISTOGRAM');}
+
+
+    get VoxelEnabled(): boolean {
+        if (this.Lighting_Refraction_Mode == RefractMode.WorldSpace) return true;
+        if (this.Lighting_Reflection_Mode == ReflectMode.WorldSpace) return true;
+        if (this.Lighting_GI_Enabled) return true;
+        return false;
+    }
+}
+
+export const ReflectMode = {
+    WorldSpace: 3,
+    ScreenSpace: 2,
+    SkyOnly: 1,
+    None: 0,
+}
+
+export const RefractMode = {
+    WorldSpace: 2,
+    ScreenSpace: 1,
+    None: 0,
 }

@@ -8,9 +8,12 @@ import lib.sampling.depth;
 import lib.sampling.IGN;
 import lib.sky.common;
 import lib.sky.sample_final;
+import lib.screen_trace;
 
 extern static const int RefractMode;
 extern static const bool Reflect_Rough;
+extern static const int Reflect_ScreenSteps;
+extern static const int Reflect_RefineSteps;
 
 Sampler2D<float> mainDepthTex;
 
@@ -20,23 +23,6 @@ Sampler2D<uint2> texNormalGB_translucent;
 Sampler2D<uint2> texMatLightGB_translucent;
 
 
-float3 projectToScreenBounds(const in float3 screenPos, const in float3 screenDir) {
-    float3 stepDir = sign(screenDir);
-    float3 stepSizes = rcp(abs(screenDir));
-
-    float3 nextDist = stepDir * 0.5 + 0.5;
-    nextDist = (nextDist - fract(screenPos)) / screenDir;
-
-    float closestDist = minOf(nextDist);
-    float3 stepAxis = float3(nextDist <= closestDist);
-
-    nextDist -= closestDist;
-    nextDist = fma(stepSizes, stepAxis, nextDist);
-
-    return fma(screenDir, closestDist, screenPos);
-}
-
-
 [[shader("fragment")]]
 half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
     uint2 uv = uint2(pos);
@@ -44,14 +30,6 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
     half3 finalColor = texSource[uv];
 
     half4 colorData = texAlbedoGB_translucent[uv];
-
-    // float waterDepth;
-    // bool isWater = false;
-    // if (RefractMode != Refract_WorldSpace) {
-    //     float waterDepthL = WaterDepth_get(uv);
-    //     waterDepth = delinearizeDepth(waterDepthL, ap.camera.near, ap.camera.far) * 0.5 + 0.5;
-    //     isWater = waterDepth < depth;
-    // }
     
     if (colorData.a > 0.0) {
         float2 texcoord = pos / ap.game.screenSize;
@@ -83,20 +61,14 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             ? randomizeNormal(uv, tex_normal, roughL)
             : tex_normal;
         
-        float viewDist = length(viewPos);
-        float3 viewDir = viewPos / viewDist;
+        // float viewDist = length(viewPos);
+        // float3 viewDir = viewPos / viewDist;
+        float3 viewDir = normalize(viewPos);
         float3 viewNormal = mul(float3x3(ap.camera.view), reflectNormal);
         float3 reflect_viewDir = reflect(viewDir, viewNormal);
         float3 reflect_localDir = mul(float3x3(ap.camera.viewInv), reflect_viewDir);
 
-        float3 reflect_viewPos = 0.5 * viewDist * reflect_viewDir + viewPos;
-        float3 reflect_clipPos = project(ap.camera.projection, reflect_viewPos);
-        float3 reflect_screenPos = reflect_clipPos * 0.5 + 0.5;
-
-        float3 screenDir = normalize(reflect_screenPos - screenPos);
-
-        // project the reflected trace direction to edge of trace bounds
-        float3 screenEnd = projectToScreenBounds(screenPos, screenDir);
+        float3 screenEnd = projectScreenTrace(viewPos, screenPos, reflect_viewDir);
         float3 traceClipEnd = screenEnd * 2.0 - 1.0;
         float3 traceClipStart = clipPos;
 
@@ -104,13 +76,10 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         float3 traceClipPos_prev = traceClipStart;
         float2 traceScreenPos;
 
-        const uint SS_StepCount = 24;
-        const uint SS_RefineSteps = 8;
-
         bool hit = false;
         float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
-        for (uint i = 1; i < SS_StepCount; i++) {
-            float f = (i + dither) / SS_StepCount;
+        for (uint i = 1; i < Reflect_ScreenSteps; i++) {
+            float f = (i + dither) / Reflect_ScreenSteps;
             traceClipPos = lerp(traceClipStart, traceClipEnd, f);
             traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
             if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
@@ -132,9 +101,8 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             traceClipStart = traceClipPos_prev;
             traceClipEnd = traceClipPos;
 
-            // traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
-            for (uint i = 0; i < SS_RefineSteps; i++) {
-                float f = (i + dither) / SS_RefineSteps;
+            for (uint i = 0; i < Reflect_RefineSteps; i++) {
+                float f = (i + dither) / Reflect_RefineSteps;
                 traceClipPos = lerp(traceClipStart, traceClipEnd, f);
                 traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
                 if (!all(saturate(traceScreenPos) == traceScreenPos)) break;

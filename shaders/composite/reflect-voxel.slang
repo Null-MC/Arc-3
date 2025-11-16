@@ -12,11 +12,15 @@ import lib.water.common;
 import lib.voxel.voxel_tex;
 import lib.voxel.voxel_mask;
 import lib.voxel.voxel_sample;
+import lib.screen_trace;
 import lib.dda;
 
 extern static const int RefractMode;
 extern static const bool Reflect_Rough;
 extern static const bool Reflect_SS_Fallback;
+extern static const int Reflect_VoxelSteps;
+extern static const int Reflect_ScreenSteps;
+extern static const int Reflect_RefineSteps;
 
 StructuredBuffer<VoxelMask> VoxelMaskBuffer;
 
@@ -73,7 +77,6 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         float3 reflect_localDir = mul(float3x3(ap.camera.viewInv), reflect_viewDir);
 
 
-
         half3 reflectColor = half3(0.65);
 
         bool ss_hit = false;
@@ -93,12 +96,9 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             float3 traceClipPos_prev = traceClipStart;
             float2 traceScreenPos;
 
-            const uint SS_StepCount = 24;
-            const uint SS_RefineSteps = 8;
-
             float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
-            for (uint i = 1; i < SS_StepCount; i++) {
-                float f = (i + dither) / SS_StepCount;
+            for (uint i = 1; i < Reflect_ScreenSteps; i++) {
+                float f = (i + dither) / Reflect_ScreenSteps;
                 traceClipPos = lerp(traceClipStart, traceClipEnd, f);
                 traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
                 if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
@@ -120,8 +120,8 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
                 traceClipStart = traceClipPos_prev;
                 traceClipEnd = traceClipPos;
 
-                for (uint i = 0; i < SS_RefineSteps; i++) {
-                    float f = (i + dither) / SS_RefineSteps;
+                for (uint i = 0; i < Reflect_RefineSteps; i++) {
+                    float f = (i + dither) / Reflect_RefineSteps;
                     traceClipPos = lerp(traceClipStart, traceClipEnd, f);
                     traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
                     if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
@@ -155,7 +155,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
             if (ap.camera.fluid == 1) traceWaterDist += viewDist;
 
-            for (uint i = 0; i < 64; i++) {
+            for (uint i = 0; i < Reflect_VoxelSteps; i++) {
                 float3 stepAxisNext;
                 float3 step = DDA_step(stepAxisNext, nextDist, stepSizes, reflect_localDir);
 

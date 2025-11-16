@@ -11,9 +11,12 @@ import lib.voxel.voxel_mask;
 import lib.voxel.voxel_sample;
 import lib.material.pbr;
 import lib.material.rough_normal;
+import lib.screen_trace;
 import lib.dda;
 
-extern static const int Refract_VoxelStepCount = 32;
+extern static const int Refract_VoxelSteps;
+extern static const int Refract_ScreenSteps;
+extern static const int Refract_RefineSteps;
 extern static const bool Refract_SS_Fallback;
 extern static const bool Refract_Rough;
 
@@ -90,40 +93,10 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
         else {
             float3 refract_localDir = mul(float3x3(ap.camera.viewInv), refract_viewDir);
 
-            float3 cameraFract = fract(ap.camera.position);
-            int3 cameraFloor = int3(floor(ap.camera.position));
-
-            float3 stepSizes, nextDist, stepAxis;
             float3 traceLocalStart = (transDist + EPSILON) * localDir;
-            float3 currPos = traceLocalStart + cameraFract;
-            DDA_init(stepSizes, nextDist, currPos, refract_localDir);
 
-            float traceWaterDist = 0.0;
-            bool hit = false;
-
-            for (uint i = 0; i < Refract_VoxelStepCount; i++) {
-                float3 stepAxisNext;
-                float3 step = DDA_step(stepAxisNext, nextDist, stepSizes, refract_localDir);
-
-                hit_voxelMaskPos = int3(floor(VoxelMask_GetBufferPosition(currPos + 0.5*step - cameraFract)));
-                uint voxelIndex = VoxelMask_GetBufferIndex(hit_voxelMaskPos);
-                var voxelMask = VoxelMaskBuffer[voxelIndex];
-                uint maskId = voxelMask.getId();
-
-                if (maskId == MaskId_Solid) {
-                    hit = true;
-                    break;
-                }
-                else if (maskId == MaskId_Water) {
-                    traceWaterDist += length(step);
-                }
-
-                currPos += step;
-                stepAxis = stepAxisNext;
-            }
-
-            float3 hit_localPos = currPos - cameraFract;
             opaque_color = half3(0.65);
+            float traceWaterDist = 0.0;
 
             bool ss_hit = false;
             if (Refract_SS_Fallback) {
@@ -131,19 +104,22 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
 
                 float3 traceViewStart = mul3(ap.camera.view, traceLocalStart);
                 float3 traceClipStart = project(ap.camera.projection, traceViewStart);
+                float3 screenStart = traceClipStart * 0.5 + 0.5;
 
-                float3 traceViewEnd = mul3(ap.camera.view, hit_localPos);
-                float3 traceClipEnd = project(ap.camera.projection, traceViewEnd);
+                // float3 traceViewEnd = mul3(ap.camera.view, hit_localPos);
+                // float3 traceClipEnd = project(ap.camera.projection, traceViewEnd);
 
-                const uint SS_StepCount = 24;
-                const uint SS_RefineSteps = 8;
+                float3 screenEnd = projectScreenTrace(traceViewStart, screenStart, refract_viewDir);
+                float3 traceClipEnd = screenEnd * 2.0 - 1.0;
+                // float3 traceClipStart = clipPos;
 
                 float3 traceClipPos;
                 float3 traceClipPos_prev = traceClipStart;
                 float2 traceScreenPos;
+                
                 float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
-                for (uint i = 0; i < SS_StepCount; i++) {
-                    float f = (i + dither) / SS_StepCount;
+                for (uint i = 0; i < Refract_ScreenSteps; i++) {
+                    float f = (i + dither) / Refract_ScreenSteps;
                     traceClipPos = lerp(traceClipStart, traceClipEnd, f);
                     traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
                     if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
@@ -155,7 +131,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                     float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
 
                     if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
-                        hit = true;
+                        // hit = true;
                         ss_hit = true;
                         break;
                     }
@@ -169,8 +145,8 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                     traceClipEnd = traceClipPos;
 
                     traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
-                    for (uint i = 0; i < SS_RefineSteps; i++) {
-                        float f = (i + dither) / SS_RefineSteps;
+                    for (uint i = 0; i < Refract_RefineSteps; i++) {
+                        float f = (i + dither) / Refract_RefineSteps;
                         traceClipPos = lerp(traceClipStart, traceClipEnd, f);
                         traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
                         if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
@@ -196,6 +172,38 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
             }
 
             if (!ss_hit) {
+                float3 cameraFract = fract(ap.camera.position);
+                int3 cameraFloor = int3(floor(ap.camera.position));
+
+                float3 stepSizes, nextDist, stepAxis;
+                float3 currPos = traceLocalStart + cameraFract;
+                DDA_init(stepSizes, nextDist, currPos, refract_localDir);
+
+                bool hit = false;
+
+                for (uint i = 0; i < Refract_VoxelSteps; i++) {
+                    float3 stepAxisNext;
+                    float3 step = DDA_step(stepAxisNext, nextDist, stepSizes, refract_localDir);
+
+                    hit_voxelMaskPos = int3(floor(VoxelMask_GetBufferPosition(currPos + 0.5*step - cameraFract)));
+                    uint voxelIndex = VoxelMask_GetBufferIndex(hit_voxelMaskPos);
+                    var voxelMask = VoxelMaskBuffer[voxelIndex];
+                    uint maskId = voxelMask.getId();
+
+                    if (maskId == MaskId_Solid) {
+                        hit = true;
+                        break;
+                    }
+                    else if (maskId == MaskId_Water) {
+                        traceWaterDist += length(step);
+                    }
+
+                    currPos += step;
+                    stepAxis = stepAxisNext;
+                }
+
+                float3 hit_localPos = currPos - cameraFract;
+
                 // recreate final sample
                 if (hit) {
                     float3 hit_normal = -stepAxis * sign(refract_localDir);

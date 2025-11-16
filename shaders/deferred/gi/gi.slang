@@ -14,6 +14,7 @@ import lib.water.common;
 import lib.voxel.voxel_tex;
 import lib.voxel.voxel_mask;
 import lib.voxel.voxel_sample;
+import lib.screen_trace;
 import lib.dda;
 
 extern static const int GI_VoxelStepCount;
@@ -75,16 +76,8 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             float3 traceClipStart = project(ap.camera.projection, traceViewStart);
             float3 screenStart = traceClipStart * 0.5 + 0.5;
 
-            float3 traceViewEnd = mul3(ap.camera.view, offsetLocalPos + 0.1*viewDist * trace_localDir);
-            float3 traceClipEnd = project(ap.camera.projection, traceViewEnd);
-            float3 screenEnd = traceClipEnd * 0.5 + 0.5;
-
-            // TODO: clip SS bounds
-            // float3 screenOffset = screenEnd - screenStart;
-            // float screenLen = length(screenOffset);
-            float3 screenDir = normalize(screenEnd - screenStart);
-            screenEnd = projectToScreenBounds(screenStart, screenDir, 16.0);
-            traceClipEnd = screenEnd * 2.0 - 1.0;
+            float3 screenEnd = projectScreenTrace(traceViewStart, screenStart, trace_localDir);
+            float3 traceClipEnd = screenEnd * 2.0 - 1.0;
 
             float3 traceClipPos;
             float3 traceClipPos_prev = traceClipStart;

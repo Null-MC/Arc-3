@@ -42,35 +42,47 @@ screen.LIGHTING=Lighting
 option.LIGHTING_COLOR_CANDLES=Colored Candles
 
 
-screen.LIGHTING_REFRACTION=Refraction
+screen.LIGHTING.REFRACTION=Refraction
 
-# option.LIGHTING_REFRACT_ENABLED=Enabled
+# option.LIGHTING.REFRACT.ENABLED=Enabled
 
-option.LIGHTING_REFRACT_MODE=Mode
-value.LIGHTING_REFRACT_MODE.0=None
-value.LIGHTING_REFRACT_MODE.1=Screen-Space
-value.LIGHTING_REFRACT_MODE.2=World-Space
+option.LIGHTING.REFRACT.MODE=Mode
+value.LIGHTING.REFRACT.MODE.0=None
+value.LIGHTING.REFRACT.MODE.1=Screen-Space
+value.LIGHTING.REFRACT.MODE.2=World-Space
 
-option.LIGHTING_REFRACT_SS_FALLBACK=Hybrid Tracing
-option.LIGHTING_REFRACT_SS_FALLBACK.comment=Allows world-space refraction tracing to also perform a screen-space trace to include entities and non-full blocks.
+option.LIGHTING.REFRACT.SS_FALLBACK=Hybrid Tracing
+option.LIGHTING.REFRACT.SS_FALLBACK.comment=Allows world-space refraction tracing to also perform a screen-space trace to include entities and non-full blocks.
 
-option.LIGHTING_REFRACT_ROUGH=Roughness
+option.LIGHTING.REFRACT.ROUGH=Roughness
+
+option.LIGHTING.REFRACT.VOXEL_STEPS=Voxel Steps
+
+option.LIGHTING.REFRACT.SCREEN_STEPS=Screen Steps
+
+option.LIGHTING.REFRACT.REFINE_STEPS=Refine Steps
 
 
-screen.LIGHTING_REFLECTIONS=Reflections
+screen.LIGHTING.REFLECTIONS=Reflections
 
-option.LIGHTING_REFLECT_ENABLED=Enabled
+option.LIGHTING.REFLECT.ENABLED=Enabled
 
-option.LIGHTING_REFLECT_MODE=Mode
-value.LIGHTING_REFLECT_MODE.0=None
-value.LIGHTING_REFLECT_MODE.1=Sky Only
-value.LIGHTING_REFLECT_MODE.2=Screen-Space
-value.LIGHTING_REFLECT_MODE.3=World-Space
+option.LIGHTING.REFLECT.MODE=Mode
+value.LIGHTING.REFLECT.MODE.0=None
+value.LIGHTING.REFLECT.MODE.1=Sky Only
+value.LIGHTING.REFLECT.MODE.2=Screen-Space
+value.LIGHTING.REFLECT.MODE.3=World-Space
 
-option.LIGHTING_REFLECT_SS_FALLBACK=Hybrid Tracing
-option.LIGHTING_REFLECT_SS_FALLBACK.comment=Allows world-space reflection tracing to also perform a screen-space trace to include entities and non-full blocks.
+option.LIGHTING.REFLECT.SS_FALLBACK=Hybrid Tracing
+option.LIGHTING.REFLECT.SS_FALLBACK.comment=Allows world-space reflection tracing to also perform a screen-space trace to include entities and non-full blocks.
 
-option.LIGHTING_REFLECT_ROUGH=Roughness
+option.LIGHTING.REFLECT.ROUGH=Roughness
+
+option.LIGHTING.REFLECT.VOXEL_STEPS=Voxel Steps
+
+option.LIGHTING.REFLECT.SCREEN_STEPS=Screen Steps
+
+option.LIGHTING.REFLECT.REFINE_STEPS=Refine Steps
 
 
 screen.LIGHTING_GI=Global Illumination

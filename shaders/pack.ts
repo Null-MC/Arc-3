@@ -1,4 +1,4 @@
-import {Options} from "./scripts/Options";
+import {Options, ReflectMode, RefractMode} from "./scripts/Options";
 import {BlockMap} from "./scripts/BlockMap";
 import {TagBuilder} from "./scripts/TagBuilder";
 import {Dimensions} from "./scripts/Dimensions";
@@ -10,7 +10,7 @@ import {ApplyLightColors} from "./scripts/Lights";
 
 const DEBUG = true;
 const DEBUG_LIGHT_TILES = false;
-const VOXEL_TEX_ENABLED = true;
+// const VOXEL_TEX_ENABLED = true;
 
 let dimension: Dimensions;
 let BlockMappings: BlockMap;
@@ -23,15 +23,6 @@ let imgFinalPrevRef: ActiveTextureReference | undefined;
 let settings: BuiltStreamingBuffer | undefined;
 
 let _renderConfig: RendererConfig;
-
-const Reflect_WorldSpace = 3;
-const Reflect_ScreenSpace = 2;
-const Reflect_SkyOnly = 1;
-const Reflect_None = 0;
-
-const Refract_WorldSpace = 2;
-const Refract_ScreenSpace = 1;
-const Refract_None = 0;
 
 
 export function configureRenderer(config: RendererConfig): void {
@@ -111,7 +102,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     pipeline.createBuffer("scene", 1024, false);
     settings = pipeline.createStreamingBuffer("settings", 128);
 
-    if (VOXEL_TEX_ENABLED) {
+    if (options.VoxelEnabled) {
         pipeline.createBuffer('VoxelMaskBuffer', cubed(256), false);
         pipeline.createBuffer('voxelTexBuffer', 8*cubed(256), true);
     }
@@ -464,14 +455,15 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .overrideObject('scene_writer', 'scene')
             .compile();
 
-        beginStage.createCompute("begin-voxel-mask")
-            .location("pre/voxel-mask", "buildVoxelMask")
-            .workGroups(
-                Math.ceil(256 / 8),
-                Math.ceil(256 / 8),
-                Math.ceil(256 / 8))
-            // .overrideObject('scene_writer', 'scene')
-            .compile();
+        if (options.VoxelEnabled) {
+            beginStage.createCompute("begin-voxel-mask")
+                .location("pre/voxel-mask", "buildVoxelMask")
+                .workGroups(
+                    Math.ceil(256 / 8),
+                    Math.ceil(256 / 8),
+                    Math.ceil(256 / 8))
+                .compile();
+        }
 
         // beginStage.createCompute("clear-screen")
         //     .location("pre/clear-screen", "clearScreen")
@@ -765,10 +757,10 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 .exportBool('Lighting_GI', options.Lighting_GI_Enabled)
                 .compile();
 
-            if (options.Lighting_Reflection_Mode == Reflect_WorldSpace || options.Lighting_Reflection_Mode == Reflect_ScreenSpace) {
+            if (options.Lighting_Reflection_Mode == ReflectMode.WorldSpace || options.Lighting_Reflection_Mode == ReflectMode.ScreenSpace) {
                 finalFlipper.flip();
 
-                const location = options.Lighting_Reflection_Mode == Reflect_WorldSpace
+                const location = options.Lighting_Reflection_Mode == ReflectMode.WorldSpace
                     ? 'deferred/reflect_voxel' : 'deferred/reflect_screen';
 
                 opaqueStage.createComposite("opaque-reflections")
@@ -780,6 +772,9 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                     .exportBool('Reflect_Rough', options.Lighting_Reflection_Rough)
                     .exportBool('Reflect_SS_Fallback', options.Lighting_Reflection_ScreenSpaceFallback)
+                    .exportInt('Reflect_VoxelSteps', options.Lighting_Reflection_VoxelSteps)
+                    .exportInt('Reflect_ScreenSteps', options.Lighting_Reflection_ScreenSteps)
+                    .exportInt('Reflect_RefineSteps', options.Lighting_Reflection_RefineSteps)
                     .compile();
             }
         });
@@ -861,7 +856,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         withSubList(postRenderStage, 'translucent-composite', translucentStage => {
             finalFlipper.flip();
 
-            let location = options.Lighting_Refraction_Mode == Refract_WorldSpace
+            let location = options.Lighting_Refraction_Mode == RefractMode.WorldSpace
                 ? "composite/overlay_voxel" : "composite/overlay_screen";
             
             translucentStage.createComposite("composite-overlays")
@@ -870,12 +865,15 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 .overrideObject('texFinal_opaque', finalFlipper.getReadTexture().name())
                 .exportBool('Refract_SS_Fallback', options.Lighting_Refraction_ScreenSpaceFallback)
                 .exportBool('Refract_Rough', options.Lighting_Refraction_Rough)
+                .exportInt('Refract_VoxelSteps', options.Lighting_Refraction_VoxelSteps)
+                .exportInt('Refract_ScreenSteps', options.Lighting_Refraction_ScreenSteps)
+                .exportInt('Refract_RefineSteps', options.Lighting_Refraction_RefineSteps)
                 .compile();
 
-            if (options.Lighting_Reflection_Mode == Reflect_WorldSpace || options.Lighting_Reflection_Mode == Reflect_ScreenSpace) {
+            if (options.Lighting_Reflection_Mode == ReflectMode.WorldSpace || options.Lighting_Reflection_Mode == ReflectMode.ScreenSpace) {
                 finalFlipper.flip();
 
-                let location = options.Lighting_Reflection_Mode == Reflect_WorldSpace
+                let location = options.Lighting_Reflection_Mode == ReflectMode.WorldSpace
                     ? "composite/reflect_voxel" : "composite/reflect_screen";
 
                 translucentStage.createComposite("translucent-reflections")
@@ -884,6 +882,9 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .overrideObject('texSource', finalFlipper.getReadTexture().name())
                     .exportBool('Reflect_SS_Fallback', options.Lighting_Reflection_ScreenSpaceFallback)
                     .exportBool('Reflect_Rough', options.Lighting_Reflection_Rough)
+                    .exportInt('Reflect_VoxelSteps', options.Lighting_Reflection_VoxelSteps)
+                    .exportInt('Reflect_ScreenSteps', options.Lighting_Reflection_ScreenSteps)
+                    .exportInt('Reflect_RefineSteps', options.Lighting_Reflection_RefineSteps)
                     .compile();
             }
         });
