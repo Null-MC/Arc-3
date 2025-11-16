@@ -1,13 +1,13 @@
 import aperture;
 import buffers.ObjectData;
 import lib.common;
+import lib.blocks;
 import lib.water.common;
 import lib.material.pbr;
 import lib.material.rough_normal;
 
 extern static const int RefractMode;
 extern static const bool Refract_Rough;
-extern static const int BLOCK_WATER;
 
 Sampler2D<float> mainDepthTex;
 Sampler2D<float> solidDepthTex;
@@ -69,19 +69,20 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     float3 viewDir = normalize(transViewPos);
     float3 localDir = normalize(transLocalPos);
 
-    uint2 water_uv = uv;
+    // uint2 water_uv = uv;
     float2 refract_texcoord = texcoord;
     float transDist = length(transViewPos);
     half3 opaque_color = texFinal_opaque[uv];
 
+    ObjectData_MatLit mat_lit;
+    mat_lit.unpack(texMatLightGB_translucent[uv]);
+
     bool hasOverlay = translucent.a > 0.0;
     bool hasRefract = RefractMode != Refract_None && hasOverlay;
 
-    ObjectData_MatLit mat_lit;
     if (hasRefract) {
         float3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB_translucent[uv].g);
 
-        mat_lit.unpack(texMatLightGB_translucent[uv]);
         half roughness = mat_roughness(mat_lit.specular.r);
         half roughL = pow2(roughness);
 
@@ -89,7 +90,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
             ? randomizeNormal(uv, tex_normal, roughL)
             : tex_normal;
 
-        const float IOR_AIR   = 1.0003;
+        const float IOR_AIR     = 1.0003;
         const float IOR_WATER   = 1.333;
         const float IOR_DEFAULT = 1.5;
         // TODO: store and use actual translucent IOR
@@ -122,12 +123,12 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
         isWater = customId == BLOCK_WATER;
     }
 
-    uint2 refract_uv = uint2(refract_texcoord * ap.game.screenSize);
+    // uint2 refract_uv = uint2(refract_texcoord * ap.game.screenSize);
 
     if (translucent.a > 0.0 && !isWater)
         opaque_color *= RgbToLinear(tint);
 
-    float waterDepthL;
+    float waterDepthL = 0.0;
     if (ap.camera.fluid == 1) {
         waterDepthL = transDist;
     }

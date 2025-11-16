@@ -34,6 +34,7 @@ export function setupOptions() {
             .add(new Page('LIGHTING_GI')
                 .add(asBool('LIGHTING_GI_ENABLED', true, true))
                 .add(asBool('LIGHTING_GI_SS_TRACE', true, true))
+                .add(asIntRange('LIGHTING_GI_VOXEL_STEPS', 16, 2, 32, 2, true))
                 .add(asIntRange('LIGHTING_GI_MAXFRAMES', 30, 2, 60, 2, true))
                 .build())
             .add(new Page('LIGHTING_POINT')

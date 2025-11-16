@@ -1,6 +1,7 @@
 import aperture;
 import buffers.ObjectData;
 import lib.common;
+import lib.blocks;
 import lib.octohedral;
 import lib.sampling.atlas;
 import lib.sampling.lmcoord;
@@ -16,7 +17,6 @@ extern static const bool Material_SmoothNormals;
 extern static const bool Water_WaveEnabled = false;
 extern static const bool RENDER_TERRAIN = false;
 extern static const bool RENDER_PARTICLES = false;
-extern static const uint BLOCK_WATER;
 
 static const bool SupportsParallax = Parallax_Enabled && !RENDER_PARTICLES;
 static const bool SupportsTexNormals = !RENDER_PARTICLES;

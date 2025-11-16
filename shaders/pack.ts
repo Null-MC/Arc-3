@@ -99,7 +99,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .map('lava', 'BLOCK_LAVA');
 
     new TagBuilder(pipeline, globalExports)
-        // .map("TAG_LEAVES", new NamespacedId("minecraft", "leaves"))
+        .map("TAG_LEAVES", new NamespacedId("minecraft", "leaves"))
         .map("TAG_STAIRS", new NamespacedId("minecraft", "stairs"))
         .map("TAG_SLABS", new NamespacedId("minecraft", "slabs"));
         // .map("TAG_SNOW", new NamespacedId("minecraft", "snow"));
@@ -110,6 +110,11 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
     pipeline.createBuffer("scene", 1024, false);
     settings = pipeline.createStreamingBuffer("settings", 128);
+
+    if (VOXEL_TEX_ENABLED) {
+        pipeline.createBuffer('VoxelMaskBuffer', cubed(256), false);
+        pipeline.createBuffer('voxelTexBuffer', 8*cubed(256), true);
+    }
 
     const texFinalA = pipeline.createImageTexture("texFinalA", "imgFinalA")
         .width(screenWidth)
@@ -144,7 +149,6 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .width(screenWidth)
         .height(screenHeight)
         .format(Format.RGB16F)
-        // .clearColor(0, 0, 0, 0)
         .clear(false)
         .build();
 
@@ -152,16 +156,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .width(screenWidth)
         .height(screenHeight)
         .format(Format.RGB16F)
-        // .clearColor(0, 0, 0, 0)
         .clear(false)
         .build();
-
-    // const texFinal_water = pipeline.createTexture("texFinal_water")
-    //     .width(screenWidth)
-    //     .height(screenHeight)
-    //     .format(Format.RGBA16F)
-    //     .clearColor(0, 0, 0, 0)
-    //     .build();
 
     const finalFlipper = new BufferFlipper(texFinalA, texFinalB);
 
@@ -354,18 +350,6 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         floodfill = new FloodFill(pipeline, options.Lighting_FloodFill_Size);
     }
 
-    if (VOXEL_TEX_ENABLED) {
-        // pipeline.createImageTexture('texVoxelTexId', 'imgVoxelTexId')
-        //     .width(256)
-        //     .height(256)
-        //     .depth(256)
-        //     .format(Format.R32UI)
-        //     .clearColor(0, 0, 0, 0)
-        //     .build();
-
-        pipeline.createBuffer('voxelTexBuffer', (256*256*256)*8, true);
-    }
-
     const texDiffuse = pipeline.createImageTexture('texDiffuse', 'imgDiffuse')
         .width(screenWidth)
         .height(screenHeight)
@@ -478,6 +462,15 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .location("pre/scene-begin", "beginScene")
             .workGroups(1, 1, 1)
             .overrideObject('scene_writer', 'scene')
+            .compile();
+
+        beginStage.createCompute("begin-voxel-mask")
+            .location("pre/voxel-mask", "buildVoxelMask")
+            .workGroups(
+                Math.ceil(256 / 8),
+                Math.ceil(256 / 8),
+                Math.ceil(256 / 8))
+            // .overrideObject('scene_writer', 'scene')
             .compile();
 
         // beginStage.createCompute("clear-screen")
@@ -725,6 +718,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
                         .overrideObject('texNormalGB', texNormalGB_opaque.name())
                         .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
+                        .exportInt('GI_VoxelStepCount', options.Lighting_GI_VoxelSteps)
                         .exportBool('GI_ScreenTrace', options.Lighting_GI_ScreenTrace)
                         .compile();
 
@@ -1113,3 +1107,5 @@ function withSubList(context: CommandList, name: string, action: CommandListActi
     action(list);
     list.end();
 }
+
+function cubed(x) {return x*x*x;}

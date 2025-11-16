@@ -12,8 +12,7 @@ export class TagBuilder {
         if (this.index >= 32) throw new RangeError('Limit of 32 tags has been exceeded!');
 
         this.pipeline.addTag(this.index, namespace);
-        // defineGlobally(name, this.index);
-        this.exports.addInt(name, this.index);
+        this.exports.addInt(name, (1 << this.index));
         this.index++;
 
         return this;

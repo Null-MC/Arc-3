@@ -1,19 +1,23 @@
 import aperture;
 import buffers.ObjectData;
 import lib.common;
+import lib.blocks;
 import lib.sampling.IGN;
 import lib.sampling.depth;
 import lib.water.common;
 import lib.sky.sample_final;
 import lib.voxel.voxel_tex;
+import lib.voxel.voxel_mask;
 import lib.voxel.voxel_sample;
 import lib.material.pbr;
 import lib.material.rough_normal;
 import lib.dda;
 
+extern static const int Refract_VoxelStepCount = 32;
 extern static const bool Refract_SS_Fallback;
 extern static const bool Refract_Rough;
-extern static const uint BLOCK_WATER;
+
+StructuredBuffer<VoxelMask> VoxelMaskBuffer;
 
 Sampler2D<float> mainDepthTex;
 Sampler2D<float> solidDepthTex;
@@ -55,9 +59,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     if (hasOverlay) {
         tint = RgbToLinear(texTintTranslucent[uv]);
 
-        // half4 packedTransData = unpackUnorm4x8ToHalf(transData);
         float3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB_translucent[uv].g);
-        // uint blockMapId = bitfieldExtract(transData, 24, 8);
 
         ObjectData_MatLit mat_lit;
         mat_lit.unpack(texMatLightGB_translucent[uv]);
@@ -80,8 +82,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
         float3 refract_viewDir = refract(viewDir, refract_viewNormal, eta);
         float3 refract_viewPos = transDist * viewDir;
 
-        int3 hit_voxelTexPos = -1;
-        int3 hitVoxelPos = 0;
+        int3 hit_voxelMaskPos = -1;
 
         if (dot(refract_viewDir, refract_viewDir) < EPSILON) {
             opaque_color = half3(0.0);
@@ -97,41 +98,31 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
             float3 currPos = traceLocalStart + cameraFract;
             DDA_init(stepSizes, nextDist, currPos, refract_localDir);
 
+            float traceWaterDist = 0.0;
             bool hit = false;
-            float traceWaterDist = EPSILON;
-            float3 hit_localPos;
 
-            for (uint i = 0; i < 64; i++) {
+            for (uint i = 0; i < Refract_VoxelStepCount; i++) {
                 float3 stepAxisNext;
                 float3 step = DDA_step(stepAxisNext, nextDist, stepSizes, refract_localDir);
 
-                hitVoxelPos = int3(floor(fma(step, float3(0.5), currPos))) + cameraFloor;
-                hit_voxelTexPos = int3(floor(VoxelTex_GetBufferPosition(currPos + 0.5*step - cameraFract)));
+                hit_voxelMaskPos = int3(floor(VoxelMask_GetBufferPosition(currPos + 0.5*step - cameraFract)));
+                uint voxelIndex = VoxelMask_GetBufferIndex(hit_voxelMaskPos);
+                var voxelMask = VoxelMaskBuffer[voxelIndex];
+                uint maskId = voxelMask.getId();
 
-                // var voxel = ap.voxel[hitVoxelPos];
-                // if (voxel.blockId > 0) {
-                //     if (voxel.block.isFullBlock) {
-                //         hit = true;
-                //         break;
-                //     }
-                //     else if (voxel.block.customId == BLOCK_WATER) {
-                //         traceWaterDist += length(step);
-                //     }
-                // }
-
-                // TODO: use custom voxelTex lookup to verify builtin is broken
-
-                uint voxelIndex = VoxelTex_GetBufferIndex(hit_voxelTexPos);
-                if (voxelTexBuffer[voxelIndex].r != 0) {
+                if (maskId == MaskId_Solid) {
                     hit = true;
                     break;
+                }
+                else if (maskId == MaskId_Water) {
+                    traceWaterDist += length(step);
                 }
 
                 currPos += step;
                 stepAxis = stepAxisNext;
             }
 
-            hit_localPos = currPos - cameraFract;
+            float3 hit_localPos = currPos - cameraFract;
             opaque_color = half3(0.65);
 
             bool ss_hit = false;
@@ -208,9 +199,9 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                 // recreate final sample
                 if (hit) {
                     float3 hit_normal = -stepAxis * sign(refract_localDir);
-                    float3 hit_viewPos = mul3(ap.camera.view, hit_localPos);
-                    float3 hit_screenPos = project(ap.camera.projection, hit_viewPos) * 0.5 + 0.5;
-                    float hit_depth = solidDepthTex.Sample(hit_screenPos.xy);
+
+                    // TODO: these line up for now, but need a proper conversion!
+                    int3 hit_voxelTexPos = hit_voxelMaskPos;
 
                     float2 voxelTexCoord = GetVoxelTexCoord(hit_normal, currPos);
                     opaque_color = SampleVoxel(hit_localPos, hit_normal, hit_voxelTexPos, voxelTexCoord);
@@ -220,7 +211,8 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                 }
             }
 
-            opaque_color *= half3(exp(-traceWaterDist * Water_AbsorbColor));
+            if (traceWaterDist > 0.0)
+                opaque_color *= half3(exp(-traceWaterDist * Water_AbsorbColor));
         }
     }
 

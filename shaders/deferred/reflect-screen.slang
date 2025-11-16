@@ -129,8 +129,8 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             reflectColor = texSource.Sample(traceScreenPos);
         }
         else {
-            half3 skyColor = sampleSkyFinal(localPos, reflect_localDir, true);
-            reflectColor = skyColor * lmcoord_y;
+            reflectColor = sampleSkyFinal(localPos, reflect_localDir, true);
+            reflectColor *= lmcoord_y;
         }
 
         half3 f0 = lerp(half3(f0_metal), albedo.rgb, metalness);

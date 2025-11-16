@@ -1,6 +1,7 @@
 import aperture;
 import buffers.ObjectData;
 import lib.common;
+import lib.blocks;
 import lib.material.pbr;
 import lib.material.rough_normal;
 import lib.light.fresnel;
@@ -9,12 +10,19 @@ import lib.sampling.IGN;
 import lib.sampling.R2;
 import lib.sky.common;
 import lib.sky.sample_view;
+import lib.water.common;
 import lib.voxel.voxel_tex;
+import lib.voxel.voxel_mask;
 import lib.voxel.voxel_sample;
 import lib.dda;
 
+extern static const int GI_VoxelStepCount;
 extern static const bool GI_ScreenTrace;
-extern static const uint BLOCK_WATER;
+
+static const int GI_ScreenStepCount = 12;
+static const int GI_ScreenRefineCount = 4;
+
+StructuredBuffer<VoxelMask> VoxelMaskBuffer;
 
 Sampler2D<float> solidDepthTex;
 Sampler2D<half3> texDiffuse;
@@ -52,7 +60,6 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         float cos_trace = max(dot(trace_localDir, tex_normal), 0.0);
 
 
-
         half3 sampleColor = half3(0.0);
         float cos_sample = 1.0;
 
@@ -83,12 +90,11 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             float3 traceClipPos_prev = traceClipStart;
             float2 traceScreenPos;
 
-            const uint SS_StepCount = 16;
             const uint SS_RefineSteps = 5;
 
             float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
-            for (uint i = 0; i < SS_StepCount; i++) {
-                float f = (i + dither) / SS_StepCount;
+            for (uint i = 0; i < GI_ScreenStepCount; i++) {
+                float f = (i + dither) / GI_ScreenStepCount;
                 traceClipPos = lerp(traceClipStart, traceClipEnd, f);
                 traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
                 if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
@@ -101,7 +107,6 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
                 if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
                     ss_hit = true;
-                    // hit = true;
                     break;
                 }
 
@@ -113,8 +118,8 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 traceClipStart = traceClipPos_prev;
                 traceClipEnd = traceClipPos;
 
-                for (uint i = 0; i < SS_RefineSteps; i++) {
-                    float f = (i + dither) / SS_RefineSteps;
+                for (uint i = 0; i < GI_ScreenRefineCount; i++) {
+                    float f = (i + dither) / GI_ScreenRefineCount;
                     traceClipPos = lerp(traceClipStart, traceClipEnd, f);
                     traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
                     if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
@@ -154,34 +159,33 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             DDA_init(stepSizes, nextDist, currPos, trace_localDir);
 
             bool hit = false;
-            float traceWaterDist = EPSILON;
-            int3 hit_voxelTexPos = -1;
-            int3 hit_voxelPos = 0;
+            float traceWaterDist = 0.0;
+            int3 hit_voxelMaskPos = -1;
 
-            for (uint i = 0; i < 16; i++) {
+            for (uint i = 0; i < GI_VoxelStepCount; i++) {
                 float3 stepAxisNext;
                 float3 step = DDA_step(stepAxisNext, nextDist, stepSizes, trace_localDir);
 
-                hit_voxelPos = int3(floor(fma(step, float3(0.5), currPos))) + cameraFloor;
-                hit_voxelTexPos = int3(floor(VoxelTex_GetBufferPosition(currPos + 0.5*step - cameraFract)));
+                hit_voxelMaskPos = int3(floor(VoxelMask_GetBufferPosition(currPos + 0.5*step - cameraFract)));
+                uint voxelIndex = VoxelMask_GetBufferIndex(hit_voxelMaskPos);
+                var voxelMask = VoxelMaskBuffer[voxelIndex];
+                uint maskId = voxelMask.getId();
 
-                // var voxel = ap.voxel[hit_voxelPos];
-                // if (voxel.blockId > 0) {
-                //     if (voxel.block.isFullBlock) {
-                //         hit = true;
-                //         break;
-                //     }
-                //     else if (voxel.block.customId == BLOCK_WATER) {
-                //         traceWaterDist += length(step);
-                //     }
-                // }
-
-                // TODO: use custom voxelTex lookup to verify builtin is broken
-
-                uint voxelIndex = VoxelTex_GetBufferIndex(hit_voxelTexPos);
-                if (voxelTexBuffer[voxelIndex].r != 0) {
+                if (maskId == MaskId_Solid) {
                     hit = true;
                     break;
+                }
+                else if (maskId == MaskId_Water) {
+                    traceWaterDist += length(step);
+                }
+                else {
+                    // TODO: build and test face mask
+                    // uint enterFace = ;
+                    // uint exitFace = ;
+                    // if (!voxelMask.testFaces(enterFace | exitFace)) {
+                    //     hit = true;
+                    //     break;
+                    // }
                 }
 
                 currPos += step;
@@ -198,6 +202,9 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 float3 hit_screenPos = project(ap.camera.projection, hit_viewPos) * 0.5 + 0.5;
                 float hit_depth = solidDepthTex.Sample(hit_screenPos.xy);
 
+                // TODO: these line up for now, but need a proper conversion!
+                int3 hit_voxelTexPos = hit_voxelMaskPos;
+
                 float2 voxelTexCoord = GetVoxelTexCoord(hit_normal, currPos);
                 sampleColor = SampleVoxel(hit_localPos, hit_normal, hit_voxelTexPos, voxelTexCoord);
 
@@ -208,10 +215,10 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 sampleColor = sampleSkyView(skyPos, trace_localDir, scene[0].SunLocalDir);
                 cos_sample = lmcoord_y;
             }
+
+            if (traceWaterDist > 0.0)
+                sampleColor *= half3(exp(-traceWaterDist * Water_AbsorbColor));
         }
-
-
-
 
         diffuse += cos_trace * cos_sample * sampleColor;
     }

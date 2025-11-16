@@ -161,3 +161,9 @@ float3 RgbToLinear(const in float3 color) {
 
 //     return lerp(lower, higher, is_high);
 // }
+
+extension BlockData {
+    bool hasAnyTag(const in uint _tags) {
+        return (tags & _tags) != 0;
+    }
+}

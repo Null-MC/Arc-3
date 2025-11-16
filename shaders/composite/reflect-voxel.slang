@@ -1,6 +1,7 @@
 import aperture;
 import buffers.ObjectData;
 import lib.common;
+import lib.blocks;
 import lib.material.pbr;
 import lib.material.rough_normal;
 import lib.light.fresnel;
@@ -9,13 +10,15 @@ import lib.sampling.IGN;
 import lib.sky.sample_final;
 import lib.water.common;
 import lib.voxel.voxel_tex;
+import lib.voxel.voxel_mask;
 import lib.voxel.voxel_sample;
 import lib.dda;
 
 extern static const int RefractMode;
 extern static const bool Reflect_Rough;
 extern static const bool Reflect_SS_Fallback;
-extern static const uint BLOCK_WATER;
+
+StructuredBuffer<VoxelMask> VoxelMaskBuffer;
 
 Sampler2D<float> mainDepthTex;
 Sampler2D<half3> texSource;
@@ -71,54 +74,6 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
 
 
-        float3 cameraFract = fract(ap.camera.position);
-        int3 cameraFloor = int3(floor(ap.camera.position));
-
-        float3 stepSizes, nextDist, stepAxis;
-        // float3 traceLocalStart = localPos;
-        float3 localDir = normalize(localPos);
-        float3 currPos = localPos + cameraFract - localDir*0.02;
-        DDA_init(stepSizes, nextDist, currPos, reflect_localDir);
-
-        bool hit = false;
-        float traceWaterDist = EPSILON;
-        int3 hit_voxelTexPos = -1;
-        int3 hit_voxelPos = 0;
-        float3 hit_localPos;
-
-        if (ap.camera.fluid == 1) traceWaterDist += viewDist;
-
-        for (uint i = 0; i < 64; i++) {
-            float3 stepAxisNext;
-            float3 step = DDA_step(stepAxisNext, nextDist, stepSizes, reflect_localDir);
-
-            hit_voxelPos = int3(floor(fma(step, float3(0.5), currPos))) + cameraFloor;
-            hit_voxelTexPos = int3(floor(VoxelTex_GetBufferPosition(currPos + 0.5*step - cameraFract)));
-
-            // var voxel = ap.voxel[hit_voxelPos];
-            // if (voxel.blockId > 0) {
-            //     if (voxel.block.isFullBlock) {
-            //         hit = true;
-            //         break;
-            //     }
-            //     else if (voxel.block.customId == BLOCK_WATER) {
-            //         traceWaterDist += length(step);
-            //     }
-            // }
-
-            // TODO: use custom voxelTex lookup to verify builtin is broken
-
-            uint voxelIndex = VoxelTex_GetBufferIndex(hit_voxelTexPos);
-            if (voxelTexBuffer[voxelIndex].r != 0) {
-                hit = true;
-                break;
-            }
-
-            currPos += step;
-            stepAxis = stepAxisNext;
-        }
-
-        hit_localPos = currPos - cameraFract;
         half3 reflectColor = half3(0.65);
 
         bool ss_hit = false;
@@ -141,7 +96,6 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             const uint SS_StepCount = 24;
             const uint SS_RefineSteps = 8;
 
-            // bool hit = false;
             float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
             for (uint i = 1; i < SS_StepCount; i++) {
                 float f = (i + dither) / SS_StepCount;
@@ -155,7 +109,6 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
                 if (screenDepthL < traceDepthL) {
                     ss_hit = true;
-                    hit = true;
                     break;
                 }
 
@@ -186,13 +139,51 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             if (ss_hit) reflectColor = texSource.Sample(traceScreenPos);
         }
 
+        float3 localDir = normalize(localPos);
+
         if (!ss_hit) {
+            float3 cameraFract = fract(ap.camera.position);
+            int3 cameraFloor = int3(floor(ap.camera.position));
+
+            float3 stepSizes, nextDist, stepAxis;
+            float3 currPos = localPos + cameraFract - localDir*0.02;
+            DDA_init(stepSizes, nextDist, currPos, reflect_localDir);
+
+            float traceWaterDist = 0.0;
+            int3 hit_voxelMaskPos = -1;
+            bool hit = false;
+
+            if (ap.camera.fluid == 1) traceWaterDist += viewDist;
+
+            for (uint i = 0; i < 64; i++) {
+                float3 stepAxisNext;
+                float3 step = DDA_step(stepAxisNext, nextDist, stepSizes, reflect_localDir);
+
+                hit_voxelMaskPos = int3(floor(VoxelMask_GetBufferPosition(currPos + 0.5*step - cameraFract)));
+                uint voxelIndex = VoxelMask_GetBufferIndex(hit_voxelMaskPos);
+                var voxelMask = VoxelMaskBuffer[voxelIndex];
+                uint maskId = voxelMask.getId();
+
+                if (maskId == MaskId_Solid) {
+                    hit = true;
+                    break;
+                }
+                else if (maskId == MaskId_Water) {
+                    traceWaterDist += length(step);
+                }
+                
+                currPos += step;
+                stepAxis = stepAxisNext;
+            }
+
+            float3 hit_localPos = currPos - cameraFract;
+
             // recreate final sample
             if (hit) {
                 float3 hit_normal = -stepAxis * sign(reflect_localDir);
-                float3 hit_viewPos = mul3(ap.camera.view, hit_localPos);
-                float3 hit_screenPos = project(ap.camera.projection, hit_viewPos) * 0.5 + 0.5;
-                float hit_depth = mainDepthTex.Sample(hit_screenPos.xy);
+
+                // TODO: these line up for now, but need a proper conversion!
+                int3 hit_voxelTexPos = hit_voxelMaskPos;
 
                 float2 voxelTexCoord = GetVoxelTexCoord(hit_normal, currPos);
                 reflectColor = SampleVoxel(hit_localPos, hit_normal, hit_voxelTexPos, voxelTexCoord);
@@ -200,15 +191,15 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             else {
                 reflectColor = sampleSkyFinal(hit_localPos, reflect_localDir, false);
             }
+
+            if (traceWaterDist > 0.0)
+                reflectColor *= half3(exp(-traceWaterDist * Water_AbsorbColor));
         }
 
-        reflectColor *= half3(exp(-traceWaterDist * Water_AbsorbColor));
-
         half3 f0 = lerp(half3(f0_metal), albedo.rgb, metalness);
-
-        // half3 localDir = half3(normalize(localPos));
         half NoVm = max(dot(reflectNormal, -localDir), (half)0.0);
         half3 F_NoV = F_schlickRough(NoVm, f0, roughL);
+
         half3 specular_tint = lerp((half)1.0, albedo, metalness);
 
         // imgDebug[uv] = float4(LinearToRgb(reflectColor * 0.008), 1.0);

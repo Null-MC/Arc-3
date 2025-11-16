@@ -1,12 +1,13 @@
 import aperture;
+import lib.tags;
 import lib.common;
+import lib.blocks;
 import lib.sampling.atlas;
 import lib.voxel.voxel_tex;
 
 extern static const bool RENDER_TERRAIN = false;
 extern static const bool VOXEL_TEX_ENABLED = true;
 extern static const bool ALPHATEST_ENABLED = false;
-extern static const uint BLOCK_WATER;
 
 RWStructuredBuffer<uint2> voxelTexBuffer;
 
@@ -33,18 +34,23 @@ VertexOutput vertexMain(Vertex input) {
     float3 shadowViewPos = mul3(input.viewMatrix(), modelPos);
     output.position = mul(input.projectionMatrix(), float4(shadowViewPos, 1.0));
 
-    bool isFullBlock = false;
-    bool isFluidBlock = false;
+    bool voxelize = false;
+    // bool isFluidBlock = false;
     if (output.blockId >= 0) {
-        isFullBlock = ap.blocks[output.blockId].isFullBlock;
+        var block = ap.blocks[output.blockId];
+        voxelize = block.isFullBlock;
 
-        if (ap.blocks[output.blockId].isFluid) {
+		const uint hit_tags = TAG_SLABS | TAG_STAIRS | TAG_LEAVES;
+        if (block.hasAnyTag(hit_tags)) voxelize = true;
+
+        if (block.isFluid) {
             color = half4(1.0);
-            isFluidBlock = true;
+            // isFluidBlock = true;
+            voxelize = false;
         }
     }
 
-    if (VOXEL_TEX_ENABLED && RENDER_TERRAIN && isFullBlock && !isFluidBlock && input.currentInstance() == 1) {
+    if (VOXEL_TEX_ENABLED && RENDER_TERRAIN && voxelize && input.currentInstance() == 1) {
         float3 origin = modelPos;// mul3(ap.celestial.viewInv, shadowViewPos);
         if (let value = input.midBlock()) origin += value;
         int3 voxelPos = int3(floor(VoxelTex_GetBufferPosition(origin)));
