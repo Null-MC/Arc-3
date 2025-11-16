@@ -48,10 +48,12 @@ float3 atrous(float2 sampleUV, float c_phi, float n_phi, float p_phi, float step
 
     for (int i = 0; i < 25; i++) {
         float2 uv = sampleUV + atrousOffsets[i] * step * stepwidth;
+        float3 t;
+        float dist2;
 
         float3 ctmp = texSource.Sample(uv);
-        float3 t = cval - ctmp;
-        float dist2 = dot(t,t);
+        // float3 t = cval - ctmp;
+        // float dist2 = dot(t,t);
         float c_w = 1.0;//min(exp(-(dist2)/c_phi), 1.0);
 
         float3 ntmp = atrous_GetTexNormal(uv);

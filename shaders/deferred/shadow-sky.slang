@@ -39,10 +39,10 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
         ObjectData_Normals normals;
         normals.unpack(texNormalGB[uv]);
 
-        half4 specularData;
-        ObjectData_MatLit.unpackSpecular(texMatLightGB[uv].r, specularData);
+        ObjectData_MatLit mat_lit;
+        mat_lit.unpackSpecular(texMatLightGB[uv].r);
 
-        half sss = mat_sss(specularData.b);
+        half sss = mat_sss(mat_lit.specular.b);
 
         float dither;
         if (TAA_Enabled) {

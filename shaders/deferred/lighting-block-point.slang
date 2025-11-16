@@ -146,8 +146,8 @@ void applyPointLights(ComputeInput input) {
         ObjectData_Normals normals;
         normals.unpack(texNormalGB[input.globalPos.xy]);
 
-        half4 specularData;
-        ObjectData_MatLit.unpackSpecular(texMatLightGB[input.globalPos.xy].r, specularData);
+        ObjectData_MatLit mat_lit;
+        mat_lit.unpackSpecular(texMatLightGB[input.globalPos.xy].r);
 
         float2 texcoord = (input.globalPos.xy + 0.5) / float2(ap.game.screenSize);
         if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
@@ -158,8 +158,8 @@ void applyPointLights(ComputeInput input) {
 
         float3 viewDir = -normalize(localPos);
 
-        half roughness = mat_roughness(specularData.r);
-        half f0_metal = mat_f0_metal(specularData.g);
+        half roughness = mat_roughness(mat_lit.specular.r);
+        half f0_metal = mat_f0_metal(mat_lit.specular.g);
 
         half3 albedo = RgbToLinear(colorData.rgb);
         half roughL = roughness * roughness;

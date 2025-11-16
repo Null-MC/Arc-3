@@ -93,6 +93,8 @@ option.LIGHTING.GI.SS_TRACE=ScreenSpace Trace
 
 option.LIGHTING.GI.MAXFRAMES=Max Frames
 
+option.LIGHTING.GI.FILTERING=Filter Passes
+
 option.LIGHTING.GI.VOXEL_STEPS=Voxel Steps
 
 option.LIGHTING.GI.SCREEN_STEPS=Screen Steps

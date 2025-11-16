@@ -6,8 +6,6 @@ import lib.sky.sample_irradiance;
 import lib.shadow;
 import lib.material.pbr;
 
-extern static const bool Debug_WhiteWorld;
-
 
 struct VertexOutput {
     float4 position : SV_Position;
@@ -54,7 +52,7 @@ FragmentOutput fragmentMain(VertexOutput input) {
     iris_discardIfNeeded(albedo);
 
     albedo.rgb = RgbToLinear(albedo.rgb);
-    if (Debug_WhiteWorld) albedo.rgb = 0.85;
+    if (Debug_WhiteWorld) albedo.rgb = WhiteWorldColor;
 
     float4 normalData = normalTex.SampleLevel(input.uv, LOD);
 

@@ -355,32 +355,37 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .clearColor(0, 0, 0, 0)
         .build();
 
-    let texGI: BuiltTexture | undefined;
-    let texGI_atrous1: BuiltTexture | undefined;
-    let texGI_atrous2: BuiltTexture | undefined;
+    // let texGI: BuiltTexture | undefined;
+    let texGI1: BuiltTexture | undefined;
+    let texGI2: BuiltTexture | undefined;
+    let texGI_flipper: BufferFlipper | undefined;
     let texGI_prev: BuiltTexture | undefined;
     let texGI_final: BuiltTexture | undefined;
     if (options.Lighting_GI_Enabled) {
-        texGI = pipeline.createTexture('texGI')
-            .width(screenWidth)
-            .height(screenHeight)
-            .format(Format.RGBA16F)
-            .clearColor(0, 0, 0, 0)
-            .build();
+        // texGI = pipeline.createTexture('texGI')
+        //     .width(screenWidth)
+        //     .height(screenHeight)
+        //     .format(Format.RGBA16F)
+        //     .clearColor(0, 0, 0, 0)
+        //     .build();
 
-        texGI_atrous1 = pipeline.createTexture('texGI_atrous1')
-            .width(screenWidth)
-            .height(screenHeight)
-            .format(Format.RGBA16F)
-            .clear(false)
-            .build();
+        // if (options.Lighting_GI_FilterPasses > 0) {
+            texGI1 = pipeline.createTexture('texGI1')
+                .width(screenWidth)
+                .height(screenHeight)
+                .format(Format.RGBA16F)
+                .clearColor(0, 0, 0, 0)
+                .build();
 
-        texGI_atrous2 = pipeline.createTexture('texGI_atrous2')
-            .width(screenWidth)
-            .height(screenHeight)
-            .format(Format.RGBA16F)
-            .clear(false)
-            .build();
+            texGI2 = pipeline.createTexture('texGI2')
+                .width(screenWidth)
+                .height(screenHeight)
+                .format(Format.RGBA16F)
+                .clear(false)
+                .build();
+            
+            texGI_flipper = new BufferFlipper(texGI1, texGI2);
+        // }
 
         texGI_final = pipeline.createTexture('texGI_final')
             .width(screenWidth)
@@ -710,7 +715,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 withSubList(opaqueStage, 'opaque-deferred-gi', stage_opaque_gi => {
                     stage_opaque_gi.createComposite("deferred-gi")
                         .location('deferred/gi/gi-trace', "applyGI")
-                        .target(0, texGI)
+                        .target(0, texGI_flipper.getWriteTexture())
                         .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
                         .overrideObject('texNormalGB', texNormalGB_opaque.name())
                         .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
@@ -718,31 +723,24 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         .exportBool('GI_ScreenTrace', options.Lighting_GI_ScreenTrace)
                         .compile();
 
-                    stage_opaque_gi.createComposite("deferred-gi-atrous-1")
-                        .location('deferred/gi/gi-atrous', "atrousFilter")
-                        .target(0, texGI_atrous1)
-                        .overrideObject('texSource', 'texGI')
-                        .exportInt('AtrousLevel', 0)
-                        .compile();
+                    for (let i = 0; i < options.Lighting_GI_FilterPasses; i++) {
+                        // const tex_src = i == 0 ? 'texGI' : texGI_atrousFlip.getReadTexture();
+                        texGI_flipper.flip();
 
-                    stage_opaque_gi.createComposite("deferred-gi-atrous-2")
-                        .location('deferred/gi/gi-atrous', "atrousFilter")
-                        .target(0, texGI_atrous2)
-                        .overrideObject('texSource', 'texGI_atrous1')
-                        .exportInt('AtrousLevel', 1)
-                        .compile();
+                        stage_opaque_gi.createComposite("deferred-gi-atrous-1")
+                            .location('deferred/gi/gi-atrous', "atrousFilter")
+                            .target(0, texGI_flipper.getWriteTexture())
+                            .overrideObject('texSource', texGI_flipper.getReadTexture().name())
+                            .exportInt('AtrousLevel', i)
+                            .compile();
+                    }
 
-                    stage_opaque_gi.createComposite("deferred-gi-atrous-3")
-                        .location('deferred/gi/gi-atrous', "atrousFilter")
-                        .target(0, texGI_atrous1)
-                        .overrideObject('texSource', 'texGI_atrous2')
-                        .exportInt('AtrousLevel', 3)
-                        .compile();
+                    texGI_flipper.flip();
 
                     stage_opaque_gi.createComposite("deferred-gi-accumulate")
                         .location('deferred/gi/gi-accumulate', "accumulateGI")
                         .target(0, texGI_final)
-                        .overrideObject('texSource', 'texGI_atrous1')
+                        .overrideObject('texSource', texGI_flipper.getReadTexture().name())
                         .exportInt('GI_MaxFrames', options.Lighting_GI_MaxFrames)
                         .compile();
 
@@ -932,7 +930,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 const screenHeight_half = Math.ceil(screenHeight / 2.0);
             
                 let maxLod = Math.log2(Math.min(screenWidth, screenHeight));
-                maxLod = Math.floor(maxLod);
+                maxLod = Math.floor(maxLod - 1);
                 maxLod = Math.max(Math.min(maxLod, 12), 0);
             
                 const texBloom = pipeline.createTexture('texBloom')

@@ -11,7 +11,7 @@ import lib.sky.sample_transmit;
 import lib.sky.sample_irradiance;
 
 extern static const bool World_HasSky;
-extern static const bool Debug_WhiteWorld;
+extern static const half BLOCK_LUX;
 
 StructuredBuffer<uint2> voxelTexBuffer;
 
@@ -29,10 +29,11 @@ float2 GetVoxelTexCoord(const in float3 normal, const in float3 voxelPos) {
     return 1.0 - fract(hitCoord);
 }
 
-float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in int3 voxelTexPos, const in float2 voxelTexCoord, bool skyLight = false) {
+float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in int3 voxelTexPos, const in float2 voxelTexCoord, bool skyLight = true) {
     float3 albedo = 0.0;
     half roughL = (half)0.85;
     half metalness = (half)0.0;
+    half emission = (half)0.0;
     if (VoxelTex_InBounds(voxelTexPos)) {
         VoxelTex voxel;
         uint voxelIndex = VoxelTex_GetBufferIndex(voxelTexPos);
@@ -52,6 +53,7 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
         half4 specularData = blockAtlasS.Sample(uv);
         half roughness = mat_roughness(specularData.r);
         metalness = mat_metalness(specularData.g);
+        emission = mat_emission(specularData);
         roughL = pow2(roughness);
 
         if (voxelTexBuffer[voxelIndex].r == 0) {
@@ -89,17 +91,21 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
 
         diffuse /= PI;
 
-        // TODO: recalc from local-pos + normal offset
-        // int3 voxelPos = int3(floor(localPos + 0.04*normal + ap.camera.position));
-        // float lmcoord_y = saturate(ap.voxel[voxelPos].lightData.y / 15.0);
-        // diffuse += sampleSkyIrradiance(normal) * lmcoord_y;
+        if (skyLight) {
+            // TODO: recalc from local-pos + normal offset
+            int3 voxelPos = int3(floor(localPos + 0.04*normal + ap.camera.position));
+            float lmcoord_y = saturate(ap.voxel[voxelPos].lightData.y / 15.0);
+            diffuse += sampleSkyIrradiance(normal) * lmcoord_y;
+        }
     }
 
     // remove diffuse for smooth metals
     half smoothness = (half)1.0 - roughL;
     diffuse *= (half)1.0 - metalness * smoothness;
 
-    if (Debug_WhiteWorld) albedo = half3(0.85);
+    diffuse += emission * BLOCK_LUX;
+
+    if (Debug_WhiteWorld) albedo = WhiteWorldColor;
 
     return albedo * diffuse;
 }

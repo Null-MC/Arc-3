@@ -6,7 +6,6 @@ import lib.sky.sample_final;
 
 extern static const bool Lighting_GI = false;
 extern static const bool World_HasSky;
-extern static const bool Debug_WhiteWorld;
 extern static const bool RENDER_TRANSLUCENT = false;
 extern static const half BLOCK_LUX;
 
@@ -53,7 +52,7 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         half smoothness = (half)1.0 - pow2(roughness);
         diffuse *= (half)1.0 - metalness * smoothness;
 
-        if (Debug_WhiteWorld) albedo = half3(0.85);
+        if (Debug_WhiteWorld) albedo = WhiteWorldColor;
 
         final.rgb = albedo * diffuse + specular * tint;
         final.a = color.a;

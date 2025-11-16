@@ -25,11 +25,11 @@ float3 projectScreenTrace(const in float3 viewPos, const in float3 screenPos, co
     float viewDist = length(viewPos);
     float3 viewDir = viewPos / viewDist;
 
-    float3 reflect_viewPos = 0.1 * viewDist * viewDir + viewPos;
-    float3 reflect_clipPos = project(ap.camera.projection, reflect_viewPos);
-    float3 reflect_screenPos = reflect_clipPos * 0.5 + 0.5;
+    float3 dest_viewPos = 0.1 * viewDist * viewDir + viewPos;
+    float3 dest_clipPos = project(ap.camera.projection, dest_viewPos);
+    float3 dest_screenPos = dest_clipPos * 0.5 + 0.5;
 
-    float3 screenDir = normalize(reflect_screenPos - screenPos);
+    float3 screenDir = normalize(dest_screenPos - screenPos);
 
     return projectToScreenBounds(screenPos, screenDir);
 }

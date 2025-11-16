@@ -29,6 +29,26 @@ float3 tonemap_ACESFit2(const in float3 color) {
     return saturate(mul(m2, a / b));
 }
 
+float3 tonemap_uchimura(float3 x, float P, float a, float m, float l, float c, float b) {
+    float l0 = ((P - m) * l) / a;
+    float L0 = m - m / a;
+    float L1 = m + (1.0 - m) / a;
+    float S0 = m + l0;
+    float S1 = m + a * l0;
+    float C2 = (a * P) / (P - S1);
+    float CP = -C2 / P;
+
+    float3 w0 = 1.0 - smoothstep(0.0, m, x);
+    float3 w2 = step(m + l0, x);
+    float3 w1 = 1.0 - w0 - w2;
+
+    float3 T = m * pow(x / m, c) + b;
+    float3 S = P - (P - S1) * exp(CP * (x - S0));
+    float3 L = m + a * (x - m);
+
+    return T * w0 + L * w1 + S * w2;
+}
+
 
 [[shader("fragment")]]
 float4 applyTonemap(float2 pos : SV_Position) : SV_Target0 {
@@ -36,7 +56,15 @@ float4 applyTonemap(float2 pos : SV_Position) : SV_Target0 {
 
     color = mul(LINEAR_RGB_TO_REC2020, color);
 
-    color = tonemap_ACESFit2(color);
+    // color = tonemap_ACESFit2(color);
+
+    color = tonemap_uchimura(color,
+        1.00,
+        1.00,
+        0.22,
+        0.40,
+        1.56,
+        0.00);
 
     color = mul(REC2020_TO_SRGB, color);
 

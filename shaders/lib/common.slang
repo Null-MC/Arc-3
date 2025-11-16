@@ -11,6 +11,9 @@ StructuredBuffer<SceneBuffer> scene;
 RWTexture2D<float4> imgDebug;
 
 extern static const bool TAA_Enabled;
+extern static const bool Debug_WhiteWorld;
+
+static const half3 WhiteWorldColor = half3(0.65);
 
 static const float PI = 3.14159265358;
 static const float EPSILON = 1.0e-6;

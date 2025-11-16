@@ -46,18 +46,31 @@ struct ObjectData_MatLit {
 
     [mutating]
     void unpack(const in uint2 data) {
-        unpackSpecular(data.r, specular);
-        unpackLightOcclusion(data.g, lmcoord, occlusion, blockMapId);
+        unpackSpecular(data.r);
+        unpackLightOcclusion(data.g);
     }
 
-    static void unpackSpecular(const in uint data_r, out half4 specularData) {
-        specularData = unpackUnorm4x8ToHalf(data_r);
-    }
-
-    static void unpackLightOcclusion(const in uint data_g, out half2 lmcoord, out half occlusion, out int blockId) {
+    [mutating]
+    void unpackLightOcclusion(const in uint data_g) {
         half3 data = unpackUnorm4x8ToHalf(data_g).xyz;
-        blockId = bitfieldExtract(data_g, 24, 8);
+        blockMapId = bitfieldExtract(data_g, 24, 8);
         lmcoord = data.xy;
         occlusion = data.z;
     }
+
+    [mutating]
+    void unpackSpecular(const in uint data_r) {
+        specular = unpackUnorm4x8ToHalf(data_r);
+    }
+
+    // static void unpackSpecular(const in uint data_r, out half4 specularData) {
+    //     specularData = unpackUnorm4x8ToHalf(data_r);
+    // }
+
+    // static void unpackLightOcclusion(const in uint data_g, out half2 lmcoord, out half occlusion, out int blockMapId) {
+    //     half3 data = unpackUnorm4x8ToHalf(data_g).xyz;
+    //     blockMapId = bitfieldExtract(data_g, 24, 8);
+    //     lmcoord = data.xy;
+    //     occlusion = data.z;
+    // }
 };

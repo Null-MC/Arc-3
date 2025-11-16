@@ -33,6 +33,12 @@ Sampler2D<uint2> texNormalGB;
 Sampler2D<uint2> texMatLightGB;
 
 
+bool between(const in float value, const in float _min, const in float _max) {
+    if (_max >= _min) return value > _min && value < _max;
+    else return value > _max && value < _min;
+}
+
+
 [[shader("fragment")]]
 half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
     uint2 uv = uint2(pos);
@@ -66,24 +72,29 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
         bool ss_hit = false;
         if (GI_ScreenTrace) {
-            float dither = InterleavedGradientNoiseTime(pos);
+            // float dither = InterleavedGradientNoiseTime(pos);
 
-            // float seed = InterleavedGradientNoise(pos);
-            // float dither = GetR2_1D(seed * 13.0 + ap.timing.frameCounter * 137.0).x;
-            float viewDist = length(localPos);
+            float3 trace_viewDir = mul(float3x3(ap.camera.view), trace_localDir);
+            trace_viewDir = normalize(trace_viewDir);
+            
+            float seed = InterleavedGradientNoise(pos);
+            float dither = GetR2_1D(seed * 13.0 + ap.timing.frameCounter * 137.0).x;
 
             float3 traceViewStart = mul3(ap.camera.view, offsetLocalPos);
             float3 traceClipStart = project(ap.camera.projection, traceViewStart);
-            float3 screenStart = traceClipStart * 0.5 + 0.5;
+            // float3 screenStart = traceClipStart * 0.5 + 0.5;
 
-            float3 screenEnd = projectScreenTrace(traceViewStart, screenStart, trace_localDir);
-            float3 traceClipEnd = screenEnd * 2.0 - 1.0;
+            // float3 screenEnd = projectScreenTrace(traceViewStart, screenStart, trace_viewDir);
+            // float3 traceClipEnd = screenEnd * 2.0 - 1.0;
+
+            float viewDist = length(localPos);
+            float traceDist = clamp(viewDist * 0.25, 0.0, 16.0);
+            float3 traceViewEnd = traceViewStart + traceDist * trace_viewDir;
+            float3 traceClipEnd = project(ap.camera.projection, traceViewEnd);
 
             float3 traceClipPos;
             float3 traceClipPos_prev = traceClipStart;
             float2 traceScreenPos;
-
-            const uint SS_RefineSteps = 5;
 
             float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
             for (uint i = 0; i < GI_ScreenStepCount; i++) {
@@ -96,9 +107,10 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
                 float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
-                float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
+                // float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
 
-                if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
+                // if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
+                if (between(screenDepthL, traceDepthL_prev, traceDepthL)) {
                     ss_hit = true;
                     break;
                 }
@@ -121,25 +133,27 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                     float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
                     float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
-                    float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
+                    // float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
 
-                    if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
+                    // if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
+                    if (between(screenDepthL, traceDepthL_prev, traceDepthL)) {
                         break;
                     }
                 }
             }
 
             if (ss_hit) {
-                half3 ss_color = texAlbedoGB.Sample(traceScreenPos).rgb;
-                sampleColor = PI * RgbToLinear(ss_color) * texDiffuse.Sample(traceScreenPos);
-                // sampleColor = half3(1000,0,0);
+                half3 trace_albedo = texAlbedoGB.Sample(traceScreenPos).rgb;
+                half3 trace_diffuse = texDiffuse.Sample(traceScreenPos);
+                sampleColor = RgbToLinear(trace_albedo) * trace_diffuse;
 
                 uint2 uv2 = uint2(traceScreenPos * ap.game.screenSize);
                 // half3 sample_normal = ObjectData_Normals.unpackTex(texNormalGB[uv2].g);
                 half3 sample_normal = ObjectData_Normals.unpackGeo(texNormalGB[uv2].r);
                 cos_sample = max(dot(sample_normal, -trace_localDir), 0.0);
 
-                // cos_trace = 1.0;
+                cos_trace = 1.0;
+                // cos_sample = 1.0;
             }
         }
 

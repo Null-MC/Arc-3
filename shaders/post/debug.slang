@@ -35,11 +35,17 @@ half4 renderDebugOverlay(float2 pos : SV_Position) : SV_Target0 {
             case DEBUG_GB_NORMAL_TEX:
                 color.rgb = ObjectData_Normals.unpackTex(texNormalGB[uv].g) * half3(0.5) + half3(0.5);
                 break;
-            case DEBUG_GB_LMCOORD:
-                color.rgb = ObjectData_MatLit.unpackLightOcclusion(texMatLightGB[uv].g).rrg;
+            case DEBUG_GB_LMCOORD: {
+                    ObjectData_MatLit mat_lit;
+                    mat_lit.unpackLightOcclusion(texMatLightGB[uv].g);
+                    color.rgb = half3(mat_lit.lmcoord.x, 0, mat_lit.lmcoord.y);
+                }
                 break;
-            case DEBUG_GB_OCCLUSION:
-                color.rgb = ObjectData_MatLit.unpackLightOcclusion(texMatLightGB[uv].g).bbb;
+            case DEBUG_GB_OCCLUSION: {
+                    ObjectData_MatLit mat_lit;
+                    mat_lit.unpackLightOcclusion(texMatLightGB[uv].g);
+                    color.rgb = mat_lit.occlusion;
+                }
                 break;
         }
     }
@@ -67,7 +73,7 @@ half4 renderDebugOverlay(float2 pos : SV_Position) : SV_Target0 {
         }
     }
 
-    color.rgb = RgbToLinear(color.rgb);
+    color.rgb = (half3)RgbToLinear(color.rgb);
 
     return color;
 }
