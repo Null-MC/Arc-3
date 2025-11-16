@@ -709,7 +709,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             if (options.Lighting_GI_Enabled) {
                 withSubList(opaqueStage, 'opaque-deferred-gi', stage_opaque_gi => {
                     stage_opaque_gi.createComposite("deferred-gi")
-                        .location('deferred/gi/gi', "applyGI")
+                        .location('deferred/gi/gi-trace', "applyGI")
                         .target(0, texGI)
                         .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
                         .overrideObject('texNormalGB', texNormalGB_opaque.name())

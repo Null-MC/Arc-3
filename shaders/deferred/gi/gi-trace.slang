@@ -144,6 +144,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         }
 
         float traceWaterDist = 0.0;
+        float traceOcclusionDist = 0.0;
 
         bool hit = false;
         if (!ss_hit && VoxelMask_InBounds(offsetLocalPos)) {
@@ -178,6 +179,9 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 if (maskId == MaskId_Solid) {
                     hit = true;
                     break;
+                }
+                else if (maskId == MaskId_Partial) {
+                    traceOcclusionDist += length(step);
                 }
                 else if (maskId == MaskId_Water) {
                     traceWaterDist += length(step);
@@ -221,6 +225,9 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
         if (traceWaterDist > 0.0)
             sampleColor *= half3(exp(-traceWaterDist * Water_AbsorbColor));
+
+        if (traceOcclusionDist > 0.0)
+            sampleColor *= (half)exp(-0.2 * traceOcclusionDist);
 
         diffuse += cos_trace * cos_sample * sampleColor;
     }
