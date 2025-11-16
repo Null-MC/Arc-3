@@ -150,25 +150,37 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             }
         }
 
-        if (!ss_hit) {
+        float traceWaterDist = 0.0;
+
+        bool hit = false;
+        if (!ss_hit && VoxelMask_InBounds(offsetLocalPos)) {
             float3 cameraFract = fract(ap.camera.position);
             int3 cameraFloor = int3(floor(ap.camera.position));
 
-            float3 stepSizes, nextDist, stepAxis;
+            float3 stepSizes, nextDist;
             float3 currPos = offsetLocalPos + cameraFract;
             DDA_init(stepSizes, nextDist, currPos, trace_localDir);
 
-            bool hit = false;
-            float traceWaterDist = 0.0;
             int3 hit_voxelMaskPos = -1;
+            float3 stepAxis = 0.0;
+
+            VoxelMask voxelMask;
 
             for (uint i = 0; i < GI_VoxelStepCount; i++) {
                 float3 stepAxisNext;
                 float3 step = DDA_step(stepAxisNext, nextDist, stepSizes, trace_localDir);
 
                 hit_voxelMaskPos = int3(floor(VoxelMask_GetBufferPosition(currPos + 0.5*step - cameraFract)));
+
+                if (i > 0) {
+                    // TODO: check exit face mask
+                    // uint faceMask = VoxelMask.BuildFaceMask(stepAxis * sign(trace_localDir));
+                    float3 axisNormal = stepAxis * sign(trace_localDir);
+                    if (voxelMask.testFace(axisNormal)) {hit = true; break;}
+                }
+
                 uint voxelIndex = VoxelMask_GetBufferIndex(hit_voxelMaskPos);
-                var voxelMask = VoxelMaskBuffer[voxelIndex];
+                voxelMask = VoxelMaskBuffer[voxelIndex];
                 uint maskId = voxelMask.getId();
 
                 if (maskId == MaskId_Solid) {
@@ -178,14 +190,12 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 else if (maskId == MaskId_Water) {
                     traceWaterDist += length(step);
                 }
-                else {
-                    // TODO: build and test face mask
-                    // uint enterFace = ;
-                    // uint exitFace = ;
-                    // if (!voxelMask.testFaces(enterFace | exitFace)) {
-                    //     hit = true;
-                    //     break;
-                    // }
+
+                if (!all(stepAxis == 0)) {
+                    // TODO: check enter face mask
+                    // uint faceMask = VoxelMask.BuildFaceMask(-stepAxis * sign(trace_localDir));
+                    float3 axisNormal = -stepAxis * sign(trace_localDir);
+                    if (voxelMask.testFace(axisNormal)) {hit = true; break;}
                 }
 
                 currPos += step;
@@ -206,19 +216,20 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 int3 hit_voxelTexPos = hit_voxelMaskPos;
 
                 float2 voxelTexCoord = GetVoxelTexCoord(hit_normal, currPos);
-                sampleColor = SampleVoxel(hit_localPos, hit_normal, hit_voxelTexPos, voxelTexCoord);
+                sampleColor = SampleVoxel(hit_localPos, hit_normal, hit_voxelTexPos, voxelTexCoord, false);
 
                 cos_sample = max(dot(hit_normal, -trace_localDir), 0.0);
             }
-            else {
-                float3 skyPos = getSkyPosition(hit_localPos);
-                sampleColor = sampleSkyView(skyPos, trace_localDir, scene[0].SunLocalDir);
-                cos_sample = lmcoord_y;
-            }
-
-            if (traceWaterDist > 0.0)
-                sampleColor *= half3(exp(-traceWaterDist * Water_AbsorbColor));
         }
+
+        if (!hit && !ss_hit) {
+            float3 skyPos = getSkyPosition(localPos);
+            sampleColor = sampleSkyView(skyPos, trace_localDir, scene[0].SunLocalDir);
+            cos_sample = lmcoord_y;
+        }
+
+        if (traceWaterDist > 0.0)
+            sampleColor *= half3(exp(-traceWaterDist * Water_AbsorbColor));
 
         diffuse += cos_trace * cos_sample * sampleColor;
     }

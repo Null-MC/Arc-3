@@ -35,7 +35,7 @@ void buildVoxelMask(ComputeInput input) {
 		const uint hit_tags = TAG_SLABS | TAG_STAIRS | TAG_LEAVES;
 		if (block.hasAnyTag(hit_tags)) maskId = MaskId_Partial;
 
-		maskFaces = bitfieldExtract(block.metadata, 0, 0);
+		maskFaces = bitfieldExtract(block.metadata, 0, 6);
 	}
 
 	int index = VoxelMask_GetBufferIndex(input.globalPos);

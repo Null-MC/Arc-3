@@ -164,7 +164,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
                 var voxelMask = VoxelMaskBuffer[voxelIndex];
                 uint maskId = voxelMask.getId();
 
-                if (maskId == MaskId_Solid) {
+                if (maskId >= MaskId_Partial) {
                     hit = true;
                     break;
                 }

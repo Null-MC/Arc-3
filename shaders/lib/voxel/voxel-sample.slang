@@ -29,7 +29,7 @@ float2 GetVoxelTexCoord(const in float3 normal, const in float3 voxelPos) {
     return 1.0 - fract(hitCoord);
 }
 
-float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in int3 voxelTexPos, const in float2 voxelTexCoord) {
+float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in int3 voxelTexPos, const in float2 voxelTexCoord, bool skyLight = false) {
     float3 albedo = 0.0;
     half roughL = (half)0.85;
     half metalness = (half)0.0;
@@ -90,9 +90,9 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
         diffuse /= PI;
 
         // TODO: recalc from local-pos + normal offset
-        int3 voxelPos = int3(floor(localPos + 0.04*normal + ap.camera.position));
-        float lmcoord_y = saturate(ap.voxel[voxelPos].lightData.y / 15.0);
-        diffuse += sampleSkyIrradiance(normal) * lmcoord_y;
+        // int3 voxelPos = int3(floor(localPos + 0.04*normal + ap.camera.position));
+        // float lmcoord_y = saturate(ap.voxel[voxelPos].lightData.y / 15.0);
+        // diffuse += sampleSkyIrradiance(normal) * lmcoord_y;
     }
 
     // remove diffuse for smooth metals
