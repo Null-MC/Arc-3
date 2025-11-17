@@ -77,14 +77,18 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         bool ss_hit = false;
         if (Reflect_SS_Fallback) {
-            float3 reflect_viewPos = 0.5 * viewDist * reflect_viewDir + viewPos;
-            float3 reflect_clipPos = project(ap.camera.projection, reflect_viewPos);
-            float3 reflect_screenPos = reflect_clipPos * 0.5 + 0.5;
+            // float3 reflect_viewPos = 0.5 * viewDist * reflect_viewDir + viewPos;
+            // float3 reflect_clipPos = project(ap.camera.projection, reflect_viewPos);
+            // float3 reflect_screenPos = reflect_clipPos * 0.5 + 0.5;
 
-            float3 screenDir = normalize(reflect_screenPos - screenPos);
+            // float3 screenDir = normalize(reflect_screenPos - screenPos);
 
-            // project the reflected trace direction to edge of trace bounds
-            float3 screenEnd = projectToScreenBounds(screenPos, screenDir);
+            // // project the reflected trace direction to edge of trace bounds
+            // float3 screenEnd = projectToScreenBounds(screenPos, screenDir);
+            // float3 traceClipEnd = screenEnd * 2.0 - 1.0;
+            // float3 traceClipStart = clipPos;
+
+            float3 screenEnd = projectScreenTrace(viewPos, screenPos, reflect_viewDir);
             float3 traceClipEnd = screenEnd * 2.0 - 1.0;
             float3 traceClipStart = clipPos;
 
@@ -103,7 +107,9 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
                 float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
                 float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
-                if (screenDepthL < traceDepthL) {
+                float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
+
+                if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
                     ss_hit = true;
                     break;
                 }
@@ -126,7 +132,9 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
                     float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
                     float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
-                    if (screenDepthL < traceDepthL) {
+                    float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
+
+                    if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
                         break;
                     }
                 }

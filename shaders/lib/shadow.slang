@@ -49,6 +49,25 @@ int GetShadowProjection(const in float3 shadowViewPos, const in float padding) {
     return cascadeIndex;
 }
 
+int GetShadowProjection_BestFit(const in float3 shadowViewPos) {
+    int cascadeIndex = -1;
+    float maxDist = 0.0;
+
+    for (int i = 0; i < Shadow_CascadeCount; i++) {
+        float2 pos_norm = unmix(scene[0].shadowViewMin[i], scene[0].shadowViewMax[i], shadowViewPos.xy);
+
+        float edge_dist = minOf(abs(0.5 - pos_norm));
+
+        if (edge_dist > maxDist) {
+            cascadeIndex = i;
+            maxDist = edge_dist;
+            break;
+        }
+    }
+
+    return cascadeIndex;
+}
+
 float2 GetPixelRadius(const in float blockRadius, const in int cascade) {
     return blockRadius * GetShadowProjectionScale(cascade).xy;
 }

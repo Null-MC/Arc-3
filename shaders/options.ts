@@ -46,6 +46,7 @@ export function setupOptions() {
                 .add(asIntRange('LIGHTING.GI.MAXFRAMES', 30, 2, 60, 2, true))
                 .add(asIntRange('LIGHTING.GI.FILTERING', 2, 0, 4, 1, true))
                 .add(EMPTY)
+                .add(asIntRange('LIGHTING.GI.SAMPLES', 1, 1, 6, 1, true))
                 .add(asIntRange('LIGHTING.GI.VOXEL_STEPS', 16, 2, 64, 2, true))
                 .add(asIntRange('LIGHTING.GI.SCREEN_STEPS', 16, 2, 32, 2, true))
                 .add(asIntRange('LIGHTING.GI.REFINE_STEPS', 4, 2, 8, 1, true))

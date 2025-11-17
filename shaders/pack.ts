@@ -738,6 +738,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         .exportInt('GI_ScreenStepCount', options.Lighting_GI_ScreenSteps)
                         .exportInt('GI_RefineStepCount', options.Lighting_GI_RefineSteps)
                         .exportBool('GI_ScreenTrace', options.Lighting_GI_ScreenTrace)
+                        .exportInt('GI_SampleCount', options.Lighting_GI_Samples)
                         .exportInt('BufferWidth', GI_width)
                         .exportInt('BufferHeight', GI_height)
                         .compile();

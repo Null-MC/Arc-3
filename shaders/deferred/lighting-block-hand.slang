@@ -65,7 +65,6 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
             }
         }
 
-        const half3 BlockLightColor = RgbToLinear(float3(0.89, 0.784, 0.557));
         output.diffuse += lmcoord_x * BLOCK_LUX * BlockLightColor;
 
         // Hand Lights

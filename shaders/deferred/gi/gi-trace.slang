@@ -20,6 +20,7 @@ import lib.dda;
 
 import lib.sky.sample_irradiance;
 
+extern static const int GI_SampleCount;
 extern static const int GI_VoxelStepCount;
 extern static const int GI_ScreenStepCount;
 extern static const int GI_RefineStepCount;
@@ -104,11 +105,13 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         ObjectData_MatLit mat_lit;
         mat_lit.unpack(texMatLightGB.Sample(texcoord));
 
+        [ForceUnroll]
+        for (int i = 0; i < GI_SampleCount; i++) {
         // float3 trace_localDir = randomNormal(pos, tex_normal);
         // float cos_trace = max(dot(trace_localDir, tex_normal), 0.0);
 
         float pdf;
-        float2 seed = hash23(float3(pos, ap.timing.frameCounter));
+        float2 seed = hash23(float3(pos, ap.timing.frameCounter + i*3));
         float3 trace_tangentDir = sample_cosine_weighted_hemisphere(seed, pdf);
         float3 trace_localDir = transform_to_world(tex_normal, trace_tangentDir);
 
@@ -278,8 +281,8 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             half lmcoord_y = pow2(mat_lit.lmcoord.y);
 
             float3 skyPos = getSkyPosition(localPos);
-            // sampleColor = sampleSkyView(skyPos, trace_localDir, scene[0].SunLocalDir);
-            sampleColor = sampleSkyIrradiance(trace_localDir);
+            sampleColor = sampleSkyView(skyPos, trace_localDir, scene[0].SunLocalDir);
+            // sampleColor = sampleSkyIrradiance(trace_localDir);
             cos_sample = lmcoord_y;
         }
 
@@ -290,7 +293,8 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             sampleColor *= (half)exp(-0.2 * traceOcclusionDist);
 
         diffuse += pdf * cos_sample * sampleColor;
+        }
     }
 
-    return half4(diffuse, (half)1.0);
+    return half4(diffuse / GI_SampleCount, (half)1.0);
 }

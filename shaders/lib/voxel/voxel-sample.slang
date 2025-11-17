@@ -5,12 +5,14 @@ import lib.common;
 import lib.shadow;
 import lib.material.pbr;
 import lib.sampling.atlas;
+import lib.light.floodfill;
 import lib.voxel.voxel_tex;
 import lib.sky.common;
 import lib.sky.scattering;
 import lib.sky.sample_transmit;
 import lib.sky.sample_irradiance;
 
+extern static const bool FloodFill_Enabled;
 extern static const bool World_HasSky;
 extern static const half BLOCK_LUX;
 
@@ -70,7 +72,8 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
         float3 shadowViewPos = mul3(ap.celestial.view, shadowLocalPos);
         shadowViewPos.z += 0.008;
 
-        int shadowCascade = GetShadowProjection(shadowViewPos, 0.05);
+        int shadowCascade = GetShadowProjection(shadowViewPos, 0.0);
+        // int shadowCascade = GetShadowProjection_BestFit(shadowViewPos);
 
         half3 shadow = half3(1.0);
         if (shadowCascade >= 0) {
@@ -93,13 +96,24 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
         float NoLm_moon = max(dot(normal, scene[0].MoonLocalDir), 0.0);
         diffuse += NoLm_moon * (shadowIsSun ? (half)0.0 : shadow) * moon_color;
 
-        // diffuse /= PI;
+        int3 voxelPos = int3(floor(localPos + 0.04*normal + ap.camera.position));
+        float2 lmcoord = pow2(saturate(ap.voxel[voxelPos].lightData / 15.0));
+
+        diffuse += lmcoord.x * BLOCK_LUX * BlockLightColor;
+
+        diffuse /= PI;
 
         if (!isGI) {
-            // TODO: recalc from local-pos + normal offset
-            int3 voxelPos = int3(floor(localPos + 0.04*normal + ap.camera.position));
-            float lmcoord_y = saturate(ap.voxel[voxelPos].lightData.y / 15.0);
-            diffuse += sampleSkyIrradiance(normal) * lmcoord_y;
+            diffuse += sampleSkyIrradiance(normal) * lmcoord.y;
+        }
+    }
+
+    if (FloodFill_Enabled) {
+        float3 lpvPos = FloodFill_GetBufferPosition(localPos);
+        lpvPos += normal * 0.5;
+        
+        if (FloodFill_InBounds(lpvPos)) {
+            diffuse += floodfill_sample(lpvPos) * BLOCK_LUX;
         }
     }
 

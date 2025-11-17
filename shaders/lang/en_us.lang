@@ -99,12 +99,19 @@ value.LIGHTING.GI.RESOLUTION.2=Quarter
 option.LIGHTING.GI.MAXFRAMES=Max Frames
 
 option.LIGHTING.GI.FILTERING=Filter Passes
+option.LIGHTING.GI.FILTERING.comment=The number of A-Trous filtering passes to apply to reduce noise.
+
+option.LIGHTING.GI.SAMPLES=Sample Count
+option.LIGHTING.GI.SAMPLES.comment=The number of samples to trace per-pixel each frame.
 
 option.LIGHTING.GI.VOXEL_STEPS=Voxel Steps
+option.LIGHTING.GI.VOXEL_STEPS.comment=The maximum number of voxel steps that can be traced for each sample.
 
 option.LIGHTING.GI.SCREEN_STEPS=Screen Steps
+option.LIGHTING.GI.VOXEL_STEPS.comment=The maximum number of screen-space steps that can be traced for each sample.
 
 option.LIGHTING.GI.REFINE_STEPS=Refine Steps
+option.LIGHTING.GI.VOXEL_STEPS.comment=The number of refinement steps to take when determining a screen-space intersection.
 
 
 screen.LIGHTING_POINT=Point Lights

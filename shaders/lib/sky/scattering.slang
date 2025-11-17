@@ -29,5 +29,5 @@ float3 atmosAbsorb(const in float3 skyPos, const in float3 lightDir) {
     float3 rayleighScattering, extinction;
     getScatteringValues(skyPos, rayleighScattering, mieScattering, extinction);
     
-    return exp(-max(dist, EPSILON) * extinction * 0.07);
+    return exp(-max(0.07 * dist * extinction, EPSILON));
 }

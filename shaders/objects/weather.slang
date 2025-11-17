@@ -3,8 +3,12 @@ import lib.common;
 import lib.sky.common;
 import lib.sky.sample_transmit;
 import lib.sky.sample_irradiance;
-import lib.shadow;
+import lib.light.floodfill;
 import lib.material.pbr;
+import lib.shadow;
+
+extern static const bool FloodFill_Enabled;
+extern static const half BLOCK_LUX;
 
 
 struct VertexOutput {
@@ -86,9 +90,22 @@ FragmentOutput fragmentMain(VertexOutput input) {
     float3 ambient_normal = float3(0.0, 1.0, 0.0);
     float3 ambient = sampleSkyIrradiance(ambient_normal) * lmcoord_y;
 
-    float3 diffuse = (lightSun + lightMoon) / PI * shadow + ambient;
+    float3 diffuse = (lightSun + lightMoon) * shadow;
     float3 specular = 0.0;
 
+    if (FloodFill_Enabled) {
+        float3 lpvPos = FloodFill_GetBufferPosition(input.localPos);
+        // lpvPos -= normals.geo * 0.25;
+        // lpvPos += normals.tex * 0.75;
+        
+        if (FloodFill_InBounds(lpvPos)) {
+            diffuse += floodfill_sample(lpvPos) * BLOCK_LUX;
+            // lmcoord_x = (half)0.0;
+        }
+    }
+
+    diffuse = diffuse / PI + ambient;
+    
     float4 color = albedo;
     color.rgb = color.rgb * diffuse + specular;
 
