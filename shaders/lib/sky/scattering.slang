@@ -21,3 +21,13 @@ void getScatteringValues(float3 pos, out float3 rayleighScattering, out float mi
 
     extinction = rayleighScattering + rayleighAbsorption + mieScattering + mieAbsorption + ozoneAbsorption;
 }
+
+float3 atmosAbsorb(const in float3 skyPos, const in float3 lightDir) {
+    float dist = rayIntersectSphere(skyPos, lightDir, atmosphereRadiusMM);
+
+    float mieScattering;
+    float3 rayleighScattering, extinction;
+    getScatteringValues(skyPos, rayleighScattering, mieScattering, extinction);
+    
+    return exp(-max(dist, EPSILON) * extinction * 0.07);
+}

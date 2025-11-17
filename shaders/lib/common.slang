@@ -13,6 +13,7 @@ RWTexture2D<float4> imgDebug;
 extern static const bool TAA_Enabled;
 extern static const bool Debug_WhiteWorld;
 
+static const half WeatherOpacity = (half)0.40;
 static const half3 WhiteWorldColor = half3(0.65);
 
 static const float PI = 3.14159265358;

@@ -19,7 +19,7 @@ static const float3 groundAlbedo = 0.3;
 static const float SUN_LUMINANCE = 2000.0;//1.6e6;//1.6e9;
 static const float MOON_LUMINANCE = 2.2;
 
-static const float Sky_MinLight = 0.0;
+static const float Sky_MinLight = 0.08;
 
 // static const float GoldenAngle = PI * (3.0 - sqrt(5.0));
 // static const float PHI = (1.0 + sqrt(5.0)) / 2.0;
@@ -66,7 +66,7 @@ float getRayleighPhase(float cosTheta) {
 }
 
 // From https://gamedev.stackexchange.com/questions/96459/fast-ray-sphere-collision-code.
-float rayIntersectSphere(float3 center, float3 direction, const in float radius) {
+float rayIntersectSphere(const in float3 center, const in float3 direction, const in float radius) {
     float b = dot(center, direction);
     float c = dot(center, center) - pow2(radius);
     if (c > 0.0f && b > 0.0) return -1.0;

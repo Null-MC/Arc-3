@@ -83,7 +83,7 @@ export function setupOptions() {
             .build())
         .add(new Page('POST')
             .add(new Page('POST_EXPOSURE')
-                .add(asFloatRange('POST_EXPOSURE_MIN', -0.8, -2.0,  0.0, 0.2, false))
+                .add(asFloatRange('POST_EXPOSURE_MIN', -0.8, -6.0,  0.0, 0.2, false))
                 .add(asFloatRange('POST_EXPOSURE_MAX', 11.0,  0.0, 20.0, 0.2, false))
                 .add(asFloatRange('POST_EXPOSURE_RANGE', 9.6, 3.0, 19.0, 0.2, false))
                 .build())

@@ -8,6 +8,7 @@ import lib.material.rough_normal;
 import lib.sky.common;
 import lib.sky.sun;
 import lib.sky.moon;
+import lib.sky.scattering;
 import lib.sky.sample_transmit;
 import lib.sky.sample_irradiance;
 import lib.sky.sample_view;
@@ -85,18 +86,20 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         half3 shadow = RgbToLinear(texShadowFinal[uv]);
         bool shadowIsSun = dot(ap.celestial.position, ap.celestial.sunPosition) > 0.0;
 
+        half3 sun_color = scene[0].SunColor * sampleSkyTransmit(surface.skyPos, scene[0].SunLocalDir);
+        sun_color *= atmosAbsorb(surface.skyPos, scene[0].SunLocalDir);
+        
+        half3 moon_color = scene[0].MoonColor * sampleSkyTransmit(surface.skyPos, scene[0].MoonLocalDir);
+        moon_color *= atmosAbsorb(surface.skyPos, scene[0].MoonLocalDir);
+        
         CelestialLight sun;
         sun.localDir = GetAreaLightDir(tex_normal, viewLocalDir, scene[0].SunLocalDir, sun_distanceMm, sun_radiusMm);
-        half3 sun_color = scene[0].SunColor * sampleSkyTransmit(surface.skyPos, sun.localDir);
-        sun.color = sun_color * (shadowIsSun ? shadow : (half)1.0);
-
+        sun.color = sun_color * (shadowIsSun ? shadow : (half)0.0);
         SampleCelestial(output.diffuse, output.specular, sun, surface, viewLocalDir, NoVm);
 
         CelestialLight moon;
         moon.localDir = GetAreaLightDir(tex_normal, viewLocalDir, scene[0].MoonLocalDir, moon_distanceKm, moon_radiusKm);
-        half3 moon_color = scene[0].MoonColor * sampleSkyTransmit(surface.skyPos, moon.localDir);
-        moon.color = moon_color * (shadowIsSun ? (half)1.0 : shadow);
-
+        moon.color = moon_color * (shadowIsSun ? (half)0.0 : shadow);
         SampleCelestial(output.diffuse, output.specular, moon, surface, viewLocalDir, NoVm);
 
         // DEBUG

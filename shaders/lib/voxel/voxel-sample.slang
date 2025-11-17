@@ -7,6 +7,7 @@ import lib.material.pbr;
 import lib.sampling.atlas;
 import lib.voxel.voxel_tex;
 import lib.sky.common;
+import lib.sky.scattering;
 import lib.sky.sample_transmit;
 import lib.sky.sample_irradiance;
 
@@ -29,7 +30,7 @@ float2 GetVoxelTexCoord(const in float3 normal, const in float3 voxelPos) {
     return 1.0 - fract(hitCoord);
 }
 
-float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in int3 voxelTexPos, const in float2 voxelTexCoord, bool skyLight = true) {
+float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in int3 voxelTexPos, const in float2 voxelTexCoord, bool isGI = false) {
     float3 albedo = 0.0;
     half roughL = (half)0.85;
     half metalness = (half)0.0;
@@ -80,19 +81,21 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
         float3 skyPos = getSkyPosition(localPos);
         bool shadowIsSun = dot(ap.celestial.position, ap.celestial.sunPosition) > 0.0;
 
-        // TODO: separate sun/moon shadow
+        half3 sun_color = scene[0].SunColor * sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
+        sun_color *= atmosAbsorb(skyPos, scene[0].SunLocalDir);
+
+        half3 moon_color = scene[0].MoonColor * sampleSkyTransmit(skyPos, scene[0].MoonLocalDir);
+        moon_color *= atmosAbsorb(skyPos, scene[0].MoonLocalDir);
 
         float NoLm_sun = max(dot(normal, scene[0].SunLocalDir), 0.0);
-        half3 sunTransmit = sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
-        diffuse += NoLm_sun * (shadowIsSun ? shadow : (half)1.0) * sunTransmit * scene[0].SunColor;
+        diffuse += NoLm_sun * (shadowIsSun ? shadow : (half)0.0) * sun_color;
 
         float NoLm_moon = max(dot(normal, scene[0].MoonLocalDir), 0.0);
-        half3 moonTransmit = sampleSkyTransmit(skyPos, scene[0].MoonLocalDir);
-        diffuse += NoLm_moon * (shadowIsSun ? (half)1.0 : shadow) * moonTransmit * scene[0].MoonColor;
+        diffuse += NoLm_moon * (shadowIsSun ? (half)0.0 : shadow) * moon_color;
 
-        diffuse /= PI;
+        // diffuse /= PI;
 
-        if (skyLight) {
+        if (!isGI) {
             // TODO: recalc from local-pos + normal offset
             int3 voxelPos = int3(floor(localPos + 0.04*normal + ap.camera.position));
             float lmcoord_y = saturate(ap.voxel[voxelPos].lightData.y / 15.0);
@@ -104,9 +107,11 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
     half smoothness = (half)1.0 - roughL;
     diffuse *= (half)1.0 - metalness * smoothness;
 
-    diffuse += emission * BLOCK_LUX;
+    if (!isGI) {
+        diffuse += emission * BLOCK_LUX;
 
-    if (Debug_WhiteWorld) albedo = WhiteWorldColor;
+        if (Debug_WhiteWorld) albedo = WhiteWorldColor;
+    }
 
     return albedo * diffuse;
 }

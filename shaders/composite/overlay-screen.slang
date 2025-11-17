@@ -151,7 +151,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     }
     
     half4 weather = texWeather[uv];
-    final_color.rgb += weather.rgb * (half)0.25;
+    final_color.rgb += weather.rgb * WeatherOpacity;
 
     return half4(final_color, (half)1.0);
 }

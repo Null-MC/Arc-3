@@ -56,15 +56,15 @@ float4 applyTonemap(float2 pos : SV_Position) : SV_Target0 {
 
     color = mul(LINEAR_RGB_TO_REC2020, color);
 
-    color = tonemap_ACESFit2(color);
+    // color = tonemap_ACESFit2(color);
 
-    // color = tonemap_uchimura(color,
-    //     1.00,
-    //     1.00,
-    //     0.22,
-    //     0.40,
-    //     1.56,
-    //     0.00);
+    color = tonemap_uchimura(color,
+        1.00,
+        1.00,
+        0.22,
+        0.40,
+        1.56,
+        0.00);
 
     color = mul(REC2020_TO_SRGB, color);
 

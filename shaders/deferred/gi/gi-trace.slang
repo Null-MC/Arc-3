@@ -2,6 +2,7 @@ import aperture;
 import buffers.ObjectData;
 import lib.common;
 import lib.blocks;
+import lib.noise.hash;
 import lib.material.pbr;
 import lib.material.rough_normal;
 import lib.light.fresnel;
@@ -16,6 +17,8 @@ import lib.voxel.voxel_mask;
 import lib.voxel.voxel_sample;
 import lib.screen_trace;
 import lib.dda;
+
+import lib.sky.sample_irradiance;
 
 extern static const int GI_VoxelStepCount;
 extern static const int GI_ScreenStepCount;
@@ -39,6 +42,40 @@ Sampler2D<uint2> texMatLightGB;
 bool between(const in float value, const in float _min, const in float _max) {
     if (_max >= _min) return value > _min && value < _max;
     else return value > _max && value < _min;
+}
+
+float3 sample_cosine_weighted_hemisphere(const in float2 rand, out float pdf) {
+    float2 p = rand * 2.0 - 1.0;
+    
+    // Use concentric disk mapping to avoid distortion artifacts in uniform disk sampling
+    // This example uses simple square-to-disk for clarity, but a proper
+    // concentric mapping (as mentioned in PBRT) is better for production.
+    // For simplicity here, we'll use the basic polar approach with sqrt for r:
+    float r = sqrt(rand.x);
+    float phi = 2.0 * PI * rand.y;
+
+    float3 dir;
+    dir.x = r * cos(phi);
+    dir.y = r * sin(phi);
+    dir.z = sqrt(max(1.0 - dot(dir.xy, dir.xy), 0.0));
+    
+    pdf = dir.z / PI;
+
+    return dir;
+}
+
+float3 transform_to_world(const in float3 normal, const in float3 local_dir) {
+    float sign = sign(normal.z);
+    if (abs(normal.z) < EPSILON) sign = 1.0;
+
+    float a = -rcp(sign + normal.z);
+    float b = normal.x * normal.y * a;
+    float3 tangent = float3(1.0 + sign * normal.x * normal.x * a, sign * b, -sign * normal.x);
+    float3 bitangent = float3(b, sign + normal.y * normal.y * a, -normal.y);
+
+    float3x3 tbn = float3x3(tangent, bitangent, normal);
+
+    return mul(local_dir, tbn);
 }
 
 
@@ -67,10 +104,13 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         ObjectData_MatLit mat_lit;
         mat_lit.unpack(texMatLightGB.Sample(texcoord));
 
-        half lmcoord_y = pow2(mat_lit.lmcoord.y);
+        // float3 trace_localDir = randomNormal(pos, tex_normal);
+        // float cos_trace = max(dot(trace_localDir, tex_normal), 0.0);
 
-        float3 trace_localDir = randomNormal(pos, tex_normal);
-        float cos_trace = max(dot(trace_localDir, tex_normal), 0.0);
+        float pdf;
+        float2 seed = hash23(float3(pos, ap.timing.frameCounter));
+        float3 trace_tangentDir = sample_cosine_weighted_hemisphere(seed, pdf);
+        float3 trace_localDir = transform_to_world(tex_normal, trace_tangentDir);
 
 
         half3 sampleColor = half3(0.0);
@@ -157,9 +197,6 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 // half3 sample_normal = ObjectData_Normals.unpackTex(texNormalGB[uv2].g);
                 half3 sample_normal = ObjectData_Normals.unpackGeo(texNormalGB[uv2].r);
                 cos_sample = max(dot(sample_normal, -trace_localDir), 0.0);
-
-                cos_trace = 1.0;
-                // cos_sample = 1.0;
             }
         }
 
@@ -231,15 +268,18 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 int3 hit_voxelTexPos = hit_voxelMaskPos;
 
                 float2 voxelTexCoord = GetVoxelTexCoord(hit_normal, currPos);
-                sampleColor = SampleVoxel(hit_localPos, hit_normal, hit_voxelTexPos, voxelTexCoord, false);
+                sampleColor = SampleVoxel(hit_localPos, hit_normal, hit_voxelTexPos, voxelTexCoord, true);
 
-                cos_sample = max(dot(hit_normal, -trace_localDir), 0.0);
+                // cos_sample = max(dot(hit_normal, -trace_localDir), 0.0);
             }
         }
 
         if (!hit && !ss_hit) {
+            half lmcoord_y = pow2(mat_lit.lmcoord.y);
+
             float3 skyPos = getSkyPosition(localPos);
-            sampleColor = sampleSkyView(skyPos, trace_localDir, scene[0].SunLocalDir) / PI;
+            // sampleColor = sampleSkyView(skyPos, trace_localDir, scene[0].SunLocalDir);
+            sampleColor = sampleSkyIrradiance(trace_localDir);
             cos_sample = lmcoord_y;
         }
 
@@ -249,7 +289,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         if (traceOcclusionDist > 0.0)
             sampleColor *= (half)exp(-0.2 * traceOcclusionDist);
 
-        diffuse += cos_trace * cos_sample * sampleColor;
+        diffuse += pdf * cos_sample * sampleColor;
     }
 
     return half4(diffuse, (half)1.0);

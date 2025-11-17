@@ -92,7 +92,7 @@ half4 atrousFilter(float2 pos : SV_Position) : SV_Target0 {
         // if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
         const float w_color = 0.1;
-        const float w_normal = 0.5;
+        const float w_normal = 0.1;
         const float w_pos = 0.3;
         const float step_width = exp2(AtrousLevel);
 
