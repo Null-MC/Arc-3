@@ -2,9 +2,9 @@ import aperture;
 import lib.common;
 import lib.sampling.catmull_rom;
 
-extern static const float TAA_RejectionStrength = 0.6;
-extern static const int EFFECT_TAA_MAX_ACCUM = 16;
-extern static const bool SharpenHistory = true;
+extern static const bool TAA_SharpenHistory;
+extern static const float TAA_RejectionStrength = 0.04;
+extern static const int EFFECT_TAA_MAX_ACCUM = 8;
 static const uint groupResX = 16;
 static const uint groupResY = 16;
 
@@ -78,7 +78,7 @@ void applyTaa(ComputeInput input) {
         float2 uv_prev = (input.globalPos.xy + 0.5) / float2(ap.game.screenSize) + reproj.xy;
 
         half4 lastColor;
-        if (SharpenHistory) {
+        if (TAA_SharpenHistory) {
             lastColor = sample_CatmullRom_RGBA(texFinalPrev, uv_prev, ap.game.screenSize);
         }
         else {

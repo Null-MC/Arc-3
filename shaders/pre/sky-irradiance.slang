@@ -39,7 +39,7 @@ float3 CalculateIrradiance(const in float2 uv, const in float3 normal) {
                 cos_theta);
 
             float3 sampleVec = normalize(mul(tangentSample, tbn));
-            float3 skyColor = sampleSkyView(skyPos, sampleVec, scene[0].SunLocalDir);
+            half3 skyColor = sampleSkyView(skyPos, sampleVec, scene[0].SunLocalDir);
 
             irradiance += skyColor * (cos_theta * sin_theta);
             nrSamples++;
@@ -50,15 +50,15 @@ float3 CalculateIrradiance(const in float2 uv, const in float3 normal) {
         phi += sampleDelta.x;
     }
 
-    return irradiance / nrSamples * PI;
+    return irradiance / nrSamples;
 }
 
 [[shader("fragment")]]
-float4 bakeSkyIrradiance(float2 pos : SV_Position) : SV_Target0 {
+half4 bakeSkyIrradiance(float2 pos : SV_Position) : SV_Target0 {
     float2 uv = pos / float2(skyIrradianceDimensions);
 
     float3 viewDir = DirectionFromUV(uv);
     float3 irradiance = CalculateIrradiance(pos, viewDir);
 
-    return float4(irradiance, 0.1);
+    return half4(half3(irradiance * PI), (half)0.1);
 }

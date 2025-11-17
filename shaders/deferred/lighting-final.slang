@@ -25,6 +25,8 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
     float depth = texDepth[uv];
     half4 color = texAlbedoGB[uv];
 
+    float2 texcoord = pos / ap.game.screenSize;
+
     half4 final = half4(0.0);
     if (depth < 1.0 && color.a > 0.0) {
         ObjectData_MatLit mat_lit;
@@ -34,7 +36,7 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         half3 specular = texSpecular[uv];
 
         if (Lighting_GI && !RENDER_TRANSLUCENT) {
-            diffuse += PI * texGI_final[uv] * mat_lit.occlusion;
+            diffuse += PI * texGI_final.Sample(texcoord) * mat_lit.occlusion;
         }
         
         half roughness = mat_roughness(mat_lit.specular.r);
@@ -58,10 +60,11 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         final.a = color.a;
     }
     else if (!RENDER_TRANSLUCENT && World_HasSky) {
-        float2 texcoord = pos / ap.game.screenSize;
-        if (TAA_Enabled) texcoord += scene[0].taa_jitter;
+        // float2 texcoord = pos / ap.game.screenSize;
+        float2 project_coord = texcoord;
+        if (TAA_Enabled) project_coord += scene[0].taa_jitter;
 
-        float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
+        float3 clipPos = float3(project_coord, depth) * 2.0 - 1.0;
         float3 viewPos = project(ap.camera.projectionInv, clipPos);
         float3 localPos = mul3(ap.camera.viewInv, viewPos);
         float3 viewLocalDir = normalize(localPos);

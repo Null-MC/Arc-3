@@ -355,48 +355,42 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .clearColor(0, 0, 0, 0)
         .build();
 
-    // let texGI: BuiltTexture | undefined;
     let texGI1: BuiltTexture | undefined;
     let texGI2: BuiltTexture | undefined;
     let texGI_flipper: BufferFlipper | undefined;
     let texGI_prev: BuiltTexture | undefined;
     let texGI_final: BuiltTexture | undefined;
     if (options.Lighting_GI_Enabled) {
-        // texGI = pipeline.createTexture('texGI')
-        //     .width(screenWidth)
-        //     .height(screenHeight)
-        //     .format(Format.RGBA16F)
-        //     .clearColor(0, 0, 0, 0)
-        //     .build();
+        const GI_scale = Math.pow(2, options.Lighting_GI_Resolution);
+        const GI_width = Math.ceil(screenWidth / GI_scale);
+        const GI_height = Math.ceil(screenHeight / GI_scale);
 
-        // if (options.Lighting_GI_FilterPasses > 0) {
-            texGI1 = pipeline.createTexture('texGI1')
-                .width(screenWidth)
-                .height(screenHeight)
-                .format(Format.RGBA16F)
-                .clearColor(0, 0, 0, 0)
-                .build();
+        texGI1 = pipeline.createTexture('texGI1')
+            .width(GI_width)
+            .height(GI_height)
+            .format(Format.RGBA16F)
+            .clearColor(0, 0, 0, 0)
+            .build();
 
-            texGI2 = pipeline.createTexture('texGI2')
-                .width(screenWidth)
-                .height(screenHeight)
-                .format(Format.RGBA16F)
-                .clear(false)
-                .build();
-            
-            texGI_flipper = new BufferFlipper(texGI1, texGI2);
-        // }
+        texGI2 = pipeline.createTexture('texGI2')
+            .width(GI_width)
+            .height(GI_height)
+            .format(Format.RGBA16F)
+            .clear(false)
+            .build();
+        
+        texGI_flipper = new BufferFlipper(texGI1, texGI2);
 
         texGI_final = pipeline.createTexture('texGI_final')
-            .width(screenWidth)
-            .height(screenHeight)
+            .width(GI_width)
+            .height(GI_height)
             .format(Format.RGBA16F)
             .clear(false)
             .build();
 
         texGI_prev = pipeline.createTexture('texGI_prev')
-            .width(screenWidth)
-            .height(screenHeight)
+            .width(GI_width)
+            .height(GI_height)
             .format(Format.RGBA16F)
             .clear(false)
             .build();
@@ -580,9 +574,19 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .exportBool('RENDER_TERRAIN', true)
         .compile();
 
-    opaqueObjectShader("entity-solid", Usage.ENTITY_SOLID).compile();
+    opaqueObjectShader("entity-solid", Usage.ENTITY_SOLID)
+        .exportBool('RENDER_ENTITY', true)
+        .compile();
+
+    discardShader('shit', Usage.EMISSIVE);
     
-    opaqueObjectShader("entity-cutout", Usage.ENTITY_CUTOUT).compile();
+    opaqueObjectShader("entity-cutout", Usage.ENTITY_CUTOUT)
+        .exportBool('RENDER_ENTITY', true)
+        .compile();
+
+    // opaqueObjectShader("entity-translucent", Usage.ENTITY_TRANSLUCENT)
+    //     .exportBool('RENDER_ENTITY', true)
+    //     .compile();
 
     opaqueObjectShader("blockentity-cutout", Usage.BLOCK_ENTITY).compile();
 
@@ -618,7 +622,13 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .exportBool('RENDER_TERRAIN', true)
         .compile();
 
-    translucentObjectShader("entity-translucent", Usage.ENTITY_TRANSLUCENT).compile();
+    // translucentObjectShader("entity-solid", Usage.ENTITY_SOLID).compile();
+    
+    // translucentObjectShader("entity-cutout", Usage.ENTITY_CUTOUT).compile();
+
+    translucentObjectShader("entity-translucent", Usage.ENTITY_TRANSLUCENT)
+        .exportBool('RENDER_ENTITY', true)
+        .compile();
 
     translucentObjectShader("blockentity-translucent", Usage.BLOCK_ENTITY_TRANSLUCENT).compile();
 
@@ -692,6 +702,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
                     .overrideObject('texNormalGB', texNormalGB_opaque.name())
                     .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
+                    .exportBool('Reflect_Rough', options.Lighting_Reflection_Rough)
                     .exportBool('Lighting_GI', options.Lighting_GI_Enabled)
                     .compile();
             }
@@ -713,6 +724,10 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
             if (options.Lighting_GI_Enabled) {
                 withSubList(opaqueStage, 'opaque-deferred-gi', stage_opaque_gi => {
+                    const GI_scale = Math.pow(2, options.Lighting_GI_Resolution);
+                    const GI_width = Math.ceil(screenWidth / GI_scale);
+                    const GI_height = Math.ceil(screenHeight / GI_scale);
+
                     stage_opaque_gi.createComposite("deferred-gi")
                         .location('deferred/gi/gi-trace', "applyGI")
                         .target(0, texGI_flipper.getWriteTexture())
@@ -720,17 +735,23 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         .overrideObject('texNormalGB', texNormalGB_opaque.name())
                         .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                         .exportInt('GI_VoxelStepCount', options.Lighting_GI_VoxelSteps)
+                        .exportInt('GI_ScreenStepCount', options.Lighting_GI_ScreenSteps)
+                        .exportInt('GI_RefineStepCount', options.Lighting_GI_RefineSteps)
                         .exportBool('GI_ScreenTrace', options.Lighting_GI_ScreenTrace)
+                        .exportInt('BufferWidth', GI_width)
+                        .exportInt('BufferHeight', GI_height)
                         .compile();
 
                     for (let i = 0; i < options.Lighting_GI_FilterPasses; i++) {
                         // const tex_src = i == 0 ? 'texGI' : texGI_atrousFlip.getReadTexture();
                         texGI_flipper.flip();
 
-                        stage_opaque_gi.createComposite("deferred-gi-atrous-1")
+                        stage_opaque_gi.createComposite(`deferred-gi-atrous-${i+1}`)
                             .location('deferred/gi/gi-atrous', "atrousFilter")
                             .target(0, texGI_flipper.getWriteTexture())
                             .overrideObject('texSource', texGI_flipper.getReadTexture().name())
+                            .exportInt('BufferWidth', GI_width)
+                            .exportInt('BufferHeight', GI_height)
                             .exportInt('AtrousLevel', i)
                             .compile();
                     }
@@ -742,9 +763,11 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         .target(0, texGI_final)
                         .overrideObject('texSource', texGI_flipper.getReadTexture().name())
                         .exportInt('GI_MaxFrames', options.Lighting_GI_MaxFrames)
+                        .exportInt('BufferWidth', GI_width)
+                        .exportInt('BufferHeight', GI_height)
                         .compile();
 
-                    stage_opaque_gi.copy(texGI_final, texGI_prev, screenWidth, screenHeight);
+                    stage_opaque_gi.copy(texGI_final, texGI_prev, GI_width, GI_height);
                 });
             }
 
@@ -826,6 +849,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .overrideObject('texAlbedoGB', texAlbedoGB_translucent.name())
                     .overrideObject('texNormalGB', texNormalGB_translucent.name())
                     .overrideObject('texMatLightGB', texMatLightGB_translucent.name())
+                    .exportBool('Reflect_Rough', options.Lighting_Reflection_Rough)
                     .exportBool('Lighting_GI', options.Lighting_GI_Enabled)
                     .exportBool('RENDER_TRANSLUCENT', true)
                     .compile();
@@ -988,6 +1012,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .overrideObject("texSource", finalFlipper.getReadTexture().name())
                     .overrideObject("imgFinal", finalFlipper.getWriteTexture().imageName())
                     .overrideObject('texDepth', 'solidDepthTex')
+                    .exportBool('TAA_SharpenHistory', options.Post_TAA_CubicHistory)
                     .compile();
             }
 
@@ -1018,6 +1043,9 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .location("post/debug", "renderDebugOverlay")
                     .target(0, finalFlipper.getWriteTexture())
                     .blendFunc(0, Func.SRC_ALPHA, Func.ONE_MINUS_SRC_ALPHA, Func.ONE, Func.ZERO)
+                    .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
+                    .overrideObject('texNormalGB', texNormalGB_opaque.name())
+                    .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                     .exportInt('DEBUG_MATERIAL', options.Debug_Material)
                     .exportBool('DEBUG_HISTOGRAM', options.Debug_Histogram)
                     .compile();

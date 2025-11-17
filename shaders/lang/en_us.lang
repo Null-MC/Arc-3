@@ -91,6 +91,11 @@ option.LIGHTING.GI.ENABLED=Enabled
 
 option.LIGHTING.GI.SS_TRACE=ScreenSpace Trace
 
+option.LIGHTING.GI.RESOLUTION=Resolution
+value.LIGHTING.GI.RESOLUTION.0=Full
+value.LIGHTING.GI.RESOLUTION.1=Half
+value.LIGHTING.GI.RESOLUTION.2=Quarter
+
 option.LIGHTING.GI.MAXFRAMES=Max Frames
 
 option.LIGHTING.GI.FILTERING=Filter Passes

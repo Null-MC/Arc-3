@@ -14,6 +14,7 @@ import lib.sky.sample_view;
 import lib.sky.sample_light;
 
 extern static const int ReflectMode;
+extern static const bool Reflect_Rough;
 extern static const bool Lighting_GI;
 extern static const bool RENDER_TRANSLUCENT = false;
 
@@ -87,14 +88,14 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         CelestialLight sun;
         sun.localDir = GetAreaLightDir(tex_normal, viewLocalDir, scene[0].SunLocalDir, sun_distanceMm, sun_radiusMm);
         half3 sun_color = scene[0].SunColor * sampleSkyTransmit(surface.skyPos, sun.localDir);
-        sun.color = sun_color * (shadowIsSun ? shadow : half3(1.0));
+        sun.color = sun_color * (shadowIsSun ? shadow : (half)1.0);
 
         SampleCelestial(output.diffuse, output.specular, sun, surface, viewLocalDir, NoVm);
 
         CelestialLight moon;
         moon.localDir = GetAreaLightDir(tex_normal, viewLocalDir, scene[0].MoonLocalDir, moon_distanceKm, moon_radiusKm);
         half3 moon_color = scene[0].MoonColor * sampleSkyTransmit(surface.skyPos, moon.localDir);
-        moon.color = moon_color * (shadowIsSun ? half3(1.0) : shadow);
+        moon.color = moon_color * (shadowIsSun ? (half)1.0 : shadow);
 
         SampleCelestial(output.diffuse, output.specular, moon, surface, viewLocalDir, NoVm);
 
@@ -116,7 +117,8 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         output.diffuse += (half)(0.33/PI) * sssFinal;
 
         if (ReflectMode == Reflect_SkyOnly) {
-            float3 reflectLocalNormal = randomizeNormal(uv, tex_normal, surface.roughL);
+            float3 reflectLocalNormal = tex_normal;
+            if (Reflect_Rough) reflectLocalNormal = randomizeNormal(uv, tex_normal, surface.roughL);
 
             float3 fragViewDir = normalize(viewPos);
             float3 viewNormal = mul(float3x3(ap.camera.view), reflectLocalNormal);

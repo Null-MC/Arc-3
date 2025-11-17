@@ -3,6 +3,11 @@ import lib.common;
 import lib.sampling.depth;
 import lib.sampling.gaussian;
 
+extern static const int BufferWidth;
+extern static const int BufferHeight;
+
+static const float2 BufferSize = float2(BufferWidth, BufferHeight);
+
 static const uint groupResX = 16;
 static const uint groupResY = 16;
 static const int sharedBufferResX = groupResX+4;
@@ -82,7 +87,7 @@ void filterGI(ComputeInput input) {
             float depthL = ap.camera.far;
 
             half3 gi = half3(0.0);
-            if (all(uv >= 0 && uv < ap.game.screenSize)) {
+            if (all(uv >= 0 && uv < BufferSize)) {
                 gi = texGI[uv].rgb;
 
                 float depth = texDepth[uv].r * 2.0 - 1.0;
@@ -97,7 +102,7 @@ void filterGI(ComputeInput input) {
     GroupMemoryBarrierWithGroupSync();
 
     int2 uv = int2(input.globalPos.xy);
-	if (all(uv < ap.game.screenSize)) {
+	if (all(uv < BufferSize)) {
         int2 uv_shared = input.localPos.xy + 2;
         int i_shared = uv_shared.y * sharedBufferResX + uv_shared.x;
     	float depthL = sharedDepth[i_shared];

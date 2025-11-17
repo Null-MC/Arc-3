@@ -3,6 +3,10 @@ import buffers.ObjectData;
 import lib.common;
 
 extern static const int AtrousLevel;
+extern static const int BufferWidth;
+extern static const int BufferHeight;
+
+static const float2 BufferSize = float2(BufferWidth, BufferHeight);
 
 Sampler2D<half3> texSource;
 
@@ -40,7 +44,7 @@ float3 atrous_GetViewPosition(const in float2 texcoord) {
 
 float3 atrous(float2 sampleUV, float c_phi, float n_phi, float p_phi, float stepwidth) {
     float3 sum = 0.0;
-    float2 step = rcp(float2(ap.game.screenSize));
+    float2 step = rcp(BufferSize);
     float3 cval = texSource.Sample(sampleUV);
     float3 nval = atrous_GetTexNormal(sampleUV);
     float3 pval = atrous_GetViewPosition(sampleUV);
@@ -78,12 +82,13 @@ float3 atrous(float2 sampleUV, float c_phi, float n_phi, float p_phi, float step
 
 [[shader("fragment")]]
 half4 atrousFilter(float2 pos : SV_Position) : SV_Target0 {
-    uint2 uv = uint2(pos);
-    float depth = solidDepthTex[uv];
+    // uint2 uv = uint2(pos);
+    float2 texcoord = pos / BufferSize;
+    float depth = solidDepthTex.Sample(texcoord);
     half3 diffuse = half3(0.0);
     
     if (depth < 1.0) {
-        float2 texcoord = pos / ap.game.screenSize;
+        // float2 texcoord = pos / BufferSize;
         // if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
         const float w_color = 0.1;

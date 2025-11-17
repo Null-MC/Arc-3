@@ -18,10 +18,13 @@ import lib.screen_trace;
 import lib.dda;
 
 extern static const int GI_VoxelStepCount;
+extern static const int GI_ScreenStepCount;
+extern static const int GI_RefineStepCount;
 extern static const bool GI_ScreenTrace;
+extern static const int BufferWidth;
+extern static const int BufferHeight;
 
-static const int GI_ScreenStepCount = 12;
-static const int GI_ScreenRefineCount = 4;
+static const float2 BufferSize = float2(BufferWidth, BufferHeight);
 
 StructuredBuffer<VoxelMask> VoxelMaskBuffer;
 
@@ -41,29 +44,32 @@ bool between(const in float value, const in float _min, const in float _max) {
 
 [[shader("fragment")]]
 half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
-    uint2 uv = uint2(pos);
-    float depth = solidDepthTex[uv];
+    // uint2 uv = uint2(pos);
+    float2 texcoord = pos / BufferSize;
+    float depth = solidDepthTex.Sample(texcoord);
     half3 diffuse = half3(0.0);
     
     if (depth < 1.0) {
-        float2 texcoord = pos / ap.game.screenSize;
-        if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
+        // float2 texcoord = pos / BufferSize;
+        float2 project_coord = texcoord;
+        if (TAA_Enabled) project_coord -= scene[0].taa_jitter;
 
-        float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
+        float3 clipPos = float3(project_coord, depth) * 2.0 - 1.0;
         float3 viewPos = project(ap.camera.projectionInv, clipPos);
         float3 localPos = mul3(ap.camera.viewInv, viewPos);
 
+        float viewDist = length(viewPos);
         float3 localDir = normalize(localPos);
-        float3 offsetLocalPos = localPos - localDir*0.02;
+        float3 offsetLocalPos = localPos - 0.02*viewDist*localDir;
 
-        half3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB[uv].g);
+        half3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB.Sample(texcoord).g);
 
         ObjectData_MatLit mat_lit;
-        mat_lit.unpack(texMatLightGB[uv]);
+        mat_lit.unpack(texMatLightGB.Sample(texcoord));
 
         half lmcoord_y = pow2(mat_lit.lmcoord.y);
 
-        float3 trace_localDir = randomNormal(uv, tex_normal);
+        float3 trace_localDir = randomNormal(pos, tex_normal);
         float cos_trace = max(dot(trace_localDir, tex_normal), 0.0);
 
 
@@ -82,15 +88,15 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
             float3 traceViewStart = mul3(ap.camera.view, offsetLocalPos);
             float3 traceClipStart = project(ap.camera.projection, traceViewStart);
-            // float3 screenStart = traceClipStart * 0.5 + 0.5;
+            float3 screenStart = traceClipStart * 0.5 + 0.5;
 
-            // float3 screenEnd = projectScreenTrace(traceViewStart, screenStart, trace_viewDir);
-            // float3 traceClipEnd = screenEnd * 2.0 - 1.0;
+            float3 screenEnd = projectScreenTrace(traceViewStart, screenStart, trace_viewDir);
+            float3 traceClipEnd = screenEnd * 2.0 - 1.0;
 
-            float viewDist = length(localPos);
-            float traceDist = clamp(viewDist * 0.25, 0.0, 16.0);
-            float3 traceViewEnd = traceViewStart + traceDist * trace_viewDir;
-            float3 traceClipEnd = project(ap.camera.projection, traceViewEnd);
+            // float viewDist = length(localPos);
+            // float traceDist = clamp(viewDist * 0.25, 0.0, 16.0);
+            // float3 traceViewEnd = traceViewStart + traceDist * trace_viewDir;
+            // float3 traceClipEnd = project(ap.camera.projection, traceViewEnd);
 
             float3 traceClipPos;
             float3 traceClipPos_prev = traceClipStart;
@@ -123,8 +129,8 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 traceClipStart = traceClipPos_prev;
                 traceClipEnd = traceClipPos;
 
-                for (uint i = 0; i < GI_ScreenRefineCount; i++) {
-                    float f = (i + dither) / GI_ScreenRefineCount;
+                for (uint i = 0; i < GI_RefineStepCount; i++) {
+                    float f = (i + dither) / GI_RefineStepCount;
                     traceClipPos = lerp(traceClipStart, traceClipEnd, f);
                     traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
                     if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
@@ -233,7 +239,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
         if (!hit && !ss_hit) {
             float3 skyPos = getSkyPosition(localPos);
-            sampleColor = sampleSkyView(skyPos, trace_localDir, scene[0].SunLocalDir);
+            sampleColor = sampleSkyView(skyPos, trace_localDir, scene[0].SunLocalDir) / PI;
             cos_sample = lmcoord_y;
         }
 

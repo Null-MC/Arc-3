@@ -10,6 +10,7 @@ import lib.material.parallax;
 import lib.tbn;
 
 extern static const bool Material_SmoothNormals;
+extern static const bool RENDER_ENTITY = false;
 extern static const bool RENDER_TERRAIN = false;
 extern static const bool RENDER_PARTICLES = false;
 extern static const bool RENDER_TEXT = false;

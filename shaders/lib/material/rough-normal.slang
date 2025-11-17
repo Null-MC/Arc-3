@@ -5,8 +5,8 @@ import aperture;
 Sampler2D<float3> texBlueNoise;
 
 
-float3 randomNormal(int2 uv, const in float3 normal) {
-    uv = uv + int2(23, 137) * ap.timing.frameCounter;
+float3 randomNormal(float2 uv, const in float3 normal) {
+    uv = uv + float2(23, 137) * ap.timing.frameCounter;
     float3 random_normal = texBlueNoise[uv % 512];
     random_normal = normalize(random_normal * 2.0 - 1.0);
 

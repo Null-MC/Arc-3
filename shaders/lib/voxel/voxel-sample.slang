@@ -62,32 +62,33 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
         }
     }
 
-    float3 shadowLocalPos = normal * 0.04 + localPos;
-    float3 shadowViewPos = mul3(ap.celestial.view, shadowLocalPos);
-    shadowViewPos.z += 0.008;
-
-    int shadowCascade = GetShadowProjection(shadowViewPos, 0.05);
-
-    half3 shadow = half3(1.0);
-    if (shadowCascade >= 0) {
-        float3 shadowPos = mul3(ap.celestial.projection[shadowCascade], shadowViewPos);
-        shadow = SampleShadowColor(shadowPos * 0.5 + 0.5, shadowCascade);
-    }
-
     half3 diffuse = half3(0.0);
 
     if (World_HasSky) {
+        float3 shadowLocalPos = normal * 0.04 + localPos;
+        float3 shadowViewPos = mul3(ap.celestial.view, shadowLocalPos);
+        shadowViewPos.z += 0.008;
+
+        int shadowCascade = GetShadowProjection(shadowViewPos, 0.05);
+
+        half3 shadow = half3(1.0);
+        if (shadowCascade >= 0) {
+            float3 shadowPos = mul3(ap.celestial.projection[shadowCascade], shadowViewPos);
+            shadow = SampleShadowColor(shadowPos * 0.5 + 0.5, shadowCascade);
+        }
+
         float3 skyPos = getSkyPosition(localPos);
+        bool shadowIsSun = dot(ap.celestial.position, ap.celestial.sunPosition) > 0.0;
 
         // TODO: separate sun/moon shadow
 
         float NoLm_sun = max(dot(normal, scene[0].SunLocalDir), 0.0);
         half3 sunTransmit = sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
-        diffuse += NoLm_sun * shadow * sunTransmit * scene[0].SunColor;
+        diffuse += NoLm_sun * (shadowIsSun ? shadow : (half)1.0) * sunTransmit * scene[0].SunColor;
 
         float NoLm_moon = max(dot(normal, scene[0].MoonLocalDir), 0.0);
         half3 moonTransmit = sampleSkyTransmit(skyPos, scene[0].MoonLocalDir);
-        diffuse += NoLm_moon * shadow * moonTransmit * scene[0].MoonColor;
+        diffuse += NoLm_moon * (shadowIsSun ? (half)1.0 : shadow) * moonTransmit * scene[0].MoonColor;
 
         diffuse /= PI;
 

@@ -34,6 +34,7 @@ export class Options {
 
     get Lighting_GI_Enabled(): boolean {return getBoolSetting('LIGHTING.GI.ENABLED');}
     get Lighting_GI_ScreenTrace(): boolean {return getBoolSetting('LIGHTING.GI.SS_TRACE');}
+    get Lighting_GI_Resolution(): number {return getIntSetting('LIGHTING.GI.RESOLUTION');}
     get Lighting_GI_MaxFrames(): number {return getIntSetting('LIGHTING.GI.MAXFRAMES');}
     get Lighting_GI_FilterPasses(): number {return getIntSetting('LIGHTING.GI.FILTERING');}
     get Lighting_GI_VoxelSteps(): number {return getIntSetting('LIGHTING.GI.VOXEL_STEPS');}
