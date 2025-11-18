@@ -55,8 +55,8 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
         // Shadows
         float viewDist = length(viewPos);
         float geo_NoLm = 1.0 - max(dot(normals.geo, scene[0].SkyLightLocalDir), 0.0);
-        float normal_bias = geo_NoLm * (viewDist * 0.006 + 0.06);
-        float offset_bias = viewDist * 0.002;
+        float normal_bias = geo_NoLm * saturate(viewDist * 0.004);
+        float offset_bias = saturate(viewDist * 0.002);
 
         float3 shadowLocalPos = normals.geo * normal_bias * (1.0 - sss) + localPos;
         float3 shadowViewPos = mul3(ap.celestial.view, shadowLocalPos);

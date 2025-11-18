@@ -16,7 +16,7 @@ struct CelestialLight {
     half3 color;
 };
 
-void SampleCelestial(inout half3 diffuse, inout half3 specular, CelestialLight light, SurfaceData surface, float3 viewDir, half NoVm) {
+void SampleCelestial(inout float3 diffuse, inout float3 specular, CelestialLight light, SurfaceData surface, float3 viewDir, half NoVm) {
     float3 H = normalize(light.localDir + viewDir);
 
     float NoLm = max(dot(surface.normal, light.localDir), 0.0);
@@ -27,9 +27,9 @@ void SampleCelestial(inout half3 diffuse, inout half3 specular, CelestialLight l
     //float3 F_VoH = material_fresnel(albedo, f0_metal, roughL, VoHm);
     half3 F_VoH = F_schlickRough(VoHm, surface.f0, surface.roughL);
 
-    half D = (half)SampleLightDiffuse(NoVm, NoLm, LoHm, surface.roughL);
+    half D = SampleLightDiffuse(NoVm, NoLm, LoHm, surface.roughL);
     diffuse += NoLm * D * light.color * saturate((half)1.0 - F_VoH);
 
-    half3 S = SampleLightSpecular(NoLm, NoHm, NoVm, F_VoH, surface.roughL);
+    float3 S = SampleLightSpecular(NoLm, NoHm, NoVm, F_VoH, surface.roughL);
     specular += NoLm * S * light.color;
 }

@@ -18,9 +18,9 @@ half4 sample_CatmullRom_RGBA(const in Sampler2D<half4> texSampler, const in floa
     float2 w12 = w1 + w2;
     float2 offset12 = w2 / max(w12, 0.001);
 
-    half2 _w0  = half2(saturate( w0));
-    half2 _w12 = half2(saturate(w12));
-    half2 _w3  = half2(saturate( w3));
+    float2 _w0  = saturate( w0);
+    float2 _w12 = saturate(w12);
+    float2 _w3  = saturate( w3);
 
     // Compute the final UV coordinates we'll use for sampling the texture
     float2 pixelSize = rcp(bufferSize);
@@ -29,7 +29,7 @@ half4 sample_CatmullRom_RGBA(const in Sampler2D<half4> texSampler, const in floa
     float2 texPos3  = (texPos1 + 2.0) * pixelSize;
     float2 texPos12 = (texPos1 + offset12) * pixelSize;
 
-    half4 result = half4(0.0);
+    float4 result = 0.0;
 
     result += texSampler.SampleLevel(float2(texPos0.x,  texPos0.y), 0) * (_w0.x * _w0.y);
     result += texSampler.SampleLevel(float2(texPos12.x, texPos0.y), 0) * (_w12.x * _w0.y);
@@ -43,7 +43,7 @@ half4 sample_CatmullRom_RGBA(const in Sampler2D<half4> texSampler, const in floa
     result += texSampler.SampleLevel(float2(texPos12.x, texPos3.y), 0) * (_w12.x * _w3.y);
     result += texSampler.SampleLevel(float2(texPos3.x,  texPos3.y), 0) * (_w3.x * _w3.y);
 
-    return max(result, half4(0.0));
+    return max(half4(result), half4(0.0));
 }
 
 // float sample_CatmullRom(const in sampler2D texSampler, const in vec2 uv, const in vec2 bufferSize) {

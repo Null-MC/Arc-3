@@ -36,9 +36,8 @@ struct FragmentOutput {
 
 [[shader("fragment")]]
 FragmentOutput lightingSky(float2 pos : SV_Position) {
-    FragmentOutput output;
-    output.diffuse = half3(0.0);
-    output.specular = half3(0.0);
+    float3 diffuse = 0.0;
+    float3 specular = 0.0;
     
     uint2 uv = uint2(pos);
     float depth = texDepth[uv];
@@ -86,38 +85,40 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         half3 shadow = RgbToLinear(texShadowFinal[uv]);
         bool shadowIsSun = dot(ap.celestial.position, ap.celestial.sunPosition) > 0.0;
 
-        half3 sun_color = scene[0].SunColor * sampleSkyTransmit(surface.skyPos, scene[0].SunLocalDir);
+        float3 sun_color = scene[0].SunColor * sampleSkyTransmit(surface.skyPos, scene[0].SunLocalDir);
         sun_color *= atmosAbsorb(surface.skyPos, scene[0].SunLocalDir);
         
-        half3 moon_color = scene[0].MoonColor * sampleSkyTransmit(surface.skyPos, scene[0].MoonLocalDir);
+        float3 moon_color = scene[0].MoonColor * sampleSkyTransmit(surface.skyPos, scene[0].MoonLocalDir);
         moon_color *= atmosAbsorb(surface.skyPos, scene[0].MoonLocalDir);
         
         CelestialLight sun;
-        sun.localDir = GetAreaLightDir(tex_normal, viewLocalDir, scene[0].SunLocalDir, sun_distanceMm, sun_radiusMm);
+        // sun.localDir = GetAreaLightDir(tex_normal, viewLocalDir, scene[0].SunLocalDir, sun_distanceMm, sun_radiusMm);
+        sun.localDir = scene[0].SunLocalDir;
         sun.color = sun_color * (shadowIsSun ? shadow : (half)0.0);
-        SampleCelestial(output.diffuse, output.specular, sun, surface, viewLocalDir, NoVm);
+        SampleCelestial(diffuse, specular, sun, surface, viewLocalDir, NoVm);
 
         CelestialLight moon;
-        moon.localDir = GetAreaLightDir(tex_normal, viewLocalDir, scene[0].MoonLocalDir, moon_distanceKm, moon_radiusKm);
+        // moon.localDir = GetAreaLightDir(tex_normal, viewLocalDir, scene[0].MoonLocalDir, moon_distanceKm, moon_radiusKm);
+        moon.localDir = scene[0].MoonLocalDir;
         moon.color = moon_color * (shadowIsSun ? (half)0.0 : shadow);
-        SampleCelestial(output.diffuse, output.specular, moon, surface, viewLocalDir, NoVm);
+        SampleCelestial(diffuse, specular, moon, surface, viewLocalDir, NoVm);
 
         // DEBUG
         // imgDebug[uv] = half4(texSssFinal[uv], (half)1.0);
 
-        output.diffuse /= PI;
+        diffuse /= PI;
 
         if (!Lighting_GI || RENDER_TRANSLUCENT) {
             half3 sky_ambient = sampleSkyIrradiance(tex_normal);
-            output.diffuse += sky_ambient * lmcoord_y * mat_lit.occlusion;
+            diffuse += sky_ambient * lmcoord_y * mat_lit.occlusion;
         }
 
-        output.diffuse *= (half)1.0 - (half)0.66*sss;
+        diffuse *= 1.0 - 0.66*sss;
 
         half3 sss_sky = RgbToLinear(texSssFinal[uv]);
         half3 sss_ambient = sampleSkyIrradiance(-tex_normal) * lmcoord_y;
         half3 sssFinal = sss_sky * (sun_color + moon_color) + sss_ambient * sss;
-        output.diffuse += (half)(0.33/PI) * sssFinal;
+        diffuse += (0.33/PI) * sssFinal;
 
         if (ReflectMode == Reflect_SkyOnly) {
             float3 reflectLocalNormal = tex_normal;
@@ -131,10 +132,13 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
 
             half3 skyColor = sampleSkyView(surface.skyPos, reflectLocalDir, scene[0].SunLocalDir);
             half3 F_NoV = F_schlickRough(NoVm, surface.f0, surface.roughL);
-            output.specular += F_NoV * skyColor * (((half)1.0 - surface.roughL) * lmcoord_y);
-            output.diffuse *= half3(1.0) - F_NoV;
+            specular += F_NoV * skyColor * (((half)1.0 - surface.roughL) * lmcoord_y);
+            diffuse *= 1.0 - F_NoV;
         }
     }
 
+    FragmentOutput output;
+    output.diffuse = half3(diffuse);
+    output.specular = half3(specular);
     return output;
 }
