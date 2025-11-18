@@ -3,13 +3,15 @@ import lib.common;
 import lib.sky.common;
 import lib.sky.scattering;
 
+extern static const int BufferWidth;
+extern static const int BufferHeight;
 
 static const int sunTransmittanceSteps = 40;
 
 
 [[shader("fragment")]]
 float3 bakeSkyTransmission(float2 pos : SV_Position) : SV_Target0 {
-    float2 uv = pos / skyTransmitDimensions;
+    float2 uv = pos / float2(BufferWidth, BufferHeight);
 
     float sunCosTheta = 2.0*uv.x - 1.0;
     sunCosTheta = pow3(sunCosTheta);// * sign(sunCosTheta);

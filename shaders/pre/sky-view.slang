@@ -4,6 +4,9 @@ import lib.sky.scattering;
 import lib.sky.sample_transmit;
 import lib.sky.sample_multiscatter;
 
+extern static const int BufferWidth;
+extern static const int BufferHeight;
+
 static const int numScatteringSteps = 32;
 
 
@@ -62,7 +65,7 @@ float3 raymarchScattering(float3 pos, float3 rayDir, float3 sunDir, float tMax, 
 
 [[shader("fragment")]]
 float3 bakeSkyView(float2 pos : SV_Position) : SV_Target0 {
-    float2 uv = pos / skyViewDimensions;
+    float2 uv = pos / float2(BufferWidth, BufferHeight);
 
     float azimuthAngle = (uv.x - 0.5) * 2.0*PI;
 

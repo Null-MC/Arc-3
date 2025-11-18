@@ -205,8 +205,8 @@ half2 SSS_PCF(const in float3 shadowPos, const in int cascade, const in float2 p
         float r = sqrt((i + 0.5) / Shadow_SssPcfSamples);
         float theta = i * GoldenAngle + PHI;
 
-        float sample_dither = sss * hash13(float3(seed_pos * 999.0, i, ap.timing.frameCounter));
-        float sample_bias = bias_scale * pow3(sample_dither);
+        float sample_dither = hash13(float3(seed_pos * 999.0, i, ap.timing.frameCounter));
+        float sample_bias = bias_scale * sss * pow5(sample_dither);
         
         float2 pcfDiskOffset = r * float2(cos(theta), sin(theta));
         float2 pixelOffset = mul(rotation, pcfDiskOffset) * pixelRadius;

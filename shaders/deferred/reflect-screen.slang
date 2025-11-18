@@ -14,6 +14,11 @@ import lib.dda;
 extern static const bool Reflect_Rough;
 extern static const int Reflect_ScreenSteps;
 extern static const int Reflect_RefineSteps;
+extern static const int BufferWidth;
+extern static const int BufferHeight;
+extern static const int BufferScale;
+
+static const int2 BufferSize = int2(BufferWidth, BufferHeight);
 
 Sampler2D<float> solidDepthTex;
 Sampler2D<half3> texSource;
@@ -25,25 +30,25 @@ Sampler2D<uint2> texMatLightGB;
 
 [[shader("fragment")]]
 half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
-    uint2 uv = uint2(pos);
-    float depth = solidDepthTex[uv];
-    half3 finalColor = texSource[uv];
+    uint2 uv_full = uint2(pos) * BufferScale;
+    float depth = solidDepthTex[uv_full];
+    half3 finalColor = half3(0.0);
     
     if (depth < 1.0) {
-        float2 texcoord = pos / ap.game.screenSize;
-        if (TAA_Enabled) texcoord += scene[0].taa_jitter;
+        float2 texcoord = (uv_full + 0.5) / ap.game.screenSize;
+        if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
         float3 screenPos = float3(texcoord, depth);
         float3 clipPos = screenPos * 2.0 - 1.0;
         float3 viewPos = project(ap.camera.projectionInv, clipPos);
         float3 localPos = mul3(ap.camera.viewInv, viewPos);
 
-        half4 colorData = texAlbedoGB[uv];
+        half4 colorData = texAlbedoGB[uv_full];
 
-        half3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB[uv].g);
+        half3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB[uv_full].g);
 
         ObjectData_MatLit mat_lit;
-        mat_lit.unpack(texMatLightGB[uv]);
+        mat_lit.unpack(texMatLightGB[uv_full]);
 
         half3 albedo = RgbToLinear(colorData.rgb);
         half roughness = mat_roughness(mat_lit.specular.r);
@@ -57,7 +62,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         // get reflection direction
         float3 reflectNormal = Reflect_Rough
-            ? randomizeNormal(uv, tex_normal, roughL)
+            ? randomizeNormal(int2(pos), tex_normal, roughL)
             : tex_normal;
         
         float viewDist = length(viewPos);
@@ -134,7 +139,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         // imgDebug[uv] = float4(LinearToRgb(reflectColor * 0.008), 1.0);
 
-        finalColor += F_NoV * ((half)1.0 - roughL) * reflectColor * specular_tint;
+        finalColor = F_NoV * ((half)1.0 - roughL) * reflectColor * specular_tint;
     }
 
     return half4(finalColor, (half)1.0);

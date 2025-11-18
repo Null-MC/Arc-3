@@ -5,6 +5,7 @@ import lib.common;
 extern static const int AtrousLevel;
 extern static const int BufferWidth;
 extern static const int BufferHeight;
+extern static const int BufferScale;
 
 static const float2 BufferSize = float2(BufferWidth, BufferHeight);
 
@@ -30,14 +31,16 @@ static const float2 atrousOffsets[25] = float2[25](
 );
 
 float3 atrous_GetTexNormal(const in float2 texcoord) {
-    half3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB_opaque.Sample(texcoord).g);
+    uint2 uv = uint2(texcoord * ap.game.screenSize / BufferScale);
+    half3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB_opaque[uv].g);
     // return mul(float3x3(ap.camera.view), tex_normal);
     return tex_normal;
 }
 
 float3 atrous_GetViewPosition(const in float2 texcoord) {
-    float depth = solidDepthTex.Sample(texcoord);
-    float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
+    uint2 uv = uint2(texcoord * ap.game.screenSize / BufferScale);
+    float depth = solidDepthTex[uv];
+    float3 clipPos = float3(uv * BufferScale / float2(ap.game.screenSize), depth) * 2.0 - 1.0;
     return project(ap.camera.projectionInv, clipPos);
     // return screenSpaceToViewSpace(vec3(uv, depth));
 }
@@ -64,7 +67,7 @@ float3 atrous(float2 sampleUV, float c_phi, float n_phi, float p_phi, float step
         t = nval - ntmp;
         // dist2 = max(dot(t,t)/(stepwidth*stepwidth),0.0);
         dist2 = max(dot(t,t),0.0);
-        float n_w = min(exp(-(dist2)/n_phi), 1.0);
+        float n_w = 1.0;//min(exp(-(dist2)/n_phi), 1.0);
 
         float3 ptmp = atrous_GetViewPosition(uv);
         t = pval - ptmp;
@@ -82,9 +85,8 @@ float3 atrous(float2 sampleUV, float c_phi, float n_phi, float p_phi, float step
 
 [[shader("fragment")]]
 half4 atrousFilter(float2 pos : SV_Position) : SV_Target0 {
-    // uint2 uv = uint2(pos);
-    float2 texcoord = pos / BufferSize;
-    float depth = solidDepthTex.Sample(texcoord);
+    uint2 uv_full = uint2(pos) * BufferScale;
+    float depth = solidDepthTex[uv_full];
     half3 diffuse = half3(0.0);
     
     if (depth < 1.0) {
@@ -96,6 +98,8 @@ half4 atrousFilter(float2 pos : SV_Position) : SV_Target0 {
         const float w_pos = 0.3;
         const float step_width = exp2(AtrousLevel);
 
+        float2 texcoord = pos / BufferSize;
+        // float2 texcoord = (uv_full * BufferScale + 0.5) / float2(ap.game.screenSize);
         diffuse = atrous(texcoord, w_color, w_normal, w_pos, step_width);
     }
 

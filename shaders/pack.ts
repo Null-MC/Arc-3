@@ -106,7 +106,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         pipeline.createBuffer('VoxelMaskBuffer', cubed(256), false);
         pipeline.createBuffer('voxelTexBuffer', 8*cubed(256), true);
     }
-
+    
     const texFinalA = pipeline.createImageTexture("texFinalA", "imgFinalA")
         .width(screenWidth)
         .height(screenHeight)
@@ -224,39 +224,6 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .clearColor(1, 1, 1, 1)
         .build();
 
-    // let texAlbedoGB_water: BuiltTexture | undefined;
-    // let texNormalGB_water: BuiltTexture | undefined;
-    // let texMatLightGB_water: BuiltTexture | undefined;
-    // if (options.Lighting_Refraction_Mode != Refract_WorldSpace) {
-    //     texAlbedoGB_water = pipeline.createImageTexture('texAlbedoGB_water', 'imgAlbedoGB_water')
-    //         .width(screenWidth)
-    //         .height(screenHeight)
-    //         .format(Format.RGBA8)
-    //         .clearColor(0, 0, 0, 0)
-    //         .build();
-
-    //     texNormalGB_water = pipeline.createImageTexture('texNormalGB_water', 'imgNormalGB_water')
-    //         .width(screenWidth)
-    //         .height(screenHeight)
-    //         .format(Format.RG32UI)
-    //         .clearColor(0, 0, 0, 0)
-    //         .build();
-
-    //     texMatLightGB_water = pipeline.createImageTexture('texMatLightGB_water', 'imgMatLightGB_water')
-    //         .width(screenWidth)
-    //         .height(screenHeight)
-    //         .format(Format.RG32UI)
-    //         .clearColor(0, 0, 0, 0)
-    //         .build();
-
-    //     pipeline.createImageTexture('texDepth_water', 'imgDepth_water')
-    //         .width(screenWidth)
-    //         .height(screenHeight)
-    //         .format(Format.R32UI)
-    //         // .clearColor(0, 0, 0, 0)
-    //         .build();
-    // }
-
     let texShadowColor: BuiltTexture | undefined;
     let texSkyTransmit: BuiltTexture | undefined;
     let texSkyMultiScatter: BuiltTexture | undefined;
@@ -355,26 +322,33 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .clearColor(0, 0, 0, 0)
         .build();
 
+    const Tracing_scale = Math.pow(2, options.Lighting_Resolution);
+    const Tracing_width = Math.ceil(screenWidth / Tracing_scale);
+    const Tracing_height = Math.ceil(screenHeight / Tracing_scale);
+
+    const texReflect = pipeline.createTexture('texReflect')
+        .width(Tracing_width)
+        .height(Tracing_height)
+        .format(Format.RGBA16F)
+        .clearColor(0, 0, 0, 0)
+        .build();
+
     let texGI1: BuiltTexture | undefined;
     let texGI2: BuiltTexture | undefined;
     let texGI_flipper: BufferFlipper | undefined;
     let texGI_prev: BuiltTexture | undefined;
     let texGI_final: BuiltTexture | undefined;
     if (options.Lighting_GI_Enabled) {
-        const GI_scale = Math.pow(2, options.Lighting_GI_Resolution);
-        const GI_width = Math.ceil(screenWidth / GI_scale);
-        const GI_height = Math.ceil(screenHeight / GI_scale);
-
         texGI1 = pipeline.createTexture('texGI1')
-            .width(GI_width)
-            .height(GI_height)
+            .width(Tracing_width)
+            .height(Tracing_height)
             .format(Format.RGBA16F)
             .clearColor(0, 0, 0, 0)
             .build();
 
         texGI2 = pipeline.createTexture('texGI2')
-            .width(GI_width)
-            .height(GI_height)
+            .width(Tracing_width)
+            .height(Tracing_height)
             .format(Format.RGBA16F)
             .clear(false)
             .build();
@@ -382,15 +356,15 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         texGI_flipper = new BufferFlipper(texGI1, texGI2);
 
         texGI_final = pipeline.createTexture('texGI_final')
-            .width(GI_width)
-            .height(GI_height)
+            .width(screenWidth)
+            .height(screenHeight)
             .format(Format.RGBA16F)
             .clear(false)
             .build();
 
         texGI_prev = pipeline.createTexture('texGI_prev')
-            .width(GI_width)
-            .height(GI_height)
+            .width(screenWidth)
+            .height(screenHeight)
             .format(Format.RGBA16F)
             .clear(false)
             .build();
@@ -437,6 +411,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             setupStage.createComposite('sky-transmit')
                 .location('setup/sky-transmit', 'bakeSkyTransmission')
                 .target(0, texSkyTransmit)
+                .exportInt('BufferWidth', texSkyTransmit.width())
+                .exportInt('BufferHeight', texSkyTransmit.height())
                 .compile();
 
             setupStage.createComposite('sky-multi-scatter')
@@ -476,12 +452,16 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             beginStage.createComposite('sky-view')
                 .location('pre/sky-view', 'bakeSkyView')
                 .target(0, texSkyView)
+                .exportInt('BufferWidth', texSkyView.width())
+                .exportInt('BufferHeight', texSkyView.height())
                 .compile();
 
             beginStage.createComposite('sky-irradiance')
                 .location('pre/sky-irradiance', 'bakeSkyIrradiance')
                 .target(0, texSkyIrradiance)
                 .blendFunc(0, Func.SRC_ALPHA, Func.ONE_MINUS_SRC_ALPHA, Func.ONE, Func.ZERO)
+                .exportInt('BufferWidth', texSkyIrradiance.width())
+                .exportInt('BufferHeight', texSkyIrradiance.height())
                 .compile();
         }
 
@@ -712,22 +692,21 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .location("deferred/lighting-block-point", "applyPointLights")
                     .workGroups(
                         Math.ceil(screenWidth / 16.0),
-                        Math.ceil(screenHeight / 16.0),
+                        Math.ceil(Tracing_height / 16.0),
                         1)
                     .overrideObject('texDepth', 'solidDepthTex')
                     .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
                     .overrideObject('texNormalGB', texNormalGB_opaque.name())
                     .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                     .exportBool('DEBUG_LIGHT_TILES', DEBUG_LIGHT_TILES)
+                    .exportInt('BufferWidth', screenWidth)
+                    .exportInt('BufferHeight', Tracing_height)
+                    .exportInt('BufferScale', Tracing_scale)
                     .compile();
             }
 
             if (options.Lighting_GI_Enabled) {
                 withSubList(opaqueStage, 'opaque-deferred-gi', stage_opaque_gi => {
-                    const GI_scale = Math.pow(2, options.Lighting_GI_Resolution);
-                    const GI_width = Math.ceil(screenWidth / GI_scale);
-                    const GI_height = Math.ceil(screenHeight / GI_scale);
-
                     stage_opaque_gi.createComposite("deferred-gi")
                         .location('deferred/gi/gi-trace', "applyGI")
                         .target(0, texGI_flipper.getWriteTexture())
@@ -739,8 +718,9 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         .exportInt('GI_RefineStepCount', options.Lighting_GI_RefineSteps)
                         .exportBool('GI_ScreenTrace', options.Lighting_GI_ScreenTrace)
                         .exportInt('GI_SampleCount', options.Lighting_GI_Samples)
-                        .exportInt('BufferWidth', GI_width)
-                        .exportInt('BufferHeight', GI_height)
+                        .exportInt('BufferWidth', Tracing_width)
+                        .exportInt('BufferHeight', Tracing_height)
+                        .exportInt('BufferScale', Tracing_scale)
                         .compile();
 
                     for (let i = 0; i < options.Lighting_GI_FilterPasses; i++) {
@@ -751,8 +731,9 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                             .location('deferred/gi/gi-atrous', "atrousFilter")
                             .target(0, texGI_flipper.getWriteTexture())
                             .overrideObject('texSource', texGI_flipper.getReadTexture().name())
-                            .exportInt('BufferWidth', GI_width)
-                            .exportInt('BufferHeight', GI_height)
+                            .exportInt('BufferWidth', Tracing_width)
+                            .exportInt('BufferHeight', Tracing_height)
+                            .exportInt('BufferScale', Tracing_scale)
                             .exportInt('AtrousLevel', i)
                             .compile();
                     }
@@ -764,11 +745,12 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         .target(0, texGI_final)
                         .overrideObject('texSource', texGI_flipper.getReadTexture().name())
                         .exportInt('GI_MaxFrames', options.Lighting_GI_MaxFrames)
-                        .exportInt('BufferWidth', GI_width)
-                        .exportInt('BufferHeight', GI_height)
+                        .exportInt('BufferWidth', Tracing_width)
+                        .exportInt('BufferHeight', Tracing_height)
+                        .exportInt('BufferScale', Tracing_scale)
                         .compile();
 
-                    stage_opaque_gi.copy(texGI_final, texGI_prev, GI_width, GI_height);
+                    stage_opaque_gi.copy(texGI_final, texGI_prev, screenWidth, screenHeight);
                 });
             }
 
@@ -791,7 +773,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
                 opaqueStage.createComposite("opaque-reflections")
                     .location(location, "applyReflections")
-                    .target(0, finalFlipper.getWriteTexture())
+                    .target(0, texReflect)
                     .overrideObject('texSource', finalFlipper.getReadTexture().name())
                     .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
                     .overrideObject('texNormalGB', texNormalGB_opaque.name())
@@ -801,6 +783,19 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .exportInt('Reflect_VoxelSteps', options.Lighting_Reflection_VoxelSteps)
                     .exportInt('Reflect_ScreenSteps', options.Lighting_Reflection_ScreenSteps)
                     .exportInt('Reflect_RefineSteps', options.Lighting_Reflection_RefineSteps)
+                    .exportInt('BufferWidth', Tracing_width)
+                    .exportInt('BufferHeight', Tracing_height)
+                    .exportInt('BufferScale', Tracing_scale)
+                    .compile();
+                
+                // TODO: accumulate and upscale
+                opaqueStage.createComposite('opaque-reflection-overlay')
+                    .location('deferred/reflect_overlay', 'overlayReflections')
+                    .target(0, finalFlipper.getWriteTexture())
+                    .overrideObject('texSource', finalFlipper.getReadTexture().name())
+                    .exportInt('BufferWidth', Tracing_width)
+                    .exportInt('BufferHeight', Tracing_height)
+                    .exportInt('BufferScale', Tracing_scale)
                     .compile();
             }
         });
@@ -881,13 +876,13 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 .compile();
         });
 
-        withSubList(postRenderStage, 'translucent-composite', translucentStage => {
+        withSubList(postRenderStage, 'translucent-composite', compositeStage => {
             finalFlipper.flip();
 
             let location = options.Lighting_Refraction_Mode == RefractMode.WorldSpace
                 ? "composite/overlay_voxel" : "composite/overlay_screen";
             
-            translucentStage.createComposite("composite-overlays")
+            compositeStage.createComposite("composite-overlays")
                 .location(location, "applyOverlays")
                 .target(0, finalFlipper.getWriteTexture())
                 .overrideObject('texFinal_opaque', finalFlipper.getReadTexture().name())
@@ -904,15 +899,28 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 let location = options.Lighting_Reflection_Mode == ReflectMode.WorldSpace
                     ? "composite/reflect_voxel" : "composite/reflect_screen";
 
-                translucentStage.createComposite("translucent-reflections")
+                compositeStage.createComposite("translucent-reflections")
                     .location(location, "applyReflections")
-                    .target(0, finalFlipper.getWriteTexture())
+                    .target(0, texReflect)
                     .overrideObject('texSource', finalFlipper.getReadTexture().name())
                     .exportBool('Reflect_SS_Fallback', options.Lighting_Reflection_ScreenSpaceFallback)
                     .exportBool('Reflect_Rough', options.Lighting_Reflection_Rough)
                     .exportInt('Reflect_VoxelSteps', options.Lighting_Reflection_VoxelSteps)
                     .exportInt('Reflect_ScreenSteps', options.Lighting_Reflection_ScreenSteps)
                     .exportInt('Reflect_RefineSteps', options.Lighting_Reflection_RefineSteps)
+                    .exportInt('BufferWidth', Tracing_width)
+                    .exportInt('BufferHeight', Tracing_height)
+                    .exportInt('BufferScale', Tracing_scale)
+                    .compile();
+                
+                // TODO: accumulate and upscale
+                compositeStage.createComposite('translucent-reflection-overlay')
+                    .location('composite/reflect_overlay', 'overlayReflections')
+                    .target(0, finalFlipper.getWriteTexture())
+                    .overrideObject('texSource', finalFlipper.getReadTexture().name())
+                    .exportInt('BufferWidth', Tracing_width)
+                    .exportInt('BufferHeight', Tracing_height)
+                    .exportInt('BufferScale', Tracing_scale)
                     .compile();
             }
         });

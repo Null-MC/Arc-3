@@ -122,7 +122,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
 
         if (ReflectMode == Reflect_SkyOnly) {
             float3 reflectLocalNormal = tex_normal;
-            if (Reflect_Rough) reflectLocalNormal = randomizeNormal(uv, tex_normal, surface.roughL);
+            if (Reflect_Rough) reflectLocalNormal = randomizeNormal(uint2(pos), tex_normal, surface.roughL);
 
             float3 fragViewDir = normalize(viewPos);
             float3 viewNormal = mul(float3x3(ap.camera.view), reflectLocalNormal);

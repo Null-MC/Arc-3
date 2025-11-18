@@ -21,6 +21,7 @@ FragmentOutput reprojectScene(float2 pos : SV_Position) {
 
     float2 texcoord = pos / ap.game.screenSize;
     if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
+    // if (TAA_Enabled) texcoord.xy += scene[0].taa_jitter_prev;
 
     float3 screenPos = float3(texcoord, depth);
     float3 clipPos = screenPos * 2.0 - 1.0;

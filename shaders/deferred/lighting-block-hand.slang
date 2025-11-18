@@ -27,9 +27,8 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
     half4 colorData = texAlbedoGB[uv];
     float depth = texDepth[uv];
 
-    FragmentOutput output;
-    output.diffuse = half3(0.0);
-    output.specular = half3(0.0);
+    float3 diffuse = 0.0;
+    float3 specular = 0.0;
 
     if (depth < 1.0 && colorData.a > 0.0) {
         ObjectData_Normals normals;
@@ -60,12 +59,12 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
             lpvPos += normals.tex * 0.75;
             
             if (FloodFill_InBounds(lpvPos)) {
-                output.diffuse += floodfill_sample(lpvPos) * BLOCK_LUX;
+                diffuse += floodfill_sample(lpvPos) * BLOCK_LUX * (1.0/4.0);
                 lmcoord_x = (half)0.0;
             }
         }
 
-        output.diffuse += lmcoord_x * BLOCK_LUX * BlockLightColor;
+        diffuse += pow2(lmcoord_x) * BLOCK_LUX * BlockLightColor;
 
         // Hand Lights
         float3 handSampleLocalPos = normals.geo*0.02 + localPos;
@@ -81,16 +80,19 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
 
         if (ap.game.mainHand != 0u) {
             float3 lightLocalPos = GetHandLightPos(HandLightOffset_main);
-            GetHandLight(output.diffuse, output.specular, ap.game.mainHand, lightLocalPos, handSampleLocalPos, viewDir, normals.tex, normals.geo, f0, roughL);
+            GetHandLight(diffuse, specular, ap.game.mainHand, lightLocalPos, handSampleLocalPos, viewDir, normals.tex, normals.geo, f0, roughL);
         }
 
         if (ap.game.offHand != 0u) {
             float3 lightLocalPos = GetHandLightPos(HandLightOffset_alt);
-            GetHandLight(output.diffuse, output.specular, ap.game.offHand, lightLocalPos, handSampleLocalPos, viewDir, normals.tex, normals.geo, f0, roughL);
+            GetHandLight(diffuse, specular, ap.game.offHand, lightLocalPos, handSampleLocalPos, viewDir, normals.tex, normals.geo, f0, roughL);
         }
 
-        output.diffuse /= half3(PI);
+        diffuse /= half3(PI);
     }
 
+    FragmentOutput output;
+    output.diffuse = half3(diffuse);
+    output.specular = half3(specular);
     return output;
 }

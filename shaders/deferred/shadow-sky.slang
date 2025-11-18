@@ -46,14 +46,14 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
 
         float dither;
         if (TAA_Enabled) {
-            dither = InterleavedGradientNoiseTime(uv);
+            dither = InterleavedGradientNoiseTime(uint2(pos));
         }
         else {
-            dither = InterleavedGradientNoise(uv);
+            dither = InterleavedGradientNoise(uint2(pos));
         }
 
         // Shadows
-        float viewDist = length(viewPos);
+        float viewDist = length(viewPos) + 1.0;
         float geo_NoLm = 1.0 - max(dot(normals.geo, scene[0].SkyLightLocalDir), 0.0);
         float normal_bias = geo_NoLm * saturate(viewDist * 0.004);
         float offset_bias = saturate(viewDist * 0.002);
@@ -87,11 +87,11 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
             float2 coverage_dist = SSS_PCF(shadowPos, cascade, pixelRadius, bias_scale, sss, dither);
 
             float absorb_depth = 1.0 * (coverage_dist.y / cascadeScale.z) + 0.1;
-            half3 sss_color = normalize(RgbToLinear(1.0 - colorData.rgb) + 0.02);
-            half3 lit = coverage_dist.x * exp(-(absorb_depth * sss_color + EPSILON));
+            float3 sss_color = normalize(RgbToLinear(1.0 - colorData.rgb) + 0.02);
+            float3 lit = coverage_dist.x * exp(-(absorb_depth * sss_color + EPSILON));
 
             // half tex_NoLm = max((half)dot(normals.tex, scene[0].SkyLightLocalDir), (half)0.0);
-            output.sss.rgb = LinearToRgb(sss * lit);
+            output.sss.rgb = (half3)LinearToRgb(sss * lit);
         }
     }
 

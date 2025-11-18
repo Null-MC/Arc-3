@@ -4,26 +4,17 @@ import aperture;
 import lib.common;
 import lib.hg;
 
-
-static const uint2 skyTransmitDimensions = uint2(128, 64);
-static const uint2 skyViewDimensions = 256;
-static const uint2 skyIrradianceDimensions = 32;
-
 // Units are in megameters.
 static const float groundRadiusMM = 6.371;
 static const float atmosphereRadiusMM = 0.100 + groundRadiusMM;
 // static const float earthRadiusKm = 6371.0;
 
-static const float3 groundAlbedo = 0.3;
+static const float3 groundAlbedo = 0.65;
 
-static const float SUN_LUMINANCE = 2000.0;//1.6e6;//1.6e9;
+static const float SUN_LUMINANCE = 2000.0;
 static const float MOON_LUMINANCE = 2.2;
 
 static const float Sky_MinLight = 0.08;
-
-// static const float GoldenAngle = PI * (3.0 - sqrt(5.0));
-// static const float PHI = (1.0 + sqrt(5.0)) / 2.0;
-
 
 
 float safeacos(const in float x) {

@@ -78,14 +78,21 @@ void applyPointLights(ComputeInput input) {
 
     GroupMemoryBarrierWithGroupSync();
 
-    float depth = texDepth[input.globalPos.xy];
-    half4 colorData = texAlbedoGB[input.globalPos.xy];
+    uint2 uv = input.globalPos.xy;
+    bool on_screen = all(uv < ap.game.screenSize);
+    half4 colorData;
+    float depth;
 
-    if (depth < 1.0 && colorData.a > 0.0) {
-        float depthL = linearizeDepth(depth * 2.0 - 1.0, ap.camera.near, ap.camera.far);
-        float depthInt = depthL / ap.camera.far * uint.maxValue;
-        depthMinInt.min(uint(floor(depthInt)));
-        depthMaxInt.max(uint(ceil(depthInt)));
+    if (on_screen) {
+        depth = texDepth[uv];
+        colorData = texAlbedoGB[uv];
+
+        if (depth < 1.0 && colorData.a > 0.0) {
+            float depthL = linearizeDepth(depth * 2.0 - 1.0, ap.camera.near, ap.camera.far);
+            float depthInt = depthL / ap.camera.far * uint.maxValue;
+            depthMinInt.min(uint(floor(depthInt)));
+            depthMaxInt.max(uint(ceil(depthInt)));
+        }
     }
 
     GroupMemoryBarrierWithGroupSync();
@@ -135,19 +142,21 @@ void applyPointLights(ComputeInput input) {
 
     GroupMemoryBarrierWithGroupSync();
 
+    if (!on_screen) return;
+
     half3 src_diffuse = imgDiffuse[input.globalPos.xy].rgb;
     half3 src_specular = imgSpecular[input.globalPos.xy].rgb;
     uint total = counter.load();
 
-    half3 diffuse = half3(0.0);
-    half3 specular = half3(0.0);
+    float3 diffuse = 0.0;
+    float3 specular = 0.0;
 
     if (depth < 1.0 && colorData.a > 0.0 && total > 0) {
         ObjectData_Normals normals;
-        normals.unpack(texNormalGB[input.globalPos.xy]);
+        normals.unpack(texNormalGB[uv]);
 
         ObjectData_MatLit mat_lit;
-        mat_lit.unpackSpecular(texMatLightGB[input.globalPos.xy].r);
+        mat_lit.unpackSpecular(texMatLightGB[uv].r);
 
         float2 texcoord = (input.globalPos.xy + 0.5) / float2(ap.game.screenSize);
         if (TAA_Enabled) texcoord -= scene[0].taa_jitter;

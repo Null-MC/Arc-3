@@ -39,6 +39,11 @@ option.MATERIAL_PARALLAX_OPTIMIZE.comment=Attempts to increase quality by focusi
 
 screen.LIGHTING=Lighting
 
+option.LIGHTING.RESOLUTION=Resolution
+value.LIGHTING.RESOLUTION.0=Full
+value.LIGHTING.RESOLUTION.1=Half
+value.LIGHTING.RESOLUTION.2=Quarter
+
 option.LIGHTING_COLOR_CANDLES=Colored Candles
 
 

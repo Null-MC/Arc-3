@@ -27,6 +27,7 @@ extern static const int GI_RefineStepCount;
 extern static const bool GI_ScreenTrace;
 extern static const int BufferWidth;
 extern static const int BufferHeight;
+extern static const int BufferScale;
 
 static const float2 BufferSize = float2(BufferWidth, BufferHeight);
 
@@ -41,8 +42,8 @@ Sampler2D<uint2> texMatLightGB;
 
 
 bool between(const in float value, const in float _min, const in float _max) {
-    if (_max >= _min) return value > _min && value < _max;
-    else return value > _max && value < _min;
+    if (_max >= _min) return value > _min && value <= _max;
+    else return value >= _max && value < _min;
 }
 
 float3 sample_cosine_weighted_hemisphere(const in float2 rand, out float pdf) {
@@ -60,7 +61,7 @@ float3 sample_cosine_weighted_hemisphere(const in float2 rand, out float pdf) {
     dir.y = r * sin(phi);
     dir.z = sqrt(max(1.0 - dot(dir.xy, dir.xy), 0.0));
     
-    pdf = dir.z / PI;
+    pdf = dir.z;// / PI;
 
     return dir;
 }
@@ -82,17 +83,16 @@ float3 transform_to_world(const in float3 normal, const in float3 local_dir) {
 
 [[shader("fragment")]]
 half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
-    // uint2 uv = uint2(pos);
-    float2 texcoord = pos / BufferSize;
-    float depth = solidDepthTex.Sample(texcoord);
-    half3 diffuse = half3(0.0);
+    uint2 uv_full = uint2(pos) * BufferScale;
+    // float2 texcoord = pos / BufferSize;
+    float depth = solidDepthTex[uv_full];
+    float3 diffuse = 0.0;
     
     if (depth < 1.0) {
-        // float2 texcoord = pos / BufferSize;
-        float2 project_coord = texcoord;
-        if (TAA_Enabled) project_coord -= scene[0].taa_jitter;
+        float2 texcoord = uv_full / float2(ap.game.screenSize);
+        if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
-        float3 clipPos = float3(project_coord, depth) * 2.0 - 1.0;
+        float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
         float3 viewPos = project(ap.camera.projectionInv, clipPos);
         float3 localPos = mul3(ap.camera.viewInv, viewPos);
 
@@ -100,10 +100,10 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         float3 localDir = normalize(localPos);
         float3 offsetLocalPos = localPos - 0.02*viewDist*localDir;
 
-        half3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB.Sample(texcoord).g);
+        half3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB[uv_full].g);
 
         ObjectData_MatLit mat_lit;
-        mat_lit.unpack(texMatLightGB.Sample(texcoord));
+        mat_lit.unpack(texMatLightGB[uv_full]);
 
         [ForceUnroll]
         for (int i = 0; i < GI_SampleCount; i++) {
@@ -199,7 +199,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 uint2 uv2 = uint2(traceScreenPos * ap.game.screenSize);
                 // half3 sample_normal = ObjectData_Normals.unpackTex(texNormalGB[uv2].g);
                 half3 sample_normal = ObjectData_Normals.unpackGeo(texNormalGB[uv2].r);
-                cos_sample = max(dot(sample_normal, -trace_localDir), 0.0);
+                cos_sample = abs(dot(sample_normal, -trace_localDir));
             }
         }
 
@@ -283,7 +283,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             float3 skyPos = getSkyPosition(localPos);
             sampleColor = sampleSkyView(skyPos, trace_localDir, scene[0].SunLocalDir);
             // sampleColor = sampleSkyIrradiance(trace_localDir);
-            cos_sample = lmcoord_y;
+            cos_sample = PI * lmcoord_y;
         }
 
         if (traceWaterDist > 0.0)
@@ -296,5 +296,5 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         }
     }
 
-    return half4(diffuse / GI_SampleCount, (half)1.0);
+    return half4(half3(diffuse / GI_SampleCount), (half)1.0);
 }

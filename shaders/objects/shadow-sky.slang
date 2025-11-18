@@ -84,13 +84,13 @@ VertexOutput vertexMain(Vertex input) {
 
 
 [[shader("fragment")]]
-float4 fragmentMain(VertexOutput input, int layer : SV_RenderTargetArrayIndex) : SV_Target0 {
+float4 fragmentMain(VertexOutput input) : SV_Target0 {
     float4 color = float4(0.0, 0.0, 0.0, 1.0);
 
     if (input.blockId >= 0 && ap.blocks[input.blockId].customId == BLOCK_WATER) {
         color = float4(1.0, 1.0, 1.0, 0.02);
     }
-    else if (ALPHATEST_ENABLED && layer <= 2) {
+    else if (ALPHATEST_ENABLED) {
         half4 tint = unpackUnorm4x8ToHalf(input.color);
         color = albedoTex.Sample(input.uv) * tint;
         iris_discardIfNeeded(color);

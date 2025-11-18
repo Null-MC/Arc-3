@@ -5,6 +5,9 @@ import lib.sampling.ERP;
 import lib.sky.common;
 import lib.sky.sample_view;
 
+extern static const int BufferWidth;
+extern static const int BufferHeight;
+
 
 float3 CalculateIrradiance(const in float2 uv, const in float3 normal) {
     const float2 sampleDelta = float2(0.2, 0.1); //0.025;
@@ -55,7 +58,7 @@ float3 CalculateIrradiance(const in float2 uv, const in float3 normal) {
 
 [[shader("fragment")]]
 half4 bakeSkyIrradiance(float2 pos : SV_Position) : SV_Target0 {
-    float2 uv = pos / float2(skyIrradianceDimensions);
+    float2 uv = pos / float2(BufferWidth, BufferHeight);
 
     float3 viewDir = DirectionFromUV(uv);
     float3 irradiance = CalculateIrradiance(pos, viewDir);

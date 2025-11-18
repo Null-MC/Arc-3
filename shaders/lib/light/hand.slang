@@ -19,9 +19,9 @@ float3 GetHandLightPos(const in float offsetX) {
     return pos;
 }
 
-void GetHandLight(inout half3 diffuse, inout half3 specular, const in int blockId, const in float3 lightLocalPos,
+void GetHandLight(inout float3 diffuse, inout float3 specular, const in int blockId, const in float3 lightLocalPos,
                   const in float3 localPos, const in float3 localViewDir, const in float3 localTexNormal, const in float3 localGeoNormal,
-                  const in half3 F, const in float roughL) {
+                  const in half3 F, const in half roughL) {
     half lightRange = (half)ap.blocks[blockId].emission;
     half3 lightColor = half3(ap.blocks[blockId].lightColor.rgb);
     half lightSize = (half)0.5;//getLightSize(blockId);
@@ -52,10 +52,10 @@ void GetHandLight(inout half3 diffuse, inout half3 specular, const in int blockI
         float NoHm = max(dot(localTexNormal, H), 0.0);
         float VoHm = max(dot(localViewDir, H), 0.0);
 
-        half3 D = SampleLightDiffuse(NoVm, NoLm, LoHm, roughL) * (half3(1.0) - F);
-        half3 S = SampleLightSpecular(NoLm, NoHm, NoVm, F, roughL);
+        float3 D = SampleLightDiffuse(NoVm, NoLm, LoHm, roughL) * (1.0 - F);
+        float3 S = SampleLightSpecular(NoLm, NoHm, NoVm, F, roughL);
 
-        half3 lightFinal = NoLm * BLOCK_LUX * lightAtt * lightColor;
+        float3 lightFinal = NoLm * BLOCK_LUX * lightAtt * lightColor;
         diffuse += D * lightFinal;
         specular += S * lightFinal;
     }

@@ -30,7 +30,8 @@ half3 sampleSkyView(const in float3 skyPos, const in float3 rayDir, const in flo
     float v = 0.5 + 0.5*sign(altitudeAngle) * sqrt(abs(altitudeAngle) * 2.0/PI);
     float2 uv = float2(azimuthAngle / (2.0*PI), v);
     
-    uv.y = clamp(uv.y, (0.5/skyViewDimensions.y), ((skyViewDimensions.y-1.0)/skyViewDimensions.y));
+    // TODO: probably going to regret removing this
+    // uv.y = clamp(uv.y, (0.5/skyViewDimensions.y), ((skyViewDimensions.y-1.0)/skyViewDimensions.y));
 
     return texSkyView.SampleLevel(uv, 0);
 }

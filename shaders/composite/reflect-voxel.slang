@@ -21,6 +21,11 @@ extern static const bool Reflect_SS_Fallback;
 extern static const int Reflect_VoxelSteps;
 extern static const int Reflect_ScreenSteps;
 extern static const int Reflect_RefineSteps;
+extern static const int BufferWidth;
+extern static const int BufferHeight;
+extern static const int BufferScale;
+
+static const int2 BufferSize = int2(BufferWidth, BufferHeight);
 
 StructuredBuffer<VoxelMask> VoxelMaskBuffer;
 
@@ -34,17 +39,18 @@ Sampler2D<uint2> texMatLightGB_translucent;
 
 [[shader("fragment")]]
 half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
-    uint2 uv = uint2(pos);
-    float depth = mainDepthTex[uv];
-    half3 finalColor = texSource[uv];
-    half4 colorData = texAlbedoGB_translucent[uv];
+    uint2 uv_full = uint2(pos) * BufferScale;
+    float depth = mainDepthTex[uv_full];
+    half3 finalColor = half3(0.0);
+
+    half4 colorData = texAlbedoGB_translucent[uv_full];
     
     if (colorData.a > 0.0) {
-        uint normalDataG = texNormalGB_translucent[uv].g;
-        uint2 matLitData = texMatLightGB_translucent[uv];
+        uint normalDataG = texNormalGB_translucent[uv_full].g;
+        uint2 matLitData = texMatLightGB_translucent[uv_full];
 
-        float2 texcoord = pos / ap.game.screenSize;
-        if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
+        float2 texcoord = pos / BufferSize;
+        // if (TAA_Enabled) texcoord -= scene[0].taa_jitter * BufferScale;
 
         float3 screenPos = float3(texcoord, depth);
         float3 clipPos = screenPos * 2.0 - 1.0;
@@ -67,7 +73,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         float dither = InterleavedGradientNoiseTime(pos);
 
         float3 reflectNormal = Reflect_Rough
-            ? randomizeNormal(uv, tex_normal, roughL)
+            ? randomizeNormal(int2(pos), tex_normal, roughL)
             : tex_normal;
         
         float viewDist = length(viewPos);

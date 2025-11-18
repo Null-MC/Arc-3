@@ -16,6 +16,7 @@ export class Options {
     get Material_Parallax_SampleCount(): number {return getIntSetting('MATERIAL_PARALLAX_SAMPLES');}
     get Material_Parallax_Optimize(): boolean {return getBoolSetting('MATERIAL_PARALLAX_OPTIMIZE');}
     
+    get Lighting_Resolution(): number {return getIntSetting('LIGHTING.RESOLUTION');}
     get Lighting_ColorCandles(): boolean {return getBoolSetting('LIGHTING_COLOR_CANDLES');}
 
     get Lighting_Refraction_Mode(): number {return getIntSetting('LIGHTING.REFRACT.MODE');}
@@ -34,7 +35,7 @@ export class Options {
 
     get Lighting_GI_Enabled(): boolean {return getBoolSetting('LIGHTING.GI.ENABLED');}
     get Lighting_GI_ScreenTrace(): boolean {return getBoolSetting('LIGHTING.GI.SS_TRACE');}
-    get Lighting_GI_Resolution(): number {return getIntSetting('LIGHTING.GI.RESOLUTION');}
+    // get Lighting_GI_Resolution(): number {return getIntSetting('LIGHTING.GI.RESOLUTION');}
     get Lighting_GI_MaxFrames(): number {return getIntSetting('LIGHTING.GI.MAXFRAMES');}
     get Lighting_GI_FilterPasses(): number {return getIntSetting('LIGHTING.GI.FILTERING');}
     get Lighting_GI_Samples(): number {return getIntSetting('LIGHTING.GI.SAMPLES');}

@@ -32,11 +32,11 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         ObjectData_MatLit mat_lit;
         mat_lit.unpack(texMatLightGB[uv]);
 
-        half3 diffuse = texDiffuse[uv];
-        half3 specular = texSpecular[uv];
+        half3 diffuse = texDiffuse.Sample(texcoord);
+        half3 specular = texSpecular.Sample(texcoord);
 
         if (Lighting_GI && !RENDER_TRANSLUCENT) {
-            diffuse += PI * texGI_final.Sample(texcoord) * mat_lit.occlusion;
+            diffuse += texGI_final.Sample(texcoord) * mat_lit.occlusion;
         }
         
         half roughness = mat_roughness(mat_lit.specular.r);

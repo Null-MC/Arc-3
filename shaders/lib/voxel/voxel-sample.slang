@@ -65,7 +65,22 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
         }
     }
 
-    half3 diffuse = half3(0.0);
+    int3 voxelPos = int3(floor(localPos + 0.04*normal + ap.camera.position));
+    float2 lmcoord = pow2(saturate(ap.voxel[voxelPos].lightData / 15.0));
+
+    float3 diffuse = 0.0;
+
+    if (FloodFill_Enabled) {
+        float3 lpvPos = FloodFill_GetBufferPosition(localPos);
+        lpvPos += normal * 0.5;
+        
+        if (FloodFill_InBounds(lpvPos)) {
+            lmcoord.x = 0.0;
+            diffuse += floodfill_sample(lpvPos) * BLOCK_LUX;
+        }
+    }
+
+    diffuse += lmcoord.x * BLOCK_LUX * BlockLightColor;
 
     if (World_HasSky) {
         float3 shadowLocalPos = normal * 0.04 + localPos;
@@ -95,26 +110,12 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
 
         float NoLm_moon = max(dot(normal, scene[0].MoonLocalDir), 0.0);
         diffuse += NoLm_moon * (shadowIsSun ? (half)0.0 : shadow) * moon_color;
-
-        int3 voxelPos = int3(floor(localPos + 0.04*normal + ap.camera.position));
-        float2 lmcoord = pow2(saturate(ap.voxel[voxelPos].lightData / 15.0));
-
-        diffuse += lmcoord.x * BLOCK_LUX * BlockLightColor;
-
-        diffuse /= PI;
-
-        if (!isGI) {
-            diffuse += sampleSkyIrradiance(normal) * lmcoord.y;
-        }
     }
 
-    if (FloodFill_Enabled) {
-        float3 lpvPos = FloodFill_GetBufferPosition(localPos);
-        lpvPos += normal * 0.5;
-        
-        if (FloodFill_InBounds(lpvPos)) {
-            diffuse += floodfill_sample(lpvPos) * BLOCK_LUX;
-        }
+    diffuse /= PI;
+
+    if (World_HasSky) {
+        diffuse += sampleSkyIrradiance(normal) * lmcoord.y;
     }
 
     // remove diffuse for smooth metals
