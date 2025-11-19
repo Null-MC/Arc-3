@@ -29,9 +29,11 @@ half4 accumulateGI(float2 pos : SV_Position) : SV_Target0 {
         float3 reproj = texReprojection[uv];
         float2 texcoord = pos / float2(ap.game.screenSize);
         float2 prev_texcoord = texcoord + reproj.xy;
+        // if (TAA_Enabled) texcoord -= scene[0].taa_jitter_prev;
         float4 gi_prev = texGI_prev.Sample(prev_texcoord);
 
         counter = clamp(gi_prev.a * step(0.6, reproj.z), 0, GI_MaxFrames);
+        // counter = clamp(gi_prev.a, 0, GI_MaxFrames);
 
         diffuse = texSource.Sample(texcoord);
         // diffuse = texSource[uv / BufferScale];

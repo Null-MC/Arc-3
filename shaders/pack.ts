@@ -333,29 +333,37 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .clearColor(0, 0, 0, 0)
         .build();
 
-    let texGI1: BuiltTexture | undefined;
-    let texGI2: BuiltTexture | undefined;
+    let texGI_trace: BuiltTexture | undefined;
+    let texGI_filter1: BuiltTexture | undefined;
+    let texGI_filter2: BuiltTexture | undefined;
     let texGI_flipper: BufferFlipper | undefined;
     let texGI_prev: BuiltTexture | undefined;
     let texGI_final: BuiltTexture | undefined;
     if (options.Lighting_GI_Enabled) {
-        texGI1 = pipeline.createTexture('texGI1')
+        texGI_trace = pipeline.createTexture('texGI_trace')
             .width(Tracing_width)
             .height(Tracing_height)
             .format(Format.RGBA16F)
             .clearColor(0, 0, 0, 0)
             .build();
 
-        texGI2 = pipeline.createTexture('texGI2')
-            .width(Tracing_width)
-            .height(Tracing_height)
+        texGI_filter1 = pipeline.createImageTexture('texGI_filter1', 'imgGI_filter1')
+            .width(screenWidth)
+            .height(screenHeight)
+            .format(Format.RGBA16F)
+            .clearColor(0, 0, 0, 0)
+            .build();
+
+        texGI_filter2 = pipeline.createTexture('texGI_filter2')
+            .width(screenWidth)
+            .height(screenHeight)
             .format(Format.RGBA16F)
             .clear(false)
             .build();
         
-        texGI_flipper = new BufferFlipper(texGI1, texGI2);
+        texGI_flipper = new BufferFlipper(texGI_filter1, texGI_filter2);
 
-        texGI_final = pipeline.createImageTexture('texGI_final', 'imgGI_final')
+        texGI_final = pipeline.createTexture('texGI_final')
             .width(screenWidth)
             .height(screenHeight)
             .format(Format.RGBA16F)
@@ -692,16 +700,16 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .location("deferred/lighting-block-point", "applyPointLights")
                     .workGroups(
                         Math.ceil(screenWidth / 16.0),
-                        Math.ceil(Tracing_height / 16.0),
+                        Math.ceil(screenHeight / 16.0),
                         1)
                     .overrideObject('texDepth', 'solidDepthTex')
                     .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
                     .overrideObject('texNormalGB', texNormalGB_opaque.name())
                     .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                     .exportBool('DEBUG_LIGHT_TILES', DEBUG_LIGHT_TILES)
-                    .exportInt('BufferWidth', screenWidth)
-                    .exportInt('BufferHeight', Tracing_height)
-                    .exportInt('BufferScale', Tracing_scale)
+                    // .exportInt('BufferWidth', screenWidth)
+                    // .exportInt('BufferHeight', Tracing_height)
+                    // .exportInt('BufferScale', Tracing_scale)
                     .compile();
             }
 
@@ -709,7 +717,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 withSubList(opaqueStage, 'opaque-deferred-gi', stage_opaque_gi => {
                     stage_opaque_gi.createComposite("deferred-gi")
                         .location('deferred/gi/gi-trace', "applyGI")
-                        .target(0, texGI_flipper.getWriteTexture())
+                        .target(0, texGI_trace)
                         .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
                         .overrideObject('texNormalGB', texNormalGB_opaque.name())
                         .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
@@ -723,41 +731,55 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         .exportInt('BufferScale', Tracing_scale)
                         .compile();
 
+                    if (options.Lighting_Resolution != 0) {
+                        stage_opaque_gi.createCompute("deferred-gi-upscale")
+                            .location('deferred/gi/gi-upscale', "upscaleGI")
+                            .workGroups(
+                                Math.ceil(screenWidth / 16),
+                                Math.ceil(screenHeight / 16),
+                                1)
+                            .overrideObject('imgDest', texGI_filter1.imageName())
+                            .overrideObject('texSource', texGI_trace.name())
+                            .overrideObject('texDepth', 'solidDepthTex')
+                            .exportInt('BufferWidth', Tracing_width)
+                            .exportInt('BufferHeight', Tracing_height)
+                            .exportInt('BufferScale', Tracing_scale)
+                            .compile();
+                    }
+
                     for (let i = 0; i < options.Lighting_GI_FilterPasses; i++) {
-                        // const tex_src = i == 0 ? 'texGI' : texGI_atrousFlip.getReadTexture();
-                        texGI_flipper.flip();
+                        let filter_src: string;
+                        if (i == 0) {
+                            if (options.Lighting_Resolution != 0) {
+                                filter_src = texGI_filter1.name();
+                            }
+                            else {
+                                filter_src = texGI_trace.name();
+                            }
+                        }
+                        else {
+                            texGI_flipper.flip();
+                            filter_src = texGI_flipper.getReadTexture().name();
+                        }
 
                         stage_opaque_gi.createComposite(`deferred-gi-atrous-${i+1}`)
                             .location('deferred/gi/gi-atrous', "atrousFilter")
                             .target(0, texGI_flipper.getWriteTexture())
-                            .overrideObject('texSource', texGI_flipper.getReadTexture().name())
-                            .exportInt('BufferWidth', Tracing_width)
-                            .exportInt('BufferHeight', Tracing_height)
-                            .exportInt('BufferScale', Tracing_scale)
+                            .overrideObject('texSource', filter_src)
                             .exportInt('AtrousLevel', i)
                             .compile();
                     }
 
-                    texGI_flipper.flip();
-
-                    stage_opaque_gi.createCompute("deferred-gi-upscale")
-                        .location('deferred/gi/gi-upscale', "upscaleGI")
-                        .workGroups(
-                            Math.ceil(screenWidth / 16),
-                            Math.ceil(screenHeight / 16),
-                            1)
-                        .overrideObject('texSource', texGI_flipper.getReadTexture().name())
-                        .overrideObject('texDepth', 'solidDepthTex')
-                        // .exportInt('GI_MaxFrames', options.Lighting_GI_MaxFrames)
-                        .exportInt('BufferWidth', Tracing_width)
-                        .exportInt('BufferHeight', Tracing_height)
-                        .exportInt('BufferScale', Tracing_scale)
-                        .compile();
+                    let final_src: string = texGI_trace.name();
+                    if (options.Lighting_GI_FilterPasses > 0 || options.Lighting_Resolution != 0) {
+                        texGI_flipper.flip();
+                        final_src = texGI_flipper.getReadTexture().name();
+                    }
 
                     stage_opaque_gi.createComposite("deferred-gi-accumulate")
                         .location('deferred/gi/gi-accumulate', "accumulateGI")
                         .target(0, texGI_final)
-                        .overrideObject('texSource', 'texGI_final')
+                        .overrideObject('texSource', final_src)
                         .exportInt('GI_MaxFrames', options.Lighting_GI_MaxFrames)
                         .compile();
 

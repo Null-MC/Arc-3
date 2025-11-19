@@ -84,13 +84,18 @@ float3 transform_to_world(const in float3 normal, const in float3 local_dir) {
 [[shader("fragment")]]
 half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
     uint2 uv_full = uint2(pos) * BufferScale;
+
+    if (BufferScale > 1) {
+        uv_full += (ap.timing.frameCounter % 2) * BufferScale;
+    }
+
     // float2 texcoord = pos / BufferSize;
     float depth = solidDepthTex[uv_full];
     float3 diffuse = 0.0;
     
     if (depth < 1.0) {
         float2 texcoord = uv_full / float2(ap.game.screenSize);
-        if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
+        // if (TAA_Enabled) texcoord += scene[0].taa_jitter;
 
         float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
         float3 viewPos = project(ap.camera.projectionInv, clipPos);
