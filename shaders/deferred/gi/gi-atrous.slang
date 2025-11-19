@@ -95,7 +95,7 @@ half4 atrousFilter(float2 pos : SV_Position) : SV_Target0 {
 
         const float w_color = 0.1;
         const float w_normal = 0.1;
-        const float w_pos = 0.3;
+        const float w_pos = 0.1;
         const float step_width = exp2(AtrousLevel);
 
         float2 texcoord = pos / BufferSize;

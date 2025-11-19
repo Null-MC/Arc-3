@@ -66,7 +66,8 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
     }
 
     int3 voxelPos = int3(floor(localPos + 0.04*normal + ap.camera.position));
-    float2 lmcoord = pow2(saturate(ap.voxel[voxelPos].lightData / 15.0));
+    float2 lmcoord = saturate(ap.voxel[voxelPos].lightData / 15.0);
+    if (!isGI) lmcoord = pow2(lmcoord);
 
     float3 diffuse = 0.0;
 

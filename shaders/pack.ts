@@ -355,7 +355,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         
         texGI_flipper = new BufferFlipper(texGI1, texGI2);
 
-        texGI_final = pipeline.createTexture('texGI_final')
+        texGI_final = pipeline.createImageTexture('texGI_final', 'imgGI_final')
             .width(screenWidth)
             .height(screenHeight)
             .format(Format.RGBA16F)
@@ -740,14 +740,25 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
                     texGI_flipper.flip();
 
-                    stage_opaque_gi.createComposite("deferred-gi-accumulate")
-                        .location('deferred/gi/gi-accumulate', "accumulateGI")
-                        .target(0, texGI_final)
+                    stage_opaque_gi.createCompute("deferred-gi-upscale")
+                        .location('deferred/gi/gi-upscale', "upscaleGI")
+                        .workGroups(
+                            Math.ceil(screenWidth / 16),
+                            Math.ceil(screenHeight / 16),
+                            1)
                         .overrideObject('texSource', texGI_flipper.getReadTexture().name())
-                        .exportInt('GI_MaxFrames', options.Lighting_GI_MaxFrames)
+                        .overrideObject('texDepth', 'solidDepthTex')
+                        // .exportInt('GI_MaxFrames', options.Lighting_GI_MaxFrames)
                         .exportInt('BufferWidth', Tracing_width)
                         .exportInt('BufferHeight', Tracing_height)
                         .exportInt('BufferScale', Tracing_scale)
+                        .compile();
+
+                    stage_opaque_gi.createComposite("deferred-gi-accumulate")
+                        .location('deferred/gi/gi-accumulate', "accumulateGI")
+                        .target(0, texGI_final)
+                        .overrideObject('texSource', 'texGI_final')
+                        .exportInt('GI_MaxFrames', options.Lighting_GI_MaxFrames)
                         .compile();
 
                     stage_opaque_gi.copy(texGI_final, texGI_prev, screenWidth, screenHeight);
