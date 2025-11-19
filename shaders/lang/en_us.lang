@@ -39,12 +39,15 @@ option.MATERIAL_PARALLAX_OPTIMIZE.comment=Attempts to increase quality by focusi
 
 screen.LIGHTING=Lighting
 
-option.LIGHTING.RESOLUTION=Resolution
+option.LIGHTING.RESOLUTION=Screen Resolution
 value.LIGHTING.RESOLUTION.0=Full
 value.LIGHTING.RESOLUTION.1=Half
 value.LIGHTING.RESOLUTION.2=Quarter
 
-option.LIGHTING_COLOR_CANDLES=Colored Candles
+option.LIGHTING.VOXEL_RESOLUTION=Voxel Resolution
+suffix.LIGHTING.VOXEL_RESOLUTION=m³
+
+option.LIGHTING.COLOR_CANDLES=Colored Candles
 
 
 screen.LIGHTING.REFRACTION=Refraction
@@ -170,35 +173,40 @@ option.SHADOW_SSS_PCF_SAMPLES=SSS PCF Samples
 screen.POST=Post-Processing
 
 
-screen.POST_EXPOSURE=Exposure
+screen.POST.TONEMAP=ToneMap
 
-option.POST_EXPOSURE_MIN=Minimum
-
-option.POST_EXPOSURE_MAX=Maximum
-
-option.POST_EXPOSURE_RANGE=Range
+option.POST.TONEMAP.CONTRAST=Contrast
 
 
-screen.POST_BLOOM=Bloom
+screen.POST.EXPOSURE=Exposure
 
-option.POST_BLOOM_ENABLED=Enabled
+option.POST.EXPOSURE.MIN=Minimum
 
-option.POST_BLOOM_STRENGTH=Strength
-option.POST_BLOOM_STRENGTH.comment=The amount of bloom to apply back onto the original scene.
-suffix.POST_BLOOM_STRENGTH=%
+option.POST.EXPOSURE.MAX=Maximum
+
+option.POST.EXPOSURE.RANGE=Range
 
 
-screen.POST_TAA=TAA
+screen.POST.BLOOM=Bloom
 
-option.POST_TAA_ENABLED=Enabled
-option.POST_TAA_ENABLED.comment=Enable Temporal Anti-Aliasing to remove jagged edges and improve subpixel details.
+option.POST.BLOOM.ENABLED=Enabled
 
-option.POST_TAA_CUBIC_HISTORY=Pre-Sharpen
-option.POST_TAA_CUBIC_HISTORY.comment=Sharpen history sampling using catmull-rom filter. Helps reduce blur when moving.
+option.POST.BLOOM.STRENGTH=Strength
+option.POST.BLOOM.STRENGTH.comment=The amount of bloom to apply back onto the original scene.
+suffix.POST.BLOOM.STRENGTH=%
 
-option.POST_TAA_CAS_STRENGTH=Post-Sharpening
-option.POST_TAA_CAS_STRENGTH.comment=The amount of sharpening to apply after TAA, using AMD CAS. Helps reduce blur of overall scene.
-suffix.POST_TAA_CAS_STRENGTH=%
+
+screen.POST.TAA=TAA
+
+option.POST.TAA.ENABLED=Enabled
+option.POST.TAA.ENABLED.comment=Enable Temporal Anti-Aliasing to remove jagged edges and improve subpixel details.
+
+option.POST.TAA.CUBIC_HISTORY=Pre-Sharpen
+option.POST.TAA.CUBIC_HISTORY.comment=Sharpen history sampling using catmull-rom filter. Helps reduce blur when moving.
+
+option.POST.TAA.CAS_STRENGTH=Post-Sharpening
+option.POST.TAA.CAS_STRENGTH.comment=The amount of sharpening to apply after TAA, using AMD CAS. Helps reduce blur of overall scene.
+suffix.POST.TAA.CAS_STRENGTH=%
 
 
 screen.DEBUG=Debugging

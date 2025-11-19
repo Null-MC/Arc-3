@@ -1,7 +1,6 @@
 import aperture;
 import buffers.ObjectData;
 import lib.common;
-import lib.blocks;
 import lib.noise.hash;
 import lib.material.pbr;
 import lib.material.rough_normal;
@@ -12,7 +11,7 @@ import lib.sampling.R2;
 import lib.sky.common;
 import lib.sky.sample_view;
 import lib.water.common;
-import lib.voxel.voxel_tex;
+import lib.voxel.voxel_common;
 import lib.voxel.voxel_mask;
 import lib.voxel.voxel_sample;
 import lib.screen_trace;
@@ -212,7 +211,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         float traceOcclusionDist = 0.0;
 
         bool hit = false;
-        if (!ss_hit && VoxelMask_InBounds(offsetLocalPos)) {
+        if (!ss_hit) {// && Voxel_InBounds(offsetLocalPos)) {
             float3 cameraFract = fract(ap.camera.position);
             int3 cameraFloor = int3(floor(ap.camera.position));
 
@@ -229,7 +228,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 float3 stepAxisNext;
                 float3 step = DDA_step(stepAxisNext, nextDist, stepSizes, trace_localDir);
 
-                hit_voxelMaskPos = int3(floor(VoxelMask_GetBufferPosition(currPos + 0.5*step - cameraFract)));
+                hit_voxelMaskPos = int3(floor(Voxel_GetBufferPosition(currPos + 0.5*step - cameraFract)));
 
                 if (i > 0) {
                     // check exit face mask
@@ -237,7 +236,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                     if (voxelMask.testFace(axisNormal)) {hit = true; break;}
                 }
 
-                uint voxelIndex = VoxelMask_GetBufferIndex(hit_voxelMaskPos);
+                uint voxelIndex = Voxel_GetBufferIndex(hit_voxelMaskPos);
                 voxelMask = VoxelMaskBuffer[voxelIndex];
                 uint maskId = voxelMask.getId();
 

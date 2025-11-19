@@ -68,7 +68,7 @@ half3 applyBloomUp(float2 pos : SV_Position) : SV_Target0 {
     color += (a+c+g+i) * half3(0.0625);
 
     if (BLOOM_INDEX == 0u) {
-        color = fma(color, half3(settings.Post_Bloom_Strength), texSource[int2(pos)]);
+        color = fma(color, half3(settings.Bloom_Strength), texSource[int2(pos)]);
     }
 
     color = clamp(color, half3(0.0), half3(65000.0));

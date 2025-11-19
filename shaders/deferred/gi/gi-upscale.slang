@@ -32,8 +32,10 @@ float3 sampleSharedBuffer(const in uint2 uv_base, const in float depthL) {
             int2 uv_shared = uv_base + offset;
             int i_shared = uv_shared.y * sharedBufferRes + uv_shared.x;
 
+            float weight = 1.0 + dot(offset, offset);
+
             float sampleDepthL = sharedDepth[i_shared];
-            float depthDiff = abs(sampleDepthL - depthL) * dot(offset, offset);
+            float depthDiff = abs(sampleDepthL - depthL) * weight;
 
             if (depthDiff < minDiff) {
                 minDiff = depthDiff;

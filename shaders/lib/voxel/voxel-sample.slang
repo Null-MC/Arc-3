@@ -7,6 +7,7 @@ import lib.material.pbr;
 import lib.sampling.atlas;
 import lib.light.floodfill;
 import lib.voxel.voxel_tex;
+import lib.voxel.voxel_common;
 import lib.sky.common;
 import lib.sky.scattering;
 import lib.sky.sample_transmit;
@@ -32,14 +33,14 @@ float2 GetVoxelTexCoord(const in float3 normal, const in float3 voxelPos) {
     return 1.0 - fract(hitCoord);
 }
 
-float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in int3 voxelTexPos, const in float2 voxelTexCoord, bool isGI = false) {
+float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in int3 voxelBufferPos, const in float2 voxelTexCoord, bool isGI = false) {
     float3 albedo = 0.0;
     half roughL = (half)0.85;
     half metalness = (half)0.0;
     half emission = (half)0.0;
-    if (VoxelTex_InBounds(voxelTexPos)) {
+    if (Voxel_InBufferBounds(voxelBufferPos)) {
         VoxelTex voxel;
-        uint voxelIndex = VoxelTex_GetBufferIndex(voxelTexPos);
+        uint voxelIndex = Voxel_GetBufferIndex(voxelBufferPos);
         voxel.unpack(voxelTexBuffer[voxelIndex]);
         
         uint3 atlasSize;

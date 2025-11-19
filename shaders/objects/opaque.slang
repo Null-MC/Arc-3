@@ -50,6 +50,7 @@ VertexOutput vertexMain(Vertex input) {
     output.uv = input.uv();
     half4 color = half4(input.color());
     output.occlusion = input.ao();
+    output.occlusion = pow2(output.occlusion);
 
     output.light = LightMapNorm(input.light());
     output.light = output.light * output.light;

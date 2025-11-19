@@ -63,11 +63,11 @@ half4 renderDebugOverlay(float2 pos : SV_Position) : SV_Target0 {
             color.gb = half2(step(previewCoord.y*previewCoord.y, sampleVal / float(ap.game.screenSize.x*ap.game.screenSize.y)));
             color.ra = half2(0, 1);
 
-            float meter = saturate(unmix(settings.Post_ExposureMin, settings.Post_ExposureMax, log2(scene[0].exposure)));
+            float meter = saturate(unmix(settings.Exposure_Min, settings.Exposure_Max, log2(scene[0].exposure)));
             if (abs(previewCoord.x - meter) < (4.0/ap.game.screenSize.x))
                 color.r = (half)1.0 - color.r;
 
-            // float shit2 = saturate(unmix(settings.Post_ExposureMin, settings.Post_ExposureMax, log2(Scene_AvgExposure) + Post_ExposureOffset));
+            // float shit2 = saturate(unmix(settings.Exposure_Min, settings.Exposure_Max, log2(Scene_AvgExposure) + Post_ExposureOffset));
             // if (abs(previewCoord.x - shit2) < 0.008)
             //     color.b = 1.0 - color.b;
         }

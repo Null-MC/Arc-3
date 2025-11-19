@@ -2,6 +2,7 @@ import aperture;
 import lib.common;
 import lib.blocks;
 import lib.tags;
+import lib.voxel.voxel_common;
 import lib.voxel.voxel_mask;
 
 
@@ -18,9 +19,9 @@ struct ComputeInput {
 [[shader("compute")]]
 [numthreads(8, 8, 8)]
 void buildVoxelMask(ComputeInput input) {
-	if (!all(input.globalPos < VoxelMask_BufferSize)) return;
+	if (any(input.globalPos >= Voxel_Resolution)) return;
 
-	float3 worldPos = VoxelMask_GetLocalPosition(input.globalPos + 0.5) + ap.camera.position;
+	float3 worldPos = Voxel_GetLocalPosition(input.globalPos + 0.5) + ap.camera.position;
 	var voxel = ap.voxel[int3(floor(worldPos))];
 
 	uint maskId = 0;
@@ -38,7 +39,7 @@ void buildVoxelMask(ComputeInput input) {
 		maskFaces = bitfieldExtract(block.metadata, 0, 6);
 	}
 
-	int index = VoxelMask_GetBufferIndex(input.globalPos);
+	int index = Voxel_GetBufferIndex(input.globalPos);
 
 	VoxelMaskBuffer[index].setId(maskId);
 	VoxelMaskBuffer[index].setFaces(maskFaces);

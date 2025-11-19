@@ -9,6 +9,7 @@ import lib.sampling.IGN;
 import lib.sky.common;
 import lib.sky.sample_final;
 import lib.screen_trace;
+
 extern static const int BufferWidth;
 extern static const int BufferHeight;
 extern static const int BufferScale;

@@ -35,7 +35,7 @@ float2 GetParallaxCoord(const in float2 texcoord, const in int LOD, const in Atl
         maxTexDepth = sqrt(maxTexDepth);
     }
 
-    float ParallaxDepthF = settings.ParallaxMaxDepth * maxTexDepth;
+    float ParallaxDepthF = settings.Parallax_MaxDepth * maxTexDepth;
     float2 stepCoord = tanViewDir.xy * ParallaxDepthF / (fma(tanViewDir.z, Parallax_SampleCount, 1.0));
     float stepDepth = maxTexDepth / Parallax_SampleCount;
 

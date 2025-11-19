@@ -82,6 +82,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .addInt('FloodFill_BufferSize', options.Lighting_FloodFill_Size)
         .addBool('PointLight_Enabled', options.Lighting_Point_Enabled)
         .addInt('PointLight_MaxCount', renderConfig.pointLight.maxCount)
+        .addInt('Voxel_Resolution', options.Lighting_VoxelResolution)
         .addBool('TAA_Enabled', options.Post_TAA_Enabled)
         .addBool('Debug_WhiteWorld', options.Debug_WhiteWorld);
 
@@ -103,8 +104,9 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     settings = pipeline.createStreamingBuffer("settings", 128);
 
     if (options.VoxelEnabled) {
-        pipeline.createBuffer('VoxelMaskBuffer', cubed(256), false);
-        pipeline.createBuffer('voxelTexBuffer', 8*cubed(256), true);
+        const voxelSize = cubed(options.Lighting_VoxelResolution);
+        pipeline.createBuffer('VoxelMaskBuffer', voxelSize, false);
+        pipeline.createBuffer('voxelTexBuffer', 8*voxelSize, true);
     }
     
     const texFinalA = pipeline.createImageTexture("texFinalA", "imgFinalA")
@@ -439,12 +441,13 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .compile();
 
         if (options.VoxelEnabled) {
+            const voxelSize = options.Lighting_VoxelResolution / 8;
             beginStage.createCompute("begin-voxel-mask")
                 .location("pre/voxel-mask", "buildVoxelMask")
                 .workGroups(
-                    Math.ceil(256 / 8),
-                    Math.ceil(256 / 8),
-                    Math.ceil(256 / 8))
+                    Math.ceil(voxelSize),
+                    Math.ceil(voxelSize),
+                    Math.ceil(voxelSize))
                 .compile();
         }
 
@@ -766,6 +769,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                             .location('deferred/gi/gi-atrous', "atrousFilter")
                             .target(0, texGI_flipper.getWriteTexture())
                             .overrideObject('texSource', filter_src)
+                            .overrideObject('texNormalGB', texNormalGB_opaque.name())
                             .exportInt('AtrousLevel', i)
                             .compile();
                     }
@@ -780,6 +784,9 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         .location('deferred/gi/gi-accumulate', "accumulateGI")
                         .target(0, texGI_final)
                         .overrideObject('texSource', final_src)
+                        .overrideObject('texDepth', 'solidDepthTex')
+                        .overrideObject('texNormalGB', texNormalGB_opaque.name())
+                        .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                         .exportInt('GI_MaxFrames', options.Lighting_GI_MaxFrames)
                         .compile();
 
@@ -1132,6 +1139,7 @@ export function onSettingsChanged(pipeline: PipelineConfig) {
         .appendFloat(options.Water_WaveSize * 0.01)
         .appendFloat(options.Material_Parallax_Depth * 0.01)
         .appendFloat(options.Post_Bloom_Strength * 0.01)
+        .appendFloat(options.Post_ToneMap_Contrast * 0.01)
         .appendFloat(options.Post_Exposure_Min)
         .appendFloat(options.Post_Exposure_Max)
         .appendFloat(options.Post_Exposure_Range)

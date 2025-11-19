@@ -169,11 +169,12 @@ void applyPointLights(ComputeInput input) {
 
         half roughness = mat_roughness(mat_lit.specular.r);
         half f0_metal = mat_f0_metal(mat_lit.specular.g);
+        half sss = mat_sss(mat_lit.specular.b);
 
         half3 albedo = RgbToLinear(colorData.rgb);
         half roughL = roughness * roughness;
 
-        const float offsetBias = 0.06;
+        const float offsetBias = lerp(0.06, 0.24, sss);
         const float normalBias = 0.12;
         float3 localSamplePos = normalBias * normals.geo + localPos;
 
@@ -182,10 +183,12 @@ void applyPointLights(ComputeInput input) {
         half metalness = mat_metalness(f0_metal);
         half3 f0 = lerp(f0_metal, albedo, metalness);
 
+        float sss_wrap = pow2(sss);
+
         for (uint i = 0; i < total; i++) {
             uint lightIndex = sharedLightList[i];
             PointLight light = ap.lights[lightIndex];
-            half3 lightColor = half3(ap.blocks[light.block].lightColor.rgb);
+            half4 lightColor = half4(ap.blocks[light.block].lightColor);
             half lightRange = (half)ap.blocks[light.block].emission;
 
             float3 lightOffset = light.position - localSamplePos;
@@ -193,28 +196,31 @@ void applyPointLights(ComputeInput input) {
             half lightDist = (half)length(lightOffset);
             float3 lightDir = lightOffset / lightDist;
 
-            const half lightRadius = (half)0.5; // TODO: build a LUT for this
+            const half lightRadius = clamp(lightColor.a, EPSILON, 1.0) * 0.5;// (half)0.5; // TODO: build a LUT for this
             half lightAtt = GetLightAttenuation(lightDist, lightRange, lightRadius);
             if (lightAtt < EPSILON) continue;
 
-            lightColor = RgbToLinear(lightColor);
+            lightColor.rgb = RgbToLinear(lightColor.rgb);
             lightColor *= saturate(lightRange / (half)15.0) * BLOCK_LUX;
 
+            float NoL = dot(normals.tex, lightDir);
+            float NoLm = max(NoL, 0.0);
+            float NoLm_wrap = max((NoL + sss_wrap) / (1.0 + sss_wrap), 0.0);
+
             float3 H = normalize(lightDir + viewDir);
-            float NoLm = max(dot(normals.tex, lightDir), 0.0);
             float NoHm = max(dot(normals.tex, H), 0.0);
             float LoHm = max(dot(lightDir, H), 0.0);
             float VoHm = max(dot(viewDir, H), 0.0);
 
             float shadowDepth = unmix(ap.lights.nearPlane, ap.lights.farPlane, lightDist - offsetBias);
             half shadow = (half)pointLightFiltered.SampleCmp(float4(-lightDir, lightIndex), shadowDepth).r;
-            lightColor *= shadow * NoLm * lightAtt;
+            lightColor *= shadow * NoLm_wrap * lightAtt;
 
             //float3 F_VoH = material_fresnel(albedo, f0_metal, roughL, VoHm);
             half3 F_VoH = F_schlickRough(VoHm, f0, roughL);
             
-            diffuse += lightColor * SampleLightDiffuse(NoVm, NoLm, LoHm, roughL) * saturate((half)1.0 - F_VoH);
-            specular += lightColor * SampleLightSpecular(NoLm, NoHm, NoVm, F_VoH, roughL);
+            diffuse += lightColor.rgb * SampleLightDiffuse(NoVm, NoLm_wrap, LoHm, roughL) * saturate((half)1.0 - F_VoH);
+            specular += lightColor.rgb * SampleLightSpecular(NoLm, NoHm, NoVm, F_VoH, roughL);
         }
 
         diffuse /= half3(PI);

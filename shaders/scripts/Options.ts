@@ -17,7 +17,8 @@ export class Options {
     get Material_Parallax_Optimize(): boolean {return getBoolSetting('MATERIAL_PARALLAX_OPTIMIZE');}
     
     get Lighting_Resolution(): number {return getIntSetting('LIGHTING.RESOLUTION');}
-    get Lighting_ColorCandles(): boolean {return getBoolSetting('LIGHTING_COLOR_CANDLES');}
+    get Lighting_VoxelResolution(): number {return getIntSetting('LIGHTING.VOXEL_RESOLUTION');}
+    get Lighting_ColorCandles(): boolean {return getBoolSetting('LIGHTING.COLOR_CANDLES');}
 
     get Lighting_Refraction_Mode(): number {return getIntSetting('LIGHTING.REFRACT.MODE');}
     get Lighting_Refraction_ScreenSpaceFallback(): boolean {return getBoolSetting('LIGHTING.REFRACT.SS_FALLBACK');}
@@ -62,16 +63,18 @@ export class Options {
     get Shadow_SssMaxDist(): number {return getFloatSetting('SHADOW_SSS_MAX_DIST');}
     get Shadow_SssPcfSamples(): number {return getIntSetting('SHADOW_SSS_PCF_SAMPLES');}
 
-    get Post_Bloom_Enabled(): boolean {return getBoolSetting('POST_BLOOM_ENABLED');}
-    get Post_Bloom_Strength(): number {return getFloatSetting('POST_BLOOM_STRENGTH');}
+    get Post_ToneMap_Contrast(): number {return getIntSetting('POST.TONEMAP.CONTRAST');}
 
-    get Post_TAA_Enabled(): boolean {return getBoolSetting('POST_TAA_ENABLED');}
-    get Post_TAA_CubicHistory(): boolean {return getBoolSetting('POST_TAA_CUBIC_HISTORY');}
-    get Post_TAA_CasStrength(): number {return getIntSetting('POST_TAA_CAS_STRENGTH');}
+    get Post_Exposure_Min(): number {return getFloatSetting('POST.EXPOSURE.MIN');}
+    get Post_Exposure_Max(): number {return getFloatSetting('POST.EXPOSURE.MAX');}
+    get Post_Exposure_Range(): number {return getFloatSetting('POST.EXPOSURE.RANGE');}
 
-    get Post_Exposure_Min(): number {return getFloatSetting('POST_EXPOSURE_MIN');}
-    get Post_Exposure_Max(): number {return getFloatSetting('POST_EXPOSURE_MAX');}
-    get Post_Exposure_Range(): number {return getFloatSetting('POST_EXPOSURE_RANGE');}
+    get Post_Bloom_Enabled(): boolean {return getBoolSetting('POST.BLOOM.ENABLED');}
+    get Post_Bloom_Strength(): number {return getFloatSetting('POST.BLOOM.STRENGTH');}
+
+    get Post_TAA_Enabled(): boolean {return getBoolSetting('POST.TAA.ENABLED');}
+    get Post_TAA_CubicHistory(): boolean {return getBoolSetting('POST.TAA.CUBIC_HISTORY');}
+    get Post_TAA_CasStrength(): number {return getIntSetting('POST.TAA.CAS_STRENGTH');}
 
     get Debug_Material(): number {return getIntSetting('DEBUG_MATERIAL');}
     get Debug_WhiteWorld(): boolean {return getBoolSetting('DEBUG_WHITEWORLD');}

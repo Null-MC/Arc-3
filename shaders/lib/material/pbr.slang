@@ -78,13 +78,13 @@ float mat_porosity(const in half data, const in half roughness, const in half f0
     }
 }
 
-half mat_sss_lab(const in half data) {
-    return max(data - (half)(64.0/255.0), (half)0.0) * (half)(255.0/191.0);
+half mat_sss_lab(const in half specular_b) {
+    return max(specular_b - (half)(64.0/255.0), (half)0.0) * (half)(255.0/191.0);
 }
 
-half mat_sss(const in half data) {
+half mat_sss(const in half specular_b) {
     if (MATERIAL_SSS_FORMAT == MAT_LABPBR) {
-        return mat_sss_lab(data);
+        return mat_sss_lab(specular_b);
     }
     else {
         return (half)0.0;

@@ -7,7 +7,7 @@ extern static const int AtrousLevel;
 Sampler2D<half3> texSource;
 
 Sampler2D<float> solidDepthTex;
-Sampler2D<uint2> texNormalGB_opaque;
+Sampler2D<uint2> texNormalGB;
 
 static const float atrousKernel[25] = float[25](
     1.0/256.0,  4.0/256.0,  6.0/256.0,  4.0/256.0,  1.0/256.0,
@@ -27,7 +27,7 @@ static const float2 atrousOffsets[25] = float2[25](
 
 float3 atrous_GetTexNormal(const in float2 texcoord) {
     uint2 uv = uint2(texcoord * ap.game.screenSize);
-    half3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB_opaque[uv].g);
+    half3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB[uv].g);
     // return mul(float3x3(ap.camera.view), tex_normal);
     return tex_normal;
 }
@@ -62,7 +62,7 @@ float3 atrous(float2 sampleUV, float c_phi, float n_phi, float p_phi, float step
         t = nval - ntmp;
         // dist2 = max(dot(t,t)/(stepwidth*stepwidth),0.0);
         dist2 = max(dot(t,t),0.0);
-        float n_w = 1.0;//min(exp(-(dist2)/n_phi), 1.0);
+        float n_w = min(exp(-(dist2)/n_phi), 1.0);
 
         float3 ptmp = atrous_GetViewPosition(uv);
         t = pval - ptmp;

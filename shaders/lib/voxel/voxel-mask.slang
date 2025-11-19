@@ -2,14 +2,22 @@ public module voxel_mask;
 
 import aperture;
 import lib.common;
+import lib.voxel.voxel_common;
 
-extern static const uint VoxelMask_BufferSize = 256;
-static const uint3 VoxelMask_BufferCenter = VoxelMask_BufferSize / 2;
+// extern static const uint Voxel_Resolution;
+// static const uint3 VoxelMask_BufferCenter = Voxel_Resolution / 2;
 
 static const uint MaskId_Empty = 0;
 static const uint MaskId_Water = 1;
 static const uint MaskId_Partial = 2;
 static const uint MaskId_Solid = 3;
+
+static const int BlockFace_Down = 0;
+static const int BlockFace_Up = 1;
+static const int BlockFace_North = 2;
+static const int BlockFace_South = 3;
+static const int BlockFace_West = 4;
+static const int BlockFace_East = 5;
 
 
 struct VoxelMask {
@@ -53,24 +61,24 @@ struct VoxelMask {
     }
 }
 
-uint VoxelMask_GetBufferIndex(int3 bufferPos) {
-	const int3 flatten = int3(1, VoxelMask_BufferSize, VoxelMask_BufferSize*VoxelMask_BufferSize);
-	return sumOf(bufferPos * flatten);
-}
+// uint VoxelMask_GetBufferIndex(int3 bufferPos) {
+// 	const int3 flatten = int3(1, Voxel_Resolution, Voxel_Resolution*Voxel_Resolution);
+// 	return sumOf(bufferPos * flatten);
+// }
 
-float3 VoxelMask_GetCenter(const in float3 cameraPos) {
-    return VoxelMask_BufferCenter + fract(cameraPos);
-}
+// float3 VoxelMask_GetCenter(const in float3 cameraPos) {
+//     return VoxelMask_BufferCenter + fract(cameraPos);
+// }
 
-float3 VoxelMask_GetLocalPosition(const in float3 bufferPos) {
-    return bufferPos - VoxelMask_GetCenter(ap.camera.position);
-}
+// float3 VoxelMask_GetLocalPosition(const in float3 bufferPos) {
+//     return bufferPos - VoxelMask_GetCenter(ap.camera.position);
+// }
 
-float3 VoxelMask_GetBufferPosition(const in float3 localPos) {
-    return localPos + VoxelMask_GetCenter(ap.camera.position);
-}
+// float3 VoxelMask_GetBufferPosition(const in float3 localPos) {
+//     return localPos + VoxelMask_GetCenter(ap.camera.position);
+// }
 
-bool VoxelMask_InBounds(const in float3 localPos) {
-    float3 bufferPos = VoxelMask_GetBufferPosition(localPos);
-    return all(clamp(bufferPos, 0.5, VoxelMask_BufferSize-0.5) == bufferPos);
-}
+// bool VoxelMask_InBounds(const in float3 localPos) {
+//     float3 bufferPos = VoxelMask_GetBufferPosition(localPos);
+//     return all(clamp(bufferPos, 0.5, Voxel_Resolution-0.5) == bufferPos);
+// }

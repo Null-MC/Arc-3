@@ -3,6 +3,7 @@ import lib.tags;
 import lib.common;
 import lib.blocks;
 import lib.sampling.atlas;
+import lib.voxel.voxel_common;
 import lib.voxel.voxel_tex;
 
 extern static const bool RENDER_TERRAIN = false;
@@ -53,9 +54,9 @@ VertexOutput vertexMain(Vertex input) {
     if (VOXEL_TEX_ENABLED && RENDER_TERRAIN && voxelize && input.currentInstance() == 1) {
         float3 origin = modelPos;// mul3(ap.celestial.viewInv, shadowViewPos);
         if (let value = input.midBlock()) origin += value;
-        int3 voxelPos = int3(floor(VoxelTex_GetBufferPosition(origin)));
+        int3 voxelPos = int3(floor(Voxel_GetBufferPosition(origin)));
 
-        if (VoxelTex_InBounds(voxelPos)) {
+        if (Voxel_InBufferBounds(voxelPos)) {
             float3 normal = input.normal().value;
             float2 midcoord = input.midCoord().value;
 
@@ -71,7 +72,7 @@ VertexOutput vertexMain(Vertex input) {
             voxel.tint = color.rgb;
 
             uint2 voxelData = voxel.pack(normal);
-            uint voxelIndex = VoxelTex_GetBufferIndex(voxelPos);
+            uint voxelIndex = Voxel_GetBufferIndex(voxelPos);
             InterlockedMax(voxelTexBuffer[voxelIndex].r, voxelData.r);
             InterlockedMax(voxelTexBuffer[voxelIndex].g, voxelData.g);
         }

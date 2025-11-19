@@ -24,7 +24,7 @@ float3 xyY_to_xyz(float3 xyY) {
 }
 
 float ev_100(const in float luminance, const in float luminance_avg) {
-    return luminance / (settings.Post_ExposureRange * max(luminance_avg, 1.0e-8));
+    return luminance / (settings.Exposure_Range * max(luminance_avg, 1.0e-8));
 }
 
 
@@ -34,7 +34,7 @@ float4 applyExposure(float2 pos : SV_Position) : SV_Target0 {
 
     float3 xyY = xyz_to_xyY(mul(RGB_TO_XYZ, color));
 
-    float exposureF = clamp(scene[0].exposure, settings.Post_ExposureMin, settings.Post_ExposureMax);
+    float exposureF = clamp(scene[0].exposure, settings.Exposure_Min, settings.Exposure_Max);
     xyY.z = ev_100(xyY.z, exposureF);// * exp2(-settings.Post_ExposureOffset);
 
 	color = mul(XYZ_TO_RGB, xyY_to_xyz(xyY));

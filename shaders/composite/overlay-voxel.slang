@@ -1,12 +1,11 @@
 import aperture;
 import buffers.ObjectData;
 import lib.common;
-import lib.blocks;
 import lib.sampling.IGN;
 import lib.sampling.depth;
 import lib.water.common;
 import lib.sky.sample_final;
-import lib.voxel.voxel_tex;
+import lib.voxel.voxel_common;
 import lib.voxel.voxel_mask;
 import lib.voxel.voxel_sample;
 import lib.material.pbr;
@@ -185,8 +184,8 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                     float3 stepAxisNext;
                     float3 step = DDA_step(stepAxisNext, nextDist, stepSizes, refract_localDir);
 
-                    hit_voxelMaskPos = int3(floor(VoxelMask_GetBufferPosition(currPos + 0.5*step - cameraFract)));
-                    uint voxelIndex = VoxelMask_GetBufferIndex(hit_voxelMaskPos);
+                    hit_voxelMaskPos = int3(floor(Voxel_GetBufferPosition(currPos + 0.5*step - cameraFract)));
+                    uint voxelIndex = Voxel_GetBufferIndex(hit_voxelMaskPos);
                     var voxelMask = VoxelMaskBuffer[voxelIndex];
                     uint maskId = voxelMask.getId();
 
