@@ -16,7 +16,7 @@ export function ApplyLightColors(coloredCandles: boolean) {
     setLightColorEx('#d3b178', 1, 'glowstone');
     setLightColorEx('#c2985a', 1, 'jack_o_lantern');
     setLightColorEx('#f39e49',  4/16, 'lantern');
-    setLightColorEx('#b8491c', 1, 'lava', 'magma_block');
+    setLightColorEx('#b8491c', 1, 'lava', 'lava_cauldron', 'magma_block');
     setLightColorEx('#650a5e', 1, 'nether_portal');
     setLightColorEx('#dfac47', 1, 'ochre_froglight');
     setLightColorEx('#e075e8', 1, 'pearlescent_froglight');

@@ -14,6 +14,8 @@ extern static const bool World_HasSky;
 extern static const bool TAA_Enabled;
 extern static const bool Debug_WhiteWorld;
 
+static const float BLOCK_LUX = 200;
+static const float BLOCK_LUM = BLOCK_LUX * PI;
 static const half WeatherOpacity = (half)0.40;
 static const half3 BlockLightColor = half3(RgbToLinear(float3(0.859, 0.722, 0.380)));
 static const half3 WhiteWorldColor = half3(0.65);

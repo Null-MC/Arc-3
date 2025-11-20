@@ -6,8 +6,6 @@ import lib.material.pbr;
 import lib.light.fresnel;
 import lib.light.brdf;
 
-extern static const half BLOCK_LUX;
-
 static const float HandLightOffset_main = 0.2;
 static const float HandLightOffset_alt = -0.2;
 

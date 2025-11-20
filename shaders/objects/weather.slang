@@ -8,7 +8,6 @@ import lib.material.pbr;
 import lib.shadow;
 
 extern static const bool FloodFill_Enabled;
-extern static const half BLOCK_LUX;
 
 
 struct VertexOutput {

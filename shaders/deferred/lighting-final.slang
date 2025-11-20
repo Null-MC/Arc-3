@@ -7,7 +7,6 @@ import lib.sky.sample_final;
 
 extern static const bool Lighting_GI = false;
 extern static const bool RENDER_TRANSLUCENT = false;
-extern static const half BLOCK_LUX;
 
 Sampler2D<float> texDepth;
 
@@ -60,14 +59,14 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         half smoothness = (half)1.0 - pow2(roughness);
         diffuse *= (half)1.0 - metalness * smoothness;
 
-        diffuse += emission * BLOCK_LUX;
+        // diffuse += emission * BLOCK_LUX;
+        final.rgb += albedo * emission * BLOCK_LUM;
 
         if (Debug_WhiteWorld) albedo = WhiteWorldColor;
 
         float3 diffColor = Wetness_GetAlbedo(albedo, porosity, wetness);
 
-        final.rgb = diffColor * diffuse + specular * tint;
-        final.rgb += albedo * emission * BLOCK_LUX;
+        final.rgb += diffColor * diffuse + specular * tint;
         final.a = color.a;
     }
     else if (!RENDER_TRANSLUCENT && World_HasSky) {

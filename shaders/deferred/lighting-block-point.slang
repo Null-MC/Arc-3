@@ -8,7 +8,6 @@ import lib.sampling.depth;
 import lib.water.wetness;
 import lib.hsv;
 
-extern static const half BLOCK_LUX;
 extern static const int PointLight_MaxCount;
 extern static const bool DEBUG_LIGHT_TILES;
 

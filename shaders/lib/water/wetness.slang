@@ -7,7 +7,7 @@ half3 Wetness_GetAlbedo(const in half3 albedo, const in float porosity, const in
 }
 
 void Wetness_ApplyRoughness(inout half roughness, const in half wetness) {
-    roughness = (half)lerp(roughness, 0.06, saturate(wetness));
+    roughness = (half)lerp(roughness, 0.12, saturate(wetness));
 }
 
 void Wetness_ApplyNormal(inout half3 tex_normal, const in half3 geo_normal, const in half wetness) {

@@ -38,7 +38,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
     
     if (depth < 1.0) {
         float2 texcoord = (uv_full + 0.5) / ap.game.screenSize;
-        if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
+        // if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
         float3 screenPos = float3(texcoord, depth);
         float3 clipPos = screenPos * 2.0 - 1.0;
@@ -90,9 +90,9 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         bool hit = false;
         float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
-        for (uint i = 1; i < Reflect_ScreenSteps; i++) {
+        for (uint i = 0; i <= Reflect_ScreenSteps; i++) {
             float f = (i + dither) / Reflect_ScreenSteps;
-            traceClipPos = lerp(traceClipStart, traceClipEnd, f);
+            traceClipPos = lerp(traceClipStart, traceClipEnd, saturate(f));
             traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
             if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
 
@@ -109,25 +109,27 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             traceDepthL_prev = traceDepthL;
         }
 
-        if (hit) {
-            traceClipStart = traceClipPos_prev;
-            traceClipEnd = traceClipPos;
+        // if (hit) {
+        //     traceClipStart = traceClipPos_prev;
+        //     traceClipEnd = traceClipPos;
 
-            for (uint i = 0; i < Reflect_RefineSteps; i++) {
-                float f = (i + dither) / Reflect_RefineSteps;
-                traceClipPos = lerp(traceClipStart, traceClipEnd, f);
-                traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
-                if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
+        //     for (uint i = 0; i <= Reflect_RefineSteps; i++) {
+        //         float f = (i + dither) / Reflect_RefineSteps;
+        //         traceClipPos = lerp(traceClipStart, traceClipEnd, saturate(f));
+        //         float2 testPos = traceClipPos.xy * 0.5 + 0.5;
+        //         if (!all(saturate(testPos) == testPos)) break;
 
-                float sampleClipDepth = solidDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
-                float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
-                float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
+        //         float sampleClipDepth = solidDepthTex.Sample(testPos) * 2.0 - 1.0;
+        //         float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
+        //         float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
-                if (screenDepthL < traceDepthL) {
-                    break;
-                }
-            }
-        }
+        //         if (screenDepthL < traceDepthL) {
+        //             break;
+        //         }
+
+        //         traceScreenPos = testPos;
+        //     }
+        // }
 
         half3 reflectColor;
 

@@ -273,13 +273,10 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 float3 hit_screenPos = project(ap.camera.projection, hit_viewPos) * 0.5 + 0.5;
                 float hit_depth = solidDepthTex.Sample(hit_screenPos.xy);
 
-                // TODO: these line up for now, but need a proper conversion!
-                int3 hit_voxelTexPos = hit_voxelMaskPos;
-
                 float2 voxelTexCoord = GetVoxelTexCoord(hit_normal, currPos);
-                sampleColor = SampleVoxel(hit_localPos, hit_normal, hit_voxelTexPos, voxelTexCoord, true);
+                sampleColor = SampleVoxel(hit_localPos, hit_normal, hit_voxelMaskPos, voxelTexCoord, true);
 
-                // cos_sample = max(dot(hit_normal, -trace_localDir), 0.0);
+                cos_sample = 1.0;// max(dot(hit_normal, -trace_localDir), 0.0);
             }
         }
 
@@ -289,7 +286,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             float3 skyPos = getSkyPosition(localPos);
             sampleColor = sampleSkyView(skyPos, trace_localDir, scene[0].SunLocalDir);
             // sampleColor = sampleSkyIrradiance(trace_localDir);
-            cos_sample = PI * lmcoord_y;
+            cos_sample = lmcoord_y;
         }
 
         if (traceWaterDist > 0.0)

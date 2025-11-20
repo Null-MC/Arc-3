@@ -14,7 +14,6 @@ import lib.sky.sample_transmit;
 import lib.sky.sample_irradiance;
 
 extern static const bool FloodFill_Enabled;
-extern static const half BLOCK_LUX;
 
 StructuredBuffer<uint2> voxelTexBuffer;
 
@@ -33,7 +32,7 @@ float2 GetVoxelTexCoord(const in float3 normal, const in float3 voxelPos) {
 }
 
 float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in int3 voxelBufferPos, const in float2 voxelTexCoord, bool isGI = false) {
-    float3 albedo = 0.0;
+    float3 albedo = 1.0;
     half roughL = (half)0.85;
     half metalness = (half)0.0;
     half emission = (half)0.0;
@@ -61,7 +60,7 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
 
         if (voxelTexBuffer[voxelIndex].r == 0) {
             // debug missing data with red albedo
-            albedo = half3(0.0);//half3(1, 0, 0);
+            albedo = half3(1);//half3(1, 0, 0);
         }
     }
 
@@ -113,18 +112,18 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
         diffuse += NoLm_moon * (shadowIsSun ? (half)0.0 : shadow) * moon_color;
     }
 
-    diffuse /= PI;
-
     if (World_HasSky) {
         diffuse += sampleSkyIrradiance(normal) * lmcoord.y;
     }
+
+    diffuse /= PI;
 
     // remove diffuse for smooth metals
     half smoothness = (half)1.0 - roughL;
     diffuse *= (half)1.0 - metalness * smoothness;
 
     if (!isGI) {
-        diffuse += emission * BLOCK_LUX;
+        diffuse += emission * BLOCK_LUM;
 
         if (Debug_WhiteWorld) albedo = WhiteWorldColor;
     }
