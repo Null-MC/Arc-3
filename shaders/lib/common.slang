@@ -10,6 +10,7 @@ StructuredBuffer<SceneBuffer> scene;
 [[vk::image_format("rgba8")]]
 RWTexture2D<float4> imgDebug;
 
+extern static const bool World_HasSky;
 extern static const bool TAA_Enabled;
 extern static const bool Debug_WhiteWorld;
 

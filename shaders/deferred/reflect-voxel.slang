@@ -9,6 +9,7 @@ import lib.sampling.depth;
 import lib.sampling.IGN;
 import lib.sky.sample_final;
 import lib.water.common;
+import lib.water.wetness;
 import lib.voxel.voxel_common;
 import lib.voxel.voxel_tex;
 import lib.voxel.voxel_mask;
@@ -29,8 +30,9 @@ static const int2 BufferSize = int2(BufferWidth, BufferHeight);
 
 StructuredBuffer<VoxelMask> VoxelMaskBuffer;
 
-Sampler2D<float> solidDepthTex;
 Sampler2D<half3> texSource;
+Sampler2D<float> solidDepthTex;
+Sampler2D<half2> texWetnessGB;
 
 Sampler2D<half4> texAlbedoGB;
 Sampler2D<uint2> texNormalGB;
@@ -57,7 +59,8 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         half4 colorData = texAlbedoGB[uv_full];
 
-        half3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB[uv_full].g);
+        ObjectData_Normals normals;
+        normals.unpack(texNormalGB[uv_full]);
 
         ObjectData_MatLit mat_lit;
         mat_lit.unpack(texMatLightGB[uv_full]);
@@ -67,14 +70,20 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         half f0_metal = mat_f0_metal(mat_lit.specular.g);
         half metalness = (half)mat_metalness(f0_metal);
 
+        // TODO: wetness
+        half2 wetness_puddle = texWetnessGB[uv_full];
+        Wetness_ApplyRoughness(roughness, wetness_puddle.x);
+        Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
+        // f0_metal = (half)lerp(f0_metal, 0.02, wetness);
+
         half lmcoord_y = pow2(mat_lit.lmcoord.y);
         half roughL = pow2(roughness);
 
         float dither = InterleavedGradientNoiseTime(pos);
 
         float3 reflectNormal = Reflect_Rough
-            ? randomizeNormal(int2(pos), tex_normal, roughL)
-            : tex_normal;
+            ? randomizeNormal(int2(pos), normals.tex, roughL)
+            : normals.tex;
         
         float viewDist = length(viewPos);
         float3 viewDir = viewPos / viewDist;

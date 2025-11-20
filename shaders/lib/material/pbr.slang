@@ -6,7 +6,7 @@ extern static const int MATERIAL_FORMAT;
 extern static const int MATERIAL_NORMAL_FORMAT = MATERIAL_FORMAT;
 extern static const int MATERIAL_METALS_FORMAT = MATERIAL_FORMAT;
 extern static const int MATERIAL_EMISSION_FORMAT = MATERIAL_FORMAT;
-extern static const int MATERIAL_POROSITY_FORMAT = MATERIAL_FORMAT;
+extern static const int MATERIAL_POROSITY_FORMAT = MAT_OLDPBR;
 extern static const int MATERIAL_SSS_FORMAT = MATERIAL_FORMAT;
 
 static const int MAT_LABPBR = 2;
@@ -69,7 +69,7 @@ half mat_porosity_old(const in half roughness, const in half f0_metal) {
     return sqrt(roughness) * metalInv;
 }
 
-float mat_porosity(const in half data, const in half roughness, const in half f0_metal) {
+half mat_porosity(const in half data, const in half roughness, const in half f0_metal) {
     if (MATERIAL_POROSITY_FORMAT == MAT_LABPBR) {
         return mat_porosity_lab(data);
     }

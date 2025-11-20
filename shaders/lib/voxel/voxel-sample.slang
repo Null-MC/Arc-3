@@ -14,7 +14,6 @@ import lib.sky.sample_transmit;
 import lib.sky.sample_irradiance;
 
 extern static const bool FloodFill_Enabled;
-extern static const bool World_HasSky;
 extern static const half BLOCK_LUX;
 
 StructuredBuffer<uint2> voxelTexBuffer;

@@ -2,7 +2,7 @@ public module common;
 
 import aperture;
 import lib.common;
-import lib.hg;
+import lib.light.HG;
 
 // Units are in megameters.
 static const float groundRadiusMM = 6.371;

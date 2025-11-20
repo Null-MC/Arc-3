@@ -5,6 +5,7 @@ import lib.material.pbr;
 import lib.light.brdf;
 import lib.light.fresnel;
 import lib.sampling.depth;
+import lib.water.wetness;
 import lib.hsv;
 
 extern static const half BLOCK_LUX;
@@ -28,6 +29,7 @@ RWTexture2D<half3> imgDiffuse;
 RWTexture2D<half3> imgSpecular;
 
 Sampler2D<float> texDepth;
+Sampler2D<half2> texWetnessGB;
 
 Sampler2D<half4> texAlbedoGB;
 Sampler2D<uint2> texNormalGB;
@@ -171,6 +173,10 @@ void applyPointLights(ComputeInput input) {
         half f0_metal = mat_f0_metal(mat_lit.specular.g);
         half sss = mat_sss(mat_lit.specular.b);
 
+        half2 wetness_puddle = texWetnessGB[uv];
+        Wetness_ApplyRoughness(roughness, wetness_puddle.x);
+        Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
+
         half3 albedo = RgbToLinear(colorData.rgb);
         half roughL = roughness * roughness;
 
@@ -182,8 +188,6 @@ void applyPointLights(ComputeInput input) {
         // float3 f0 = f0_metal < 0.9 ? f0_metal : albedo;
         half metalness = mat_metalness(f0_metal);
         half3 f0 = lerp(f0_metal, albedo, metalness);
-
-        float sss_wrap = pow2(sss);
 
         for (uint i = 0; i < total; i++) {
             uint lightIndex = sharedLightList[i];
@@ -205,6 +209,8 @@ void applyPointLights(ComputeInput input) {
 
             float NoL = dot(normals.tex, lightDir);
             float NoLm = max(NoL, 0.0);
+
+            float sss_wrap = pow2(sss);
             float NoLm_wrap = max((NoL + sss_wrap) / (1.0 + sss_wrap), 0.0);
 
             float3 H = normalize(lightDir + viewDir);

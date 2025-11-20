@@ -30,8 +30,9 @@ struct ObjectData_Normals {
 
 struct ObjectData_MatLit {
     half4 specular;
-    half occlusion;
     half2 lmcoord;
+    half occlusion;
+    // half wetness;
     uint blockMapId;
 
     uint2 pack() {

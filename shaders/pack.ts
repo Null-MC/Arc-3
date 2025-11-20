@@ -231,10 +231,18 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     let texSkyMultiScatter: BuiltTexture | undefined;
     let texSkyView: BuiltTexture | undefined;
     let texSkyIrradiance: BuiltTexture | undefined;
+    let texWetnessGB: BuiltTexture | undefined;
     let texShadowGB: BuiltTexture | undefined;
     let texSssGB: BuiltTexture | undefined;
     let texWeather: BuiltTexture | undefined;
     if (dimension.World_HasSky) {
+        texWetnessGB = pipeline.createTexture('texWetnessGB')
+            .width(screenWidth)
+            .height(screenHeight)
+            .format(Format.RG16F)
+            .clear(false)
+            .build();
+
         texShadowGB = pipeline.createTexture('texShadowGB')
             .width(screenWidth)
             .height(screenHeight)
@@ -649,6 +657,17 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         postRenderStage.copy(texPosition, texPositionPrev, screenWidth, screenHeight);
 
         withSubList(postRenderStage, 'opaque-deferred', opaqueStage => {
+            if (dimension.World_HasSky) {
+                opaqueStage.createComposite("deferred-sky-wetness")
+                    .location("deferred/sky-wetness", "skyWetness")
+                    .target(0, texWetnessGB)
+                    .overrideObject('texDepth', 'solidDepthTex')
+                    .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
+                    .overrideObject('texNormalGB', texNormalGB_opaque.name())
+                    .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
+                    .compile();
+            }
+
             opaqueStage.createComposite("deferred-lighting-block-hand")
                 .location("deferred/lighting-block-hand", "lightingBlockHand")
                 .target(0, texDiffuse)
@@ -660,8 +679,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 .compile();
 
             if (dimension.World_HasSky) {
-                opaqueStage.createComposite("deferred-shadow-sky")
-                    .location("deferred/shadow-sky", "skyShadowSss")
+                opaqueStage.createComposite("deferred-sky-shadow")
+                    .location("deferred/sky-shadow", "skyShadowSss")
                     .target(0, texShadowGB)
                     .target(1, texSssGB)
                     .overrideObject('texDepth', 'solidDepthTex')
@@ -676,8 +695,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .exportInt('Shadow_SssPcfSamples', options.Shadow_SssPcfSamples)
                     .compile();
 
-                opaqueStage.createCompute("deferred-shadow-sky-filter")
-                    .location("deferred/shadow-sky-filter", "filterShadowSss")
+                opaqueStage.createCompute("deferred-sky-shadow-filter")
+                    .location("deferred/sky-shadow-filter", "filterShadowSss")
                     .workGroups(
                         Math.ceil(screenWidth / 16),
                         Math.ceil(screenHeight / 16),
@@ -685,8 +704,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .overrideObject('texDepth', 'solidDepthTex')
                     .compile();
 
-                opaqueStage.createComposite("deferred-lighting-sky")
-                    .location("deferred/lighting-sky", "lightingSky")
+                opaqueStage.createComposite("deferred-sky-lighting")
+                    .location("deferred/sky-lighting", "lightingSky")
                     .target(0, texDiffuse).blendFunc(0, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
                     .target(1, texSpecular).blendFunc(1, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
                     .overrideObject('texDepth', 'solidDepthTex')
@@ -852,8 +871,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 .compile();
 
             if (dimension.World_HasSky) {
-                translucentStage.createComposite("deferred-shadow-sky")
-                    .location("deferred/shadow-sky", "skyShadowSss")
+                translucentStage.createComposite("deferred-sky-shadow")
+                    .location("deferred/sky-shadow", "skyShadowSss")
                     .target(0, texShadowGB)
                     .target(1, texSssGB)
                     .overrideObject('texDepth', 'mainDepthTex')
@@ -868,8 +887,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .exportInt('Shadow_SssPcfSamples', options.Shadow_SssPcfSamples)
                     .compile();
 
-                translucentStage.createCompute("deferred-shadow-sky-filter")
-                    .location("deferred/shadow-sky-filter", "filterShadowSss")
+                translucentStage.createCompute("deferred-sky-shadow-filter")
+                    .location("deferred/sky-shadow-filter", "filterShadowSss")
                     .workGroups(
                         Math.ceil(screenWidth / 16),
                         Math.ceil(screenHeight / 16),
@@ -877,8 +896,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .overrideObject('texDepth', 'mainDepthTex')
                     .compile();
 
-                translucentStage.createComposite("deferred-lighting-sky")
-                    .location("deferred/lighting-sky", "lightingSky")
+                translucentStage.createComposite("deferred-sky-lighting")
+                    .location("deferred/sky-lighting", "lightingSky")
                     .target(0, texDiffuse).blendFunc(0, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
                     .target(1, texSpecular).blendFunc(1, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
                     .overrideObject('texDepth', 'mainDepthTex')

@@ -5,11 +5,13 @@ import lib.material.pbr;
 import lib.point_lights;
 import lib.light.floodfill;
 import lib.light.hand;
+import lib.water.wetness;
 
 extern static const bool PointLight_Enabled;
 extern static const bool FloodFill_Enabled;
 
 Sampler2D<float> texDepth;
+Sampler2D<half2> texWetnessGB;
 
 Sampler2D<half4> texAlbedoGB;
 Sampler2D<uint2> texNormalGB;
@@ -74,6 +76,10 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
         half roughness = mat_roughness(mat_lit.specular.r);
         half f0_metal = mat_f0_metal(mat_lit.specular.g);
         half metalness = mat_metalness(f0_metal);
+
+        half2 wetness_puddle = texWetnessGB[uv];
+        Wetness_ApplyRoughness(roughness, wetness_puddle.x);
+        Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
 
         half3 f0 = lerp(f0_metal, albedo, metalness);
         half roughL = roughness*roughness;

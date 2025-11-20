@@ -62,11 +62,11 @@ float4 applyTonemap(float2 pos : SV_Position) : SV_Target0 {
 
     color = tonemap_uchimura(color,
         1.000,  // max display brightness
-        settings.ToneMap_Contrast,  // contrast
+        settings.ToneMap_Contrast,
         0.140,  // linear section start
         0.320,  // linear section length
         1.560,  // black
-        0.002); // pedestal
+        0.005); // pedestal
 
     color = mul(REC2020_TO_SRGB, color);
 

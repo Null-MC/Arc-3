@@ -236,25 +236,27 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                     if (voxelMask.testFace(axisNormal)) {hit = true; break;}
                 }
 
-                uint voxelIndex = Voxel_GetBufferIndex(hit_voxelMaskPos);
-                voxelMask = VoxelMaskBuffer[voxelIndex];
-                uint maskId = voxelMask.getId();
+                if (Voxel_InBufferBounds(hit_voxelMaskPos)) {
+                    uint voxelIndex = Voxel_GetBufferIndex(hit_voxelMaskPos);
+                    voxelMask = VoxelMaskBuffer[voxelIndex];
+                    uint maskId = voxelMask.getId();
 
-                if (maskId == MaskId_Solid) {
-                    hit = true;
-                    break;
-                }
-                else if (maskId == MaskId_Partial) {
-                    traceOcclusionDist += length(step);
-                }
-                else if (maskId == MaskId_Water) {
-                    traceWaterDist += length(step);
-                }
+                    if (maskId == MaskId_Solid) {
+                        hit = true;
+                        break;
+                    }
+                    else if (maskId == MaskId_Partial) {
+                        traceOcclusionDist += length(step);
+                    }
+                    else if (maskId == MaskId_Water) {
+                        traceWaterDist += length(step);
+                    }
 
-                if (!all(stepAxis == 0)) {
-                    // check enter face mask
-                    float3 axisNormal = -stepAxis * sign(trace_localDir);
-                    if (voxelMask.testFace(axisNormal)) {hit = true; break;}
+                    if (!all(stepAxis == 0)) {
+                        // check enter face mask
+                        float3 axisNormal = -stepAxis * sign(trace_localDir);
+                        if (voxelMask.testFace(axisNormal)) {hit = true; break;}
+                    }
                 }
 
                 currPos += step;

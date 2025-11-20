@@ -3,8 +3,10 @@ import buffers.ObjectData;
 import lib.common;
 import lib.light.fresnel;
 import lib.light.brdf;
+import lib.light.HG;
 import lib.material.pbr;
 import lib.material.rough_normal;
+import lib.water.wetness;
 import lib.sky.common;
 import lib.sky.sun;
 import lib.sky.moon;
@@ -25,6 +27,7 @@ Sampler2D<half4> texAlbedoGB;
 Sampler2D<uint2> texNormalGB;
 Sampler2D<uint2> texMatLightGB;
 
+Sampler2D<half2> texWetnessGB;
 Sampler2D<half3> texShadowFinal;
 Sampler2D<half3> texSssFinal;
 
@@ -52,7 +55,8 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         float3 localPos = mul3(ap.camera.viewInv, viewPos);
         float3 viewLocalDir = -normalize(localPos);
 
-        float3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB[uv].g);
+        ObjectData_Normals normals;
+        normals.unpack(texNormalGB[uv]);
 
         ObjectData_MatLit mat_lit;
         mat_lit.unpack(texMatLightGB[uv]);
@@ -74,13 +78,19 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
 
         half metalness = mat_metalness(f0_metal);
         
+        // TODO: wetness
+        half2 wetness_puddle = texWetnessGB[uv];
+        Wetness_ApplyRoughness(roughness, wetness_puddle.x);
+        Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
+        // f0_metal = (half)lerp(f0_metal, 0.02, wetness);
+
         SurfaceData surface;
         surface.skyPos = getSkyPosition(localPos);
-        surface.normal = tex_normal;
+        surface.normal = normals.tex;
         surface.roughL = roughness*roughness;
         surface.f0 = lerp(f0_metal, albedo, metalness);
 
-        half NoVm = max((half)dot(tex_normal, viewLocalDir), (half)0.0);
+        half NoVm = max((half)dot(normals.tex, viewLocalDir), (half)0.0);
         
         half3 shadow = RgbToLinear(texShadowFinal[uv]);
         bool shadowIsSun = dot(ap.celestial.position, ap.celestial.sunPosition) > 0.0;
@@ -109,20 +119,25 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         diffuse /= PI;
 
         if (!Lighting_GI || RENDER_TRANSLUCENT) {
-            half3 sky_ambient = sampleSkyIrradiance(tex_normal);
+            half3 sky_ambient = sampleSkyIrradiance(normals.tex);
             diffuse += sky_ambient * lmcoord_y * mat_lit.occlusion;
         }
 
-        diffuse *= 1.0 - 0.66*sss;
-
+        float VoL = dot(-viewLocalDir, scene[0].SkyLightLocalDir);
+        float sss_phase = saturate(4.0*HG(VoL, 0.3));
         half3 sss_sky = RgbToLinear(texSssFinal[uv]);
-        half3 sss_ambient = sampleSkyIrradiance(-tex_normal) * lmcoord_y;
-        half3 sssFinal = sss_sky * (sun_color + moon_color) + sss_ambient * sss;
-        diffuse += (0.33/PI) * sssFinal;
+        half3 sssFinal = sss_sky * (sun_color + moon_color) * sss_phase;
+        
+        if (!Lighting_GI || RENDER_TRANSLUCENT) {
+            half3 sss_ambient = sampleSkyIrradiance(-normals.tex) * lmcoord_y;
+            sssFinal += 0.5 * sss_ambient;
+        }
+
+        diffuse = lerp(diffuse, sssFinal, 0.3*sss);
 
         if (ReflectMode == Reflect_SkyOnly) {
-            float3 reflectLocalNormal = tex_normal;
-            if (Reflect_Rough) reflectLocalNormal = randomizeNormal(uint2(pos), tex_normal, surface.roughL);
+            float3 reflectLocalNormal = normals.tex;
+            if (Reflect_Rough) reflectLocalNormal = randomizeNormal(uint2(pos), normals.tex, surface.roughL);
 
             float3 fragViewDir = normalize(viewPos);
             float3 viewNormal = mul(float3x3(ap.camera.view), reflectLocalNormal);
