@@ -787,8 +787,9 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                             .location('deferred/gi/gi-atrous', "atrousFilter")
                             .target(0, texGI_flipper.getWriteTexture())
                             .overrideObject('texSource', filter_src)
+                            .overrideObject('texDepth', 'solidDepthTex')
                             .overrideObject('texNormalGB', texNormalGB_opaque.name())
-                            .exportInt('AtrousLevel', i)
+                            .exportInt('ATrousLevel', i)
                             .compile();
                     }
 
