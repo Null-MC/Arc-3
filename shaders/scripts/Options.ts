@@ -53,15 +53,16 @@ export class Options {
     get Lighting_FloodFill_Enabled(): boolean {return getBoolSetting('LIGHTING_FLOODFILL_ENABLED');}
     get Lighting_FloodFill_Size(): number {return getIntSetting('LIGHTING_FLOODFILL_SIZE');}
 
-    get Shadow_Resolution(): number {return getIntSetting('SHADOW_RESOLUTION');}
-    get Shadow_Distance(): number {return getIntSetting('SHADOW_DISTANCE');}
-    get Shadow_Angle(): number {return getIntSetting('SHADOW_ANGLE');}
-    get Shadow_MaxRadius(): number {return getFloatSetting('SHADOW_MAX_RADIUS');}
-    get Shadow_PcssSamples(): number {return getIntSetting('SHADOW_PCSS_SAMPLES');}
-    get Shadow_PcfSamples(): number {return getIntSetting('SHADOW_PCF_SAMPLES');}
-    get Shadow_SssMaxRadius(): number {return getFloatSetting('SHADOW_SSS_MAX_RADIUS');}
-    get Shadow_SssMaxDist(): number {return getFloatSetting('SHADOW_SSS_MAX_DIST');}
-    get Shadow_SssPcfSamples(): number {return getIntSetting('SHADOW_SSS_PCF_SAMPLES');}
+    get Shadow_CSM_Enabled(): boolean {return getBoolSetting('SHADOW.CSM_ENABLED');}
+    get Shadow_Resolution(): number {return getIntSetting('SHADOW.RESOLUTION');}
+    get Shadow_Distance(): number {return getIntSetting('SHADOW.DISTANCE');}
+    get Shadow_Angle(): number {return getIntSetting('SHADOW.ANGLE');}
+    get Shadow_MaxRadius(): number {return getFloatSetting('SHADOW.MAX_RADIUS');}
+    get Shadow_PcssSamples(): number {return getIntSetting('SHADOW.PCSS_SAMPLES');}
+    get Shadow_PcfSamples(): number {return getIntSetting('SHADOW.PCF_SAMPLES');}
+    get Shadow_SssMaxRadius(): number {return getFloatSetting('SHADOW.SSS_MAX_RADIUS');}
+    get Shadow_SssMaxDist(): number {return getFloatSetting('SHADOW.SSS_MAX_DIST');}
+    get Shadow_SssPcfSamples(): number {return getIntSetting('SHADOW.SSS_PCF_SAMPLES');}
 
     get Post_ToneMap_Contrast(): number {return getIntSetting('POST.TONEMAP.CONTRAST');}
 

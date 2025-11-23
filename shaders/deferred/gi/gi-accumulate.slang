@@ -53,7 +53,7 @@ half4 accumulateGI(float2 pos : SV_Position) : SV_Target0 {
     }
 
     // DEBUG
-    imgDebug[uint2(pos)] = half4(diffuse * 0.02, (half)1.0);
+    imgDebug[uint2(pos)] = half4(diffuse * 0.08, (half)1.0);
 
     return half4(diffuse, (half)(counter + 1.0));
 }

@@ -95,7 +95,7 @@ VertexOutput vertexMain(Vertex input) {
         }
 
         float3x3 TBN = GetTBN(viewNormal, viewTangent.xyz, viewTangent.w);
-        float3 viewPos = mul3(ap.camera.view, output.localPos);
+        // float3 viewPos = mul3(ap.camera.view, output.localPos);
         output.tangentViewPos = mul(TBN, viewPos.xyz);
     }
 

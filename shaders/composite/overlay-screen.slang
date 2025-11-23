@@ -55,8 +55,8 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
     float opaqueDepth = solidDepthTex[uv];
-    float3 opaqueClipPos = float3(texcoord, opaqueDepth) * 2.0 - 1.0;
-    float3 opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);
+    // float3 opaqueClipPos = float3(texcoord, opaqueDepth) * 2.0 - 1.0;
+    // float3 opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);
 
     float transDepth = mainDepthTex[uv];
     float3 transClipPos = float3(texcoord, transDepth) * 2.0 - 1.0;
@@ -130,7 +130,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     }
     else if (isWater) {
         float3 opaqueClipPos = float3(refract_texcoord, opaqueDepth) * 2.0 - 1.0;
-        opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);
+        float3 opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);
         float opaqueDist = length(opaqueViewPos);
 
         waterDepthL = max(opaqueDist - transDist, 0.0);

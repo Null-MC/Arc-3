@@ -22,4 +22,7 @@ struct SceneBuffer {
 
     float2 WeatherOffset;
     SkyParameters sky;
+
+    // float4x4 viewProjection;
+    float4x4 viewProjectionInv;
 };

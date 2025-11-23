@@ -32,8 +32,9 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
         if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
         float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
-        float3 viewPos = project(ap.camera.projectionInv, clipPos);
-        float3 localPos = mul3(ap.camera.viewInv, viewPos);
+        // float3 viewPos = project(ap.camera.projectionInv, clipPos);
+        // float3 localPos = mul3(ap.camera.viewInv, viewPos);
+        float3 localPos = project(scene[0].viewProjectionInv, clipPos);
         float3 viewLocalDir = -normalize(localPos);
 
         ObjectData_Normals normals;
@@ -53,7 +54,7 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
         }
 
         // Shadows
-        float viewDist = length(viewPos) + 1.0;
+        float viewDist = length(localPos) + 1.0;
         float geo_NoLm = 1.0 - max(dot(normals.geo, scene[0].SkyLightLocalDir), 0.0);
         float normal_bias = geo_NoLm * saturate(viewDist * 0.004);
         float offset_bias = saturate(viewDist * 0.002);

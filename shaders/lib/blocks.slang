@@ -1,3 +1,20 @@
 public module blocks;
 
 extern static const uint BLOCK_WATER;
+// extern static const uint BLOCK_GLASS_TINTED;
+// extern static const uint BLOCK_GLASS_WHITE;
+// extern static const uint BLOCK_GLASS_LIGHT_GRAY;
+// extern static const uint BLOCK_GLASS_GRAY;
+// extern static const uint BLOCK_GLASS_BLACK;
+// extern static const uint BLOCK_GLASS_BROWN;
+// extern static const uint BLOCK_GLASS_RED;
+// extern static const uint BLOCK_GLASS_ORANGE;
+// extern static const uint BLOCK_GLASS_YELLOW;
+// extern static const uint BLOCK_GLASS_LIME;
+// extern static const uint BLOCK_GLASS_GREEN;
+// extern static const uint BLOCK_GLASS_CYAN;
+// extern static const uint BLOCK_GLASS_LIGHT_BLUE;
+// extern static const uint BLOCK_GLASS_BLUE;
+// extern static const uint BLOCK_GLASS_PURPLE;
+// extern static const uint BLOCK_GLASS_MAGENTA;
+// extern static const uint BLOCK_GLASS_PINK;

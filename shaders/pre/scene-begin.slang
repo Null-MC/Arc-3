@@ -44,4 +44,7 @@ void beginScene() {
     scene_writer[0].WeatherOffset -= windFallSpeed * ap.timing.lastFrameTime;
 
     scene_writer[0].FloodFillCenter = GetVoxelCenter(ap.camera.position);
+
+    // scene_writer[0].viewProjection = mul(ap.camera.view, ap.camera.projection);
+    scene_writer[0].viewProjectionInv = mul(ap.camera.viewInv, ap.camera.projectionInv);
 }

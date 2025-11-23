@@ -38,7 +38,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
     
     if (depth < 1.0) {
         float2 texcoord = (uv_full + 0.5) / ap.game.screenSize;
-        // if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
+        if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
         float3 screenPos = float3(texcoord, depth);
         float3 clipPos = screenPos * 2.0 - 1.0;
@@ -109,27 +109,27 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             traceDepthL_prev = traceDepthL;
         }
 
-        // if (hit) {
-        //     traceClipStart = traceClipPos_prev;
-        //     traceClipEnd = traceClipPos;
+        if (hit) {
+            traceClipStart = traceClipPos_prev;
+            traceClipEnd = traceClipPos;
 
-        //     for (uint i = 0; i <= Reflect_RefineSteps; i++) {
-        //         float f = (i + dither) / Reflect_RefineSteps;
-        //         traceClipPos = lerp(traceClipStart, traceClipEnd, saturate(f));
-        //         float2 testPos = traceClipPos.xy * 0.5 + 0.5;
-        //         if (!all(saturate(testPos) == testPos)) break;
+            for (uint i = 0; i <= Reflect_RefineSteps; i++) {
+                float f = (i + dither) / Reflect_RefineSteps;
+                traceClipPos = lerp(traceClipStart, traceClipEnd, saturate(f));
+                float2 testPos = traceClipPos.xy * 0.5 + 0.5;
+                if (!all(saturate(testPos) == testPos)) break;
 
-        //         float sampleClipDepth = solidDepthTex.Sample(testPos) * 2.0 - 1.0;
-        //         float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
-        //         float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
+                float sampleClipDepth = solidDepthTex.Sample(testPos) * 2.0 - 1.0;
+                float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
+                float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
-        //         if (screenDepthL < traceDepthL) {
-        //             break;
-        //         }
+                if (screenDepthL < traceDepthL) {
+                    break;
+                }
 
-        //         traceScreenPos = testPos;
-        //     }
-        // }
+                traceScreenPos = testPos;
+            }
+        }
 
         half3 reflectColor;
 
@@ -143,8 +143,8 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         half3 f0 = lerp(half3(f0_metal), albedo.rgb, metalness);
 
-        half3 localDir = half3(normalize(localPos));
-        half NoVm = max(dot(reflectNormal, -localDir), (half)0.0);
+        float3 localDir = localPos / viewDist;
+        float NoVm = max(dot(reflectNormal, -localDir), 0.0);
         half3 F_NoV = F_schlickRough(NoVm, f0, roughL);
         half3 specular_tint = lerp((half)1.0, albedo, metalness);
 

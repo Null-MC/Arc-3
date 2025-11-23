@@ -147,27 +147,29 @@ suffix.LIGHTING_FLOODFILL_SIZE=m³
 
 screen.SHADOWS=Shadows
 
-option.SHADOW_RESOLUTION=Resolution
-suffix.SHADOW_RESOLUTION=x
+option.SHADOW.CSM_ENABLED=Cascading
 
-option.SHADOW_DISTANCE=Distance
+option.SHADOW.RESOLUTION=Resolution
+suffix.SHADOW.RESOLUTION=x
 
-option.SHADOW_ANGLE=Sun/Moon Angle
+option.SHADOW.DISTANCE=Distance
+
+option.SHADOW.ANGLE=Sun/Moon Angle
 
 
-screen.SHADOW_ADVANCED=Advanced Options
+screen.SHADOWS.ADVANCED=Advanced Options
 
-option.SHADOW_MAX_RADIUS=Shadow Max Radius
+option.SHADOW.MAX_RADIUS=Shadow Max Radius
 
-option.SHADOW_PCSS_SAMPLES=Shadow PCSS Samples
+option.SHADOW.PCSS_SAMPLES=Shadow PCSS Samples
 
-option.SHADOW_PCF_SAMPLES=Shadow PCF Samples
+option.SHADOW.PCF_SAMPLES=Shadow PCF Samples
 
-option.SHADOW_SSS_MAX_RADIUS=SSS Max Radius
+option.SHADOW.SSS_MAX_RADIUS=SSS Max Radius
 
-option.SHADOW_SSS_MAX_DIST=SSS Max Distance
+option.SHADOW.SSS_MAX_DIST=SSS Max Distance
 
-option.SHADOW_SSS_PCF_SAMPLES=SSS PCF Samples
+option.SHADOW.SSS_PCF_SAMPLES=SSS PCF Samples
 
 
 screen.POST=Post-Processing

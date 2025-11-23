@@ -154,6 +154,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
             float traceWaterDist = 0.0;
             int3 hit_voxelMaskPos = -1;
+            bool isLastBlockWater = ap.camera.fluid == 1;
             bool hit = false;
 
             if (ap.camera.fluid == 1) traceWaterDist += viewDist;
@@ -167,16 +168,19 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
                 var voxelMask = VoxelMaskBuffer[voxelIndex];
                 uint maskId = voxelMask.getId();
 
-                if (maskId >= MaskId_Partial) {
+                bool isWater = maskId == MaskId_Water;
+
+                if (isWater) {
+                    traceWaterDist += length(step);
+                }
+                else if (maskId != MaskId_Empty) {
                     hit = true;
                     break;
-                }
-                else if (maskId == MaskId_Water) {
-                    traceWaterDist += length(step);
                 }
                 
                 currPos += step;
                 stepAxis = stepAxisNext;
+                isLastBlockWater = isWater;
             }
 
             float3 hit_localPos = currPos - cameraFract;
@@ -184,12 +188,13 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             // recreate final sample
             if (hit) {
                 float3 hit_normal = -stepAxis * sign(reflect_localDir);
+                half wetness = (half)isLastBlockWater;
 
                 // TODO: these line up for now, but need a proper conversion!
                 int3 hit_voxelTexPos = hit_voxelMaskPos;
 
                 float2 voxelTexCoord = GetVoxelTexCoord(hit_normal, currPos);
-                reflectColor = SampleVoxel(hit_localPos, hit_normal, hit_voxelTexPos, voxelTexCoord);
+                reflectColor = SampleVoxel(hit_localPos, hit_normal, hit_voxelTexPos, voxelTexCoord, wetness);
             }
             else {
                 reflectColor = sampleSkyFinal(hit_localPos, reflect_localDir, false);

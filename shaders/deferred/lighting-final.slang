@@ -75,8 +75,9 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         if (TAA_Enabled) project_coord += scene[0].taa_jitter;
 
         float3 clipPos = float3(project_coord, depth) * 2.0 - 1.0;
-        float3 viewPos = project(ap.camera.projectionInv, clipPos);
-        float3 localPos = mul3(ap.camera.viewInv, viewPos);
+        // float3 viewPos = project(ap.camera.projectionInv, clipPos);
+        // float3 localPos = mul3(ap.camera.viewInv, viewPos);
+        float3 localPos = project(scene[0].viewProjectionInv, clipPos);
         float3 viewLocalDir = normalize(localPos);
 
         final.rgb = sampleSkyFinal(localPos, viewLocalDir, false);

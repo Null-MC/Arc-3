@@ -14,14 +14,14 @@ static const int MAT_OLDPBR = 1;
 static const int MAT_NONE = 0;
 
 
-half3 mat_normal_lab(const in half2 data) {
-    half2 normal_xy = fma(data.xy, half2(2.0), half2(-1.0));
+half3 mat_normal_lab(const in half2 normalData) {
+    half2 normal_xy = fma(normalData.xy, half2(2.0), half2(-1.0));
     half normal_z = sqrt(max((half)1.0 - dot(normal_xy, normal_xy), (half)0.0));
     return half3(normal_xy, normal_z);
 }
 
-half3 mat_normal_old(const in half3 data) {
-    return normalize(fma(data, half3(2.0), half3(-1.0)));
+half3 mat_normal_old(const in half3 normalData) {
+    return normalize(fma(normalData, half3(2.0), half3(-1.0)));
 }
 
 half3 mat_normal(const in half3 normalData) {
@@ -36,16 +36,16 @@ half3 mat_normal(const in half3 normalData) {
     }
 }
 
-half mat_roughness(const in half data) {
-    return (half)1.0 - data;
+half mat_roughness(const in half specular_r) {
+    return (half)1.0 - specular_r;
 }
 
-half mat_emission_lab(const in half data) {
-    return fract(data);
+half mat_emission_lab(const in half specular_a) {
+    return fract(specular_a);
 }
 
-half mat_emission_old(const in half data) {
-    return data;
+half mat_emission_old(const in half specular_b) {
+    return specular_b;
 }
 
 half mat_emission(const in half4 specularData) {
@@ -60,8 +60,8 @@ half mat_emission(const in half4 specularData) {
     }
 }
 
-half mat_porosity_lab(const in half data) {
-    return data * (half)(255.0/64.0) * step(data, (half)(64.5/255.0));
+half mat_porosity_lab(const in half specular_b) {
+    return specular_b * (half)(255.0/64.0) * step(specular_b, (half)(64.5/255.0));
 }
 
 half mat_porosity_old(const in half roughness, const in half f0_metal) {
@@ -69,9 +69,9 @@ half mat_porosity_old(const in half roughness, const in half f0_metal) {
     return sqrt(roughness) * metalInv;
 }
 
-half mat_porosity(const in half data, const in half roughness, const in half f0_metal) {
+half mat_porosity(const in half specular_b, const in half roughness, const in half f0_metal) {
     if (MATERIAL_POROSITY_FORMAT == MAT_LABPBR) {
-        return mat_porosity_lab(data);
+        return mat_porosity_lab(specular_b);
     }
     else {
         return mat_porosity_old(roughness, f0_metal);
@@ -91,10 +91,10 @@ half mat_sss(const in half specular_b) {
     }
 }
 
-half mat_f0_metal(const in half data) {
+half mat_f0_metal(const in half specular_g) {
     if (MATERIAL_METALS_FORMAT != MAT_NONE) {
-        if (data == 0.0) return (half)0.04;
-        return min(data, (half)0.9);
+        if (specular_g == 0.0) return (half)0.04;
+        return min(specular_g, (half)0.9);
     }
     else {
         return (half)0.04;

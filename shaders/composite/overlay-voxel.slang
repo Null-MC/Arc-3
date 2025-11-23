@@ -1,6 +1,7 @@
 import aperture;
 import buffers.ObjectData;
 import lib.common;
+import lib.blocks;
 import lib.sampling.IGN;
 import lib.sampling.depth;
 import lib.water.common;
@@ -48,23 +49,35 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     float3 transClipPos = float3(texcoord, transDepth) * 2.0 - 1.0;
     float3 transViewPos = project(ap.camera.projectionInv, transClipPos);
     float3 transLocalPos = mul3(ap.camera.viewInv, transViewPos);
-    float transDist = length(transViewPos);
 
+    float transDist = length(transViewPos);
     float3 viewDir = transViewPos / transDist;
     float3 localDir = transLocalPos / transDist;
 
     half3 opaque_color = texFinal_opaque[uv];
+
+    ObjectData_MatLit mat_lit;
+    mat_lit.unpack(texMatLightGB_translucent[uv]);
     
+    bool isWater = false;
+    if (mat_lit.blockMapId > 0) {
+        isWater = mat_lit.blockMapId == BLOCK_WATER;
+    }
+
+    float waterDepthL = 0.0;
+    if (ap.camera.fluid == 1) {
+        waterDepthL = transDist;
+    }
+
     bool hasOverlay = translucent.a > 0.0;
     half3 tint = half3(1.0);
+    bool ss_hit = false;
 
     if (hasOverlay) {
         tint = RgbToLinear(texTintTranslucent[uv]);
 
         float3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB_translucent[uv].g);
 
-        ObjectData_MatLit mat_lit;
-        mat_lit.unpack(texMatLightGB_translucent[uv]);
         half roughness = mat_roughness(mat_lit.specular.r);
         half roughL = pow2(roughness);
 
@@ -97,7 +110,6 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
             opaque_color = half3(0.65);
             float traceWaterDist = 0.0;
 
-            bool ss_hit = false;
             if (Refract_SS_Fallback) {
                 float dither = InterleavedGradientNoiseTime(pos);
 
@@ -105,12 +117,9 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                 float3 traceClipStart = project(ap.camera.projection, traceViewStart);
                 float3 screenStart = traceClipStart * 0.5 + 0.5;
 
-                // float3 traceViewEnd = mul3(ap.camera.view, hit_localPos);
-                // float3 traceClipEnd = project(ap.camera.projection, traceViewEnd);
-
+                // TODO: projecting to clip bounds is stretching trace too far; is there a good way to limit SS bounds?
                 float3 screenEnd = projectScreenTrace(traceViewStart, screenStart, refract_viewDir);
                 float3 traceClipEnd = screenEnd * 2.0 - 1.0;
-                // float3 traceClipStart = clipPos;
 
                 float3 traceClipPos;
                 float3 traceClipPos_prev = traceClipStart;
@@ -147,26 +156,35 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                     for (uint i = 0; i < Refract_RefineSteps; i++) {
                         float f = (i + dither) / Refract_RefineSteps;
                         traceClipPos = lerp(traceClipStart, traceClipEnd, f);
-                        traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
-                        if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
+                        float2 refine_pos = traceClipPos.xy * 0.5 + 0.5;
+                        if (!all(saturate(refine_pos) == refine_pos)) break;
 
-                        float sampleClipDepth = solidDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
+                        float sampleClipDepth = solidDepthTex.Sample(refine_pos) * 2.0 - 1.0;
                         float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
                         float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
                         float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
 
                         if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
+                            traceScreenPos = refine_pos;
                             break;
                         }
                     }
                 }
 
                 if (ss_hit) {
-                    opaque_color = texFinal_opaque.Sample(traceScreenPos);
-
-                    // TODO: check if pixel is water, and recalc new hit point distance
+                    uint2 uv = uint2(traceScreenPos * ap.game.screenSize);
+                    opaque_color = texFinal_opaque[uv];
                     traceWaterDist = 0.0;
+
+                    if (ap.camera.fluid == 0 && isWater) {
+                        float opaqueDepth = solidDepthTex[uv];
+                        float3 opaqueClipPos = float3(traceScreenPos, opaqueDepth) * 2.0 - 1.0;
+                        float3 opaqueViewPos = project(ap.camera.projectionInv, opaqueClipPos);
+                        float opaqueDist = length(opaqueViewPos);
+
+                        waterDepthL += max(opaqueDist - transDist, 0.0);
+                    }
                 }
             }
 
@@ -179,6 +197,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                 DDA_init(stepSizes, nextDist, currPos, refract_localDir);
 
                 bool hit = false;
+                bool isLastBlockWater = ap.camera.fluid == 1;
 
                 for (uint i = 0; i < Refract_VoxelSteps; i++) {
                     float3 stepAxisNext;
@@ -189,16 +208,19 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                     var voxelMask = VoxelMaskBuffer[voxelIndex];
                     uint maskId = voxelMask.getId();
 
+                    bool isWater = maskId == MaskId_Water;
+
                     if (maskId == MaskId_Solid) {
                         hit = true;
                         break;
                     }
-                    else if (maskId == MaskId_Water) {
+                    else if (isWater) {
                         traceWaterDist += length(step);
                     }
 
                     currPos += step;
                     stepAxis = stepAxisNext;
+                    isLastBlockWater = isWater;
                 }
 
                 float3 hit_localPos = currPos - cameraFract;
@@ -206,12 +228,13 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
                 // recreate final sample
                 if (hit) {
                     float3 hit_normal = -stepAxis * sign(refract_localDir);
+                    half wetness = (half)isLastBlockWater;
 
                     // TODO: these line up for now, but need a proper conversion!
                     int3 hit_voxelTexPos = hit_voxelMaskPos;
 
                     float2 voxelTexCoord = GetVoxelTexCoord(hit_normal, currPos);
-                    opaque_color = SampleVoxel(hit_localPos, hit_normal, hit_voxelTexPos, voxelTexCoord);
+                    opaque_color = SampleVoxel(hit_localPos, hit_normal, hit_voxelTexPos, voxelTexCoord, wetness);
                 }
                 else {
                     opaque_color = sampleSkyFinal(hit_localPos, refract_localDir, false);
@@ -223,16 +246,25 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
         }
     }
 
+    // float waterDepthL = 0.0;
+    // if (ap.camera.fluid == 1) {
+    //     waterDepthL = transDist;
+    // }
+
     half3 final_color = opaque_color;
+    half3 opaqueWaterTint = half3(exp(-(waterDepthL + EPSILON) * Water_AbsorbColor));
 
     if (hasOverlay) {
+        if (ss_hit && ap.camera.fluid == 0 && waterDepthL > 0.0) {
+            final_color *= opaqueWaterTint;
+        }
+
         final_color *= tint;
 
         final_color = fma(final_color, half3(1.0 - translucent.a), translucent.rgb);
     }
 
     if (ap.camera.fluid == 1) {
-        half3 opaqueWaterTint = half3(exp(-(transDist + EPSILON) * Water_AbsorbColor));
         final_color *= opaqueWaterTint;
     }
     

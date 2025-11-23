@@ -6,6 +6,7 @@ import lib.sampling.atlas;
 import lib.voxel.voxel_common;
 import lib.voxel.voxel_tex;
 
+extern static const int Shadow_CascadeCount;
 extern static const bool RENDER_TERRAIN = false;
 extern static const bool VOXEL_TEX_ENABLED = true;
 extern static const bool ALPHATEST_ENABLED = false;
@@ -51,7 +52,9 @@ VertexOutput vertexMain(Vertex input) {
         }
     }
 
-    if (VOXEL_TEX_ENABLED && RENDER_TERRAIN && voxelize && input.currentInstance() == 1) {
+    static const int voxel_cascade = min(1, Shadow_CascadeCount-1);
+
+    if (VOXEL_TEX_ENABLED && RENDER_TERRAIN && voxelize && input.currentInstance() == voxel_cascade) {
         float3 origin = modelPos;// mul3(ap.celestial.viewInv, shadowViewPos);
         if (let value = input.midBlock()) origin += value;
         int3 voxelPos = int3(floor(Voxel_GetBufferPosition(origin)));

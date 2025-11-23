@@ -2,6 +2,7 @@ import aperture;
 import lib.common;
 import lib.light.floodfill;
 import lib.hsv;
+import lib.voxel.voxel_common;
 
 
 extern static const bool PointLight_Enabled;
@@ -56,12 +57,17 @@ void populateShared(ComputeInput input) {
 		int3 bufferPos = workGroupOffset + int3(x / flattenShared) % 10;
 		floodfillBuffer[x] = floodfill_sample_prev(bufferPos - voxelFrameOffset);
 
+		int blockId = -1;
 		uint blockMeta = 0u;
-		float3 voxelPos = FloodFill_GetLocalPosition(bufferPos) + ap.camera.position + 0.5;
-		int blockId = ap.voxel[int3(floor(voxelPos))].blockId;
+		float3 localPos = FloodFill_GetLocalPosition(bufferPos);
+		if (ap_voxel_isInBounds(localPos)) {
+			int3 voxelPos = int3(floor(localPos + ap.camera.position + 0.5));
+			blockId = ap.voxel[voxelPos].blockId;
+			blockMeta = ap.voxel[voxelPos].block.metadata;
 
-		if (blockId >= 0)
-			blockMeta = ap.blocks[blockId].metadata;
+			// if (blockId >= 0)
+			// 	blockMeta = ap.blocks[blockId].metadata;
+		}
 
 		sharedBlockMap[x] = blockId;
 		sharedBlockMetaMap[x] = blockMeta;

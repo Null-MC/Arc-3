@@ -97,11 +97,12 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         // if (TAA_Enabled) texcoord += scene[0].taa_jitter;
 
         float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
-        float3 viewPos = project(ap.camera.projectionInv, clipPos);
-        float3 localPos = mul3(ap.camera.viewInv, viewPos);
+        // float3 viewPos = project(ap.camera.projectionInv, clipPos);
+        // float3 localPos = mul3(ap.camera.viewInv, viewPos);
+        float3 localPos = project(scene[0].viewProjectionInv, clipPos);
 
-        float viewDist = length(viewPos);
-        float3 localDir = normalize(localPos);
+        float viewDist = length(localPos);
+        float3 localDir = localPos / viewDist;
         float3 offsetLocalPos = localPos - 0.02*viewDist*localDir;
 
         half3 tex_normal = ObjectData_Normals.unpackTex(texNormalGB[uv_full].g);
@@ -208,10 +209,11 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         }
 
         float traceWaterDist = 0.0;
-        float traceOcclusionDist = 0.0;
+        // float traceOcclusionDist = 0.0;
+        half3 trace_tint = half3(1.0);
 
         bool hit = false;
-        if (!ss_hit) {// && Voxel_InBounds(offsetLocalPos)) {
+        if (!ss_hit) {
             float3 cameraFract = fract(ap.camera.position);
             int3 cameraFloor = int3(floor(ap.camera.position));
 
@@ -220,8 +222,8 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             DDA_init(stepSizes, nextDist, currPos, trace_localDir);
 
             int3 hit_voxelMaskPos = -1;
+            bool isLastBlockWater = ap.camera.fluid == 1;
             float3 stepAxis = 0.0;
-
             VoxelMask voxelMask;
 
             for (uint i = 0; i < GI_VoxelStepCount; i++) {
@@ -236,20 +238,27 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                     if (voxelMask.testFace(axisNormal)) {hit = true; break;}
                 }
 
+                bool isWater = false;
                 if (Voxel_InBufferBounds(hit_voxelMaskPos)) {
                     uint voxelIndex = Voxel_GetBufferIndex(hit_voxelMaskPos);
                     voxelMask = VoxelMaskBuffer[voxelIndex];
                     uint maskId = voxelMask.getId();
 
+                    isWater = maskId == MaskId_Water;
+                    // float stepLength = length(step);
+
                     if (maskId == MaskId_Solid) {
                         hit = true;
                         break;
                     }
-                    else if (maskId == MaskId_Partial) {
-                        traceOcclusionDist += length(step);
-                    }
-                    else if (maskId == MaskId_Water) {
+                    // else if (maskId == MaskId_Partial) {
+                    //     traceOcclusionDist += stepLength;
+                    // }
+                    else if (isWater) {
                         traceWaterDist += length(step);
+                    }
+                    else if (maskId == MaskId_Tint) {
+                        trace_tint *= voxelMask.getTint();
                     }
 
                     if (!all(stepAxis == 0)) {
@@ -261,20 +270,21 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
                 currPos += step;
                 stepAxis = stepAxisNext;
+                isLastBlockWater = isWater;
             }
-
-            float3 hit_localPos = currPos - cameraFract;
-
 
             // recreate final sample
             if (hit) {
-                float3 hit_normal = -stepAxis * sign(trace_localDir);
+                float3 hit_localPos = currPos - cameraFract;
+                float3 hit_localNormal = -stepAxis * sign(trace_localDir);
+                half hit_wetness = (half)isLastBlockWater;
+
                 float3 hit_viewPos = mul3(ap.camera.view, hit_localPos);
                 float3 hit_screenPos = project(ap.camera.projection, hit_viewPos) * 0.5 + 0.5;
                 float hit_depth = solidDepthTex.Sample(hit_screenPos.xy);
 
-                float2 voxelTexCoord = GetVoxelTexCoord(hit_normal, currPos);
-                sampleColor = SampleVoxel(hit_localPos, hit_normal, hit_voxelMaskPos, voxelTexCoord, true);
+                float2 voxelTexCoord = GetVoxelTexCoord(hit_localNormal, currPos);
+                sampleColor = SampleVoxel(hit_localPos, hit_localNormal, hit_voxelMaskPos, voxelTexCoord, hit_wetness, true);
 
                 cos_sample = 1.0;// max(dot(hit_normal, -trace_localDir), 0.0);
             }
@@ -289,11 +299,13 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             cos_sample = lmcoord_y;
         }
 
+        sampleColor *= RgbToLinear(trace_tint);
+
         if (traceWaterDist > 0.0)
             sampleColor *= half3(exp(-traceWaterDist * Water_AbsorbColor));
 
-        if (traceOcclusionDist > 0.0)
-            sampleColor *= (half)exp(-0.2 * traceOcclusionDist);
+        // if (traceOcclusionDist > 0.0)
+        //     sampleColor *= (half)exp(-0.2 * traceOcclusionDist);
 
         diffuse += pdf * cos_sample * sampleColor;
         }

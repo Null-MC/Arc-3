@@ -51,8 +51,9 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
         float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
-        float3 viewPos = project(ap.camera.projectionInv, clipPos);
-        float3 localPos = mul3(ap.camera.viewInv, viewPos);
+        // float3 viewPos = project(ap.camera.projectionInv, clipPos);
+        // float3 localPos = mul3(ap.camera.viewInv, viewPos);
+        float3 localPos = project(scene[0].viewProjectionInv, clipPos);
         float3 viewLocalDir = -normalize(localPos);
 
         ObjectData_Normals normals;
@@ -116,7 +117,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         // DEBUG
         // imgDebug[uv] = half4(texSssFinal[uv], (half)1.0);
 
-        diffuse /= PI;
+        // diffuse /= PI;
 
         if (!Lighting_GI || RENDER_TRANSLUCENT) {
             half3 sky_ambient = sampleSkyIrradiance(normals.tex);
@@ -135,13 +136,18 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
 
         diffuse = lerp(diffuse, sssFinal, 0.3*sss);
 
+        diffuse /= PI;
+
         if (ReflectMode == Reflect_SkyOnly) {
             float3 reflectLocalNormal = normals.tex;
             if (Reflect_Rough) reflectLocalNormal = randomizeNormal(uint2(pos), normals.tex, surface.roughL);
 
+            float3 viewPos = project(ap.camera.projectionInv, clipPos);
             float3 fragViewDir = normalize(viewPos);
+
             float3 viewNormal = mul(float3x3(ap.camera.view), reflectLocalNormal);
             float3 reflectViewDir = reflect(fragViewDir, viewNormal);
+            
             float3 reflectLocalDir = mul(float3x3(ap.camera.viewInv), reflectViewDir);
             reflectLocalDir = normalize(reflectLocalDir);
 

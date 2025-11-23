@@ -4,34 +4,32 @@ import aperture;
 import lib.common;
 import lib.voxel.voxel_common;
 
-// extern static const uint Voxel_Resolution;
-// static const uint3 VoxelMask_BufferCenter = Voxel_Resolution / 2;
-
 static const uint MaskId_Empty = 0;
-static const uint MaskId_Water = 1;
-static const uint MaskId_Partial = 2;
-static const uint MaskId_Solid = 3;
+static const uint MaskId_Solid = 1;
+static const uint MaskId_Water = 2;
+static const uint MaskId_Tint = 3;
 
-static const int BlockFace_Down = 0;
-static const int BlockFace_Up = 1;
-static const int BlockFace_North = 2;
-static const int BlockFace_South = 3;
-static const int BlockFace_West = 4;
-static const int BlockFace_East = 5;
+static const uint MaskFace_Down = 0;
+static const uint MaskFace_Up = 1;
+static const uint MaskFace_North = 2;
+static const uint MaskFace_South = 3;
+static const uint MaskFace_West = 4;
+static const uint MaskFace_East = 5;
 
 
 struct VoxelMask {
-    uint8_t data;
-    // 0-2: Block ID
-    // 6-8: Face Mask
+    uint data;
+    // 0-1: Block ID
+    // 2-7: Face Mask
+    // 8-31: rgb tint
 
-    __init(const in uint8_t _data) {
+    __init(const in uint _data) {
         data = _data;
     }
 
     [mutating]
     void clear() {
-        data = (uint8_t)0;
+        data = 0;
     }
 
     uint getId() {
@@ -40,7 +38,7 @@ struct VoxelMask {
 
     [mutating]
     void setId(const in uint id) {
-        data = (uint8_t)bitfieldInsert(data, id, 0, 2);
+        data = bitfieldInsert(data, id, 0, 2);
     }
 
     uint getFaces() {
@@ -49,36 +47,26 @@ struct VoxelMask {
 
     [mutating]
     void setFaces(const in uint faces) {
-        data = (uint8_t)bitfieldInsert(data, faces, 2, 6);
+        data = bitfieldInsert(data, faces, 2, 6);
     }
 
     bool testFace(const in float3 normal) {
         // Builder magic
         int index = int(round(dot(normal, float3(3.0, 6.0, 9.0)))) + 9;
-        index = (05370624 >> index) & 7;
+        index = (03150402 >> index) & 7;
 
-        return bitfieldExtract(data, index, 1) != 0;
+        return bitfieldExtract(data, 2 + index, 1) != 0;
     }
+
+    half3 getTint() {
+        return unpackUnorm4x8ToHalf(bitfieldExtract(data, 8, 24)).rgb;
+    }
+
+    [mutating]
+    void setTint(const in half3 tint) {
+        uint tint_data = packUnorm4x8(half4(tint, 1));
+        data = bitfieldInsert(data, tint_data, 8, 24);
+    }
+
+    static VoxelMask EMPTY = new VoxelMask(0);
 }
-
-// uint VoxelMask_GetBufferIndex(int3 bufferPos) {
-// 	const int3 flatten = int3(1, Voxel_Resolution, Voxel_Resolution*Voxel_Resolution);
-// 	return sumOf(bufferPos * flatten);
-// }
-
-// float3 VoxelMask_GetCenter(const in float3 cameraPos) {
-//     return VoxelMask_BufferCenter + fract(cameraPos);
-// }
-
-// float3 VoxelMask_GetLocalPosition(const in float3 bufferPos) {
-//     return bufferPos - VoxelMask_GetCenter(ap.camera.position);
-// }
-
-// float3 VoxelMask_GetBufferPosition(const in float3 localPos) {
-//     return localPos + VoxelMask_GetCenter(ap.camera.position);
-// }
-
-// bool VoxelMask_InBounds(const in float3 localPos) {
-//     float3 bufferPos = VoxelMask_GetBufferPosition(localPos);
-//     return all(clamp(bufferPos, 0.5, Voxel_Resolution-0.5) == bufferPos);
-// }

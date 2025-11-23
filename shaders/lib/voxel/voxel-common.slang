@@ -29,7 +29,7 @@ bool Voxel_InBufferBounds(const in int3 bufferPos) {
     return all(clamp(bufferPos, 0, Voxel_Resolution-1) == bufferPos);
 }
 
-bool ap_voxel_isInBounds(const in int3 localPos) {
+bool ap_voxel_isInBounds(const in float3 localPos) {
     float renderDistSq = pow2(ap.world.renderDistance);
     float3 worldPos = localPos + ap.camera.position;
 

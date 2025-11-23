@@ -6,6 +6,7 @@ import lib.shadow;
 import lib.material.pbr;
 import lib.sampling.atlas;
 import lib.light.floodfill;
+import lib.water.wetness;
 import lib.voxel.voxel_tex;
 import lib.voxel.voxel_common;
 import lib.sky.common;
@@ -31,11 +32,13 @@ float2 GetVoxelTexCoord(const in float3 normal, const in float3 voxelPos) {
     return 1.0 - fract(hitCoord);
 }
 
-float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in int3 voxelBufferPos, const in float2 voxelTexCoord, bool isGI = false) {
-    float3 albedo = 1.0;
+float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in int3 voxelBufferPos, const in float2 voxelTexCoord, const in half wetness, const in bool isGI = false) {
+    half3 albedo = half3(0);
     half roughL = (half)0.85;
     half metalness = (half)0.0;
+    half porosity = (half)0.7;
     half emission = (half)0.0;
+
     if (Voxel_InBufferBounds(voxelBufferPos)) {
         VoxelTex voxel;
         uint voxelIndex = Voxel_GetBufferIndex(voxelBufferPos);
@@ -50,17 +53,20 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
         float2 uv = atlas.GetAtlasCoord(voxelTexCoord);
 
         albedo = blockAtlas.Sample(uv).rgb * voxel.tint;
-        albedo = RgbToLinear(albedo);
+        albedo = half3(RgbToLinear(albedo));
 
         half4 specularData = blockAtlasS.Sample(uv);
         half roughness = mat_roughness(specularData.r);
-        metalness = mat_metalness(specularData.g);
+        half f0_metal = mat_f0_metal(specularData.g);
+        porosity = mat_porosity(specularData.b, roughness, f0_metal);
         emission = mat_emission(specularData);
+
+        metalness = mat_metalness(f0_metal);
         roughL = pow2(roughness);
 
         if (voxelTexBuffer[voxelIndex].r == 0) {
             // debug missing data with red albedo
-            albedo = half3(1);//half3(1, 0, 0);
+            // albedo = half3(1);//half3(1, 0, 0);
         }
     }
 
@@ -112,7 +118,7 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
         diffuse += NoLm_moon * (shadowIsSun ? (half)0.0 : shadow) * moon_color;
     }
 
-    if (World_HasSky) {
+    if (World_HasSky && !isGI) {
         diffuse += sampleSkyIrradiance(normal) * lmcoord.y;
     }
 
@@ -122,11 +128,15 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
     half smoothness = (half)1.0 - roughL;
     diffuse *= (half)1.0 - metalness * smoothness;
 
+    diffuse += emission * BLOCK_LUM;
+
     if (!isGI) {
-        diffuse += emission * BLOCK_LUM;
+        // diffuse += emission * BLOCK_LUM;
 
         if (Debug_WhiteWorld) albedo = WhiteWorldColor;
     }
+
+    albedo = Wetness_GetAlbedo(albedo, porosity, wetness);
 
     return albedo * diffuse;
 }

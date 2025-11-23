@@ -47,15 +47,35 @@ export function configureRenderer(config: RendererConfig): void {
     config.render.moon = false;
     config.render.sun = false;
 
-    config.shadow.enabled = dimension.World_HasSky;
-    config.shadow.resolution = options.Shadow_Resolution;
-    config.shadow.distance = options.Shadow_Distance;
-    // config.shadow.safeZone[0] = 32;
-    config.shadow.safeZone[1] = 128;
-    config.shadow.near = -800;
-    config.shadow.far = 800;
-    config.shadow.cascades = 4;
-    config.shadow.entityCascadeCount = 2;
+    if (dimension.World_HasSky) {
+        config.shadow.enabled = true;
+        config.shadow.resolution = options.Shadow_Resolution;
+        config.shadow.distance = options.Shadow_Distance;
+        config.shadow.near = -800;
+        config.shadow.far = 800;
+
+        if (options.Shadow_CSM_Enabled) {
+            config.shadow.cascades = 4;
+            config.shadow.entityCascadeCount = 2;
+            config.shadow.safeZone[1] = 128;
+        }
+        else {
+            config.shadow.cascades = 1;
+            config.shadow.entityCascadeCount = 1;
+            config.shadow.safeZone[0] = 128;
+        }
+    }
+    else if (options.VoxelEnabled) {
+        config.shadow.enabled = true;
+        config.shadow.resolution = 2;
+        config.shadow.distance = 128;
+        config.shadow.safeZone[0] = 128;
+        config.shadow.cascades = 1;
+        config.shadow.entityCascadeCount = 0;
+    }
+    else {
+        config.shadow.enabled = false;
+    }
 
     config.pointLight.maxCount = options.Lighting_Point_Enabled ? options.Lighting_Point_MaxCount : 0;
     config.pointLight.resolution = options.Lighting_Point_Resolution;
@@ -86,14 +106,67 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .addBool('Debug_WhiteWorld', options.Debug_WhiteWorld);
 
     BlockMappings = new BlockMap(globalExports)
-        .map('water', 'BLOCK_WATER')
-        .map('lava', 'BLOCK_LAVA');
-
-    new TagBuilder(pipeline, globalExports)
+        .map('BLOCK_WATER', 'water')
+        .map('BLOCK_LAVA', 'lava');
+        // .map('BLOCK_GLASS_TINTED', 'tinted_glass')
+        // .map('BLOCK_GLASS_WHITE', 'white_stained_glass', 'white_stained_glass_pane')
+        // .map('BLOCK_GLASS_LIGHT_GRAY', 'light_gray_stained_glass', 'light_gray_stained_glass_pane')
+        // .map('BLOCK_GLASS_GRAY', 'gray_stained_glass', 'gray_stained_glass_pane')
+        // .map('BLOCK_GLASS_BLACK', 'black_stained_glass', 'black_stained_glass_pane')
+        // .map('BLOCK_GLASS_BROWN', 'brown_stained_glass', 'brown_stained_glass_pane')
+        // .map('BLOCK_GLASS_RED', 'red_stained_glass', 'red_stained_glass_pane')
+        // .map('BLOCK_GLASS_ORANGE', 'orange_stained_glass', 'orange_stained_glass_pane')
+        // .map('BLOCK_GLASS_YELLOW', 'yellow_stained_glass', 'yellow_stained_glass_pane')
+        // .map('BLOCK_GLASS_LIME', 'lime_stained_glass', 'lime_stained_glass_pane')
+        // .map('BLOCK_GLASS_GREEN', 'green_stained_glass', 'green_stained_glass_pane')
+        // .map('BLOCK_GLASS_CYAN', 'cyan_stained_glass', 'cyan_stained_glass_pane')
+        // .map('BLOCK_GLASS_LIGHT_BLUE', 'light_blue_stained_glass', 'light_blue_stained_glass_pane')
+        // .map('BLOCK_GLASS_BLUE', 'blue_stained_glass', 'blue_stained_glass_pane')
+        // .map('BLOCK_GLASS_PURPLE', 'purple_stained_glass', 'purple_stained_glass_pane')
+        // .map('BLOCK_GLASS_MAGENTA', 'magenta_stained_glass', 'magenta_stained_glass_pane')
+        // .map('BLOCK_GLASS_PINK', 'pink_stained_glass', 'pink_stained_glass_pane');
+    
+    const tagBuilder = new TagBuilder(pipeline, globalExports)
         .map("TAG_LEAVES", new NamespacedId("minecraft", "leaves"))
         .map("TAG_STAIRS", new NamespacedId("minecraft", "stairs"))
         .map("TAG_SLABS", new NamespacedId("minecraft", "slabs"));
         // .map("TAG_SNOW", new NamespacedId("minecraft", "snow"));
+
+    tagBuilder.map("TAG_TINTS_LIGHT", pipeline.createTag(new NamespacedId("arc", "tints_light"),
+        new NamespacedId("minecraft", "glass_blocks"),
+        new NamespacedId("tinted_glass"),
+        new NamespacedId("white_stained_glass"),
+        new NamespacedId("white_stained_glass_pane"),
+        new NamespacedId("light_gray_stained_glass"),
+        new NamespacedId("light_gray_stained_glass_pane"),
+        new NamespacedId("gray_stained_glass"),
+        new NamespacedId("gray_stained_glass_pane"),
+        new NamespacedId("black_stained_glass"),
+        new NamespacedId("black_stained_glass_pane"),
+        new NamespacedId("brown_stained_glass"),
+        new NamespacedId("brown_stained_glass_pane"),
+        new NamespacedId("red_stained_glass"),
+        new NamespacedId("red_stained_glass"),
+        new NamespacedId("orange_stained_glass"),
+        new NamespacedId("orange_stained_glass_pane"),
+        new NamespacedId("yellow_stained_glass"),
+        new NamespacedId("yellow_stained_glass_pane"),
+        new NamespacedId("lime_stained_glass"),
+        new NamespacedId("lime_stained_glass_pane"),
+        new NamespacedId("green_stained_glass"),
+        new NamespacedId("green_stained_glass_pane"),
+        new NamespacedId("cyan_stained_glass"),
+        new NamespacedId("cyan_stained_glass_pane"),
+        new NamespacedId("light_blue_stained_glass"),
+        new NamespacedId("light_blue_stained_glass_pane"),
+        new NamespacedId("blue_stained_glass"),
+        new NamespacedId("blue_stained_glass_pane"),
+        new NamespacedId("purple_stained_glass"),
+        new NamespacedId("purple_stained_glass_pane"),
+        new NamespacedId("magenta_stained_glass"),
+        new NamespacedId("magenta_stained_glass_pane"),
+        new NamespacedId("pink_stained_glass"),
+        new NamespacedId("pink_stained_glass_pane")));
     
     pipeline.setGlobalExport(globalExports.build());
 
@@ -104,7 +177,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
     if (options.VoxelEnabled) {
         const voxelSize = cubed(options.Lighting_VoxelResolution);
-        pipeline.createBuffer('VoxelMaskBuffer', voxelSize, false);
+        pipeline.createBuffer('VoxelMaskBuffer', 4*voxelSize, false);
         pipeline.createBuffer('voxelTexBuffer', 8*voxelSize, true);
     }
     
@@ -335,12 +408,31 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     const Tracing_width = Math.ceil(screenWidth / Tracing_scale);
     const Tracing_height = Math.ceil(screenHeight / Tracing_scale);
 
-    const texReflect = pipeline.createTexture('texReflect')
-        .width(Tracing_width)
-        .height(Tracing_height)
-        .format(Format.RGBA16F)
-        .clearColor(0, 0, 0, 0)
-        .build();
+    let texReflect: BuiltTexture | undefined;
+    let texReflect_final: BuiltTexture | undefined;
+    let texReflect_prev: BuiltTexture | undefined;
+    if (options.Lighting_Reflection_Mode > ReflectMode.SkyOnly) {
+        texReflect = pipeline.createTexture('texReflect')
+            .width(Tracing_width)
+            .height(Tracing_height)
+            .format(Format.RGB16F)
+            .clearColor(0, 0, 0, 0)
+            .build();
+
+        texReflect_final = pipeline.createImageTexture('texReflect_final', 'imgReflect_final')
+            .width(screenWidth)
+            .height(screenHeight)
+            .format(Format.RGBA16F)
+            .clear(false)
+            .build();
+
+        texReflect_prev = pipeline.createTexture('texReflect_prev')
+            .width(screenWidth)
+            .height(screenHeight)
+            .format(Format.RGBA16F)
+            .clear(false)
+            .build();
+    }
 
     let texGI_trace: BuiltTexture | undefined;
     let texGI_filter1: BuiltTexture | undefined;
@@ -754,7 +846,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
                     if (options.Lighting_Resolution != 0) {
                         stage_opaque_gi.createCompute("deferred-gi-upscale")
-                            .location('deferred/gi/gi-upscale', "upscaleGI")
+                            .location('composite/upscale-nearest', "upscale_nearest")
                             .workGroups(
                                 Math.ceil(screenWidth / 16),
                                 Math.ceil(screenHeight / 16),
@@ -827,35 +919,72 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             if (options.Lighting_Reflection_Mode == ReflectMode.WorldSpace || options.Lighting_Reflection_Mode == ReflectMode.ScreenSpace) {
                 finalFlipper.flip();
 
-                const location = options.Lighting_Reflection_Mode == ReflectMode.WorldSpace
-                    ? 'deferred/reflect_voxel' : 'deferred/reflect_screen';
+                withSubList(opaqueStage, 'opaque-deferred-reflections', reflectStage => {
+                    const location = options.Lighting_Reflection_Mode == ReflectMode.WorldSpace
+                        ? 'deferred/reflect_voxel' : 'deferred/reflect_screen';
 
-                opaqueStage.createComposite("opaque-reflections")
-                    .location(location, "applyReflections")
-                    .target(0, texReflect)
-                    .overrideObject('texSource', finalFlipper.getReadTexture().name())
-                    .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
-                    .overrideObject('texNormalGB', texNormalGB_opaque.name())
-                    .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
-                    .exportBool('Reflect_Rough', options.Lighting_Reflection_Rough)
-                    .exportBool('Reflect_SS_Fallback', options.Lighting_Reflection_ScreenSpaceFallback)
-                    .exportInt('Reflect_VoxelSteps', options.Lighting_Reflection_VoxelSteps)
-                    .exportInt('Reflect_ScreenSteps', options.Lighting_Reflection_ScreenSteps)
-                    .exportInt('Reflect_RefineSteps', options.Lighting_Reflection_RefineSteps)
-                    .exportInt('BufferWidth', Tracing_width)
-                    .exportInt('BufferHeight', Tracing_height)
-                    .exportInt('BufferScale', Tracing_scale)
-                    .compile();
-                
-                // TODO: accumulate and upscale
-                opaqueStage.createComposite('opaque-reflection-overlay')
-                    .location('deferred/reflect_overlay', 'overlayReflections')
-                    .target(0, finalFlipper.getWriteTexture())
-                    .overrideObject('texSource', finalFlipper.getReadTexture().name())
-                    .exportInt('BufferWidth', Tracing_width)
-                    .exportInt('BufferHeight', Tracing_height)
-                    .exportInt('BufferScale', Tracing_scale)
-                    .compile();
+                    reflectStage.createComposite("opaque-reflection-trace")
+                        .location(location, "applyReflections")
+                        .target(0, texReflect)
+                        .overrideObject('texSource', finalFlipper.getReadTexture().name())
+                        .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
+                        .overrideObject('texNormalGB', texNormalGB_opaque.name())
+                        .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
+                        .exportBool('Reflect_Rough', options.Lighting_Reflection_Rough)
+                        .exportBool('Reflect_SS_Fallback', options.Lighting_Reflection_ScreenSpaceFallback)
+                        .exportInt('Reflect_VoxelSteps', options.Lighting_Reflection_VoxelSteps)
+                        .exportInt('Reflect_ScreenSteps', options.Lighting_Reflection_ScreenSteps)
+                        .exportInt('Reflect_RefineSteps', options.Lighting_Reflection_RefineSteps)
+                        .exportInt('BufferWidth', Tracing_width)
+                        .exportInt('BufferHeight', Tracing_height)
+                        .exportInt('BufferScale', Tracing_scale)
+                        .compile();
+                    
+                    if (options.Lighting_Resolution != 0) {
+                        reflectStage.createCompute("opaque-reflection-upscale")
+                            .location('composite/upscale-nearest', "upscale_nearest")
+                            // .location('composite/upscale-weighted', "upscale_weighted")
+                            .workGroups(
+                                Math.ceil(screenWidth / 16),
+                                Math.ceil(screenHeight / 16),
+                                1)
+                            .overrideObject('imgDest', texReflect_final.imageName())
+                            .overrideObject('texSource', texReflect.name())
+                            .overrideObject('texDepth', 'solidDepthTex')
+                            .exportInt('BufferWidth', Tracing_width)
+                            .exportInt('BufferHeight', Tracing_height)
+                            .exportInt('BufferScale', Tracing_scale)
+                            .compile();
+                    }
+
+                    // if (options.Lighting_Reflection_Rough) {
+                        const final_src = options.Lighting_Resolution != 0
+                            ? texReflect_final.name()
+                            : texReflect.name();
+
+                        const maxFrames = options.Lighting_Reflection_Rough
+                            ? 30 //options.Lighting_Reflect_MaxFrames
+                            : 1;
+
+                        reflectStage.createComposite("opaque-reflection-accumulate")
+                            .location('deferred/reflect-accumulate', "accumulateReflections")
+                            .target(0, texReflect_final)
+                            .overrideObject('texSource', final_src)
+                            .overrideObject('texDepth', 'solidDepthTex')
+                            .overrideObject('texSource_prev', texReflect_prev.name())
+                            .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
+                            .exportInt('MaxFrames', maxFrames)
+                            .compile();
+
+                        reflectStage.copy(texReflect_final, texReflect_prev, screenWidth, screenHeight);
+                    // }
+
+                    reflectStage.createComposite('opaque-reflection-overlay')
+                        .location('deferred/reflect-overlay', 'overlayReflections')
+                        .target(0, finalFlipper.getWriteTexture())
+                        .overrideObject('texSource', finalFlipper.getReadTexture().name())
+                        .compile();
+                });
             }
         });
 

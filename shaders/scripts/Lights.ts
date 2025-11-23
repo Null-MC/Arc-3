@@ -21,14 +21,14 @@ export function ApplyLightColors(coloredCandles: boolean) {
     setLightColorEx('#dfac47', 1, 'ochre_froglight');
     setLightColorEx('#e075e8', 1, 'pearlescent_froglight');
     setLightColorEx('#f9321c', 1, 'redstone_torch', 'redstone_wall_torch');
-    setLightColorEx('#e0ba42', 1, 'redstone_lamp');
+    setLightColorEx('#db8055', 1, 'redstone_lamp');
     setLightColorEx('#f9321c', 1, 'redstone_ore', 'deepslate_redstone_ore');
     setLightColorEx('#8bdff8', 1, 'sea_lantern');
     setLightColorEx('#4d9a76', 1, 'sea_pickle');
     setLightColorEx('#918f34', 1, 'shroomlight');
     setLightColorEx('#28aaeb',  2/16, 'soul_torch', 'soul_wall_torch', 'soul_campfire');
     setLightColorEx('#28aaeb', 12/16, 'soul_campfire');
-    setLightColorEx('#f3b549',  2/16, 'torch', 'wall_torch');
+    setLightColorEx('#eb9a3e',  2/16, 'torch', 'wall_torch');
     setLightColorEx('#a61914', 1, 'trial_spawner');
     setLightColorEx('#dfb906', 1, 'vault');
     setLightColorEx('#63e53c', 1, 'verdant_froglight');

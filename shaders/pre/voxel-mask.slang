@@ -22,25 +22,34 @@ void buildVoxelMask(ComputeInput input) {
 	if (any(input.globalPos >= Voxel_Resolution)) return;
 
 	float3 worldPos = Voxel_GetLocalPosition(input.globalPos + 0.5) + ap.camera.position;
-	var voxel = ap.voxel[int3(floor(worldPos))];
+	var ap_voxel = ap.voxel[int3(floor(worldPos))];
 
-	uint maskId = 0;
-	uint maskFaces = 0;
+	VoxelMask voxel_mask = VoxelMask.EMPTY;
 
-	if (voxel.blockId >= 0) {
-		var block = voxel.block;
+	if (ap_voxel.blockId >= 0) {
+		var block = ap_voxel.block;
 
-		if (block.customId == BLOCK_WATER) maskId = MaskId_Water;
+		static const uint partial_tags = TAG_SLABS | TAG_STAIRS | TAG_LEAVES;
+
+		uint maskId = MaskId_Empty;
+		half3 tint = half3(1.0);
+
+		if (block.isFluid) maskId = MaskId_Water;
 		else if (block.isFullBlock) maskId = MaskId_Solid;
+		else if (block.hasAnyTag(partial_tags)) {
+			maskId = MaskId_Tint;
+			tint = half3(0.5);
+		}
+		else if (block.hasAnyTag(TAG_TINTS_LIGHT)) {
+			maskId = MaskId_Tint;
+			tint = half3(block.lightColor.rgb);
+		}
 
-		const uint hit_tags = TAG_SLABS | TAG_STAIRS | TAG_LEAVES;
-		if (block.hasAnyTag(hit_tags)) maskId = MaskId_Partial;
-
-		maskFaces = bitfieldExtract(block.metadata, 0, 6);
+		voxel_mask.setId(maskId);
+		voxel_mask.setTint(tint);
+		voxel_mask.setFaces(bitfieldExtract(block.metadata, 0, 6));
 	}
 
 	int index = Voxel_GetBufferIndex(input.globalPos);
-
-	VoxelMaskBuffer[index].setId(maskId);
-	VoxelMaskBuffer[index].setFaces(maskFaces);
+	VoxelMaskBuffer[index] = voxel_mask;
 }
