@@ -193,7 +193,8 @@ void updateFroxels(ComputeInput input) {
         froxelPrev = texFroxel_read.Sample(bufferPosLast / Froxel_Resolution);
     }
 
-    float4 final = lerp(froxelPrev, float4(scatter, transmit), 0.25);
+    float counter = clamp(froxelPrev.a + 1.0, 1.0, 30.0);
+    float3 final = lerp(froxelPrev.rgb, scatter, rcp(counter));
 
-    imgFroxel_write[input.globalPos] = half4(final);
+    imgFroxel_write[input.globalPos] = (half4)float4(final, counter);
 }

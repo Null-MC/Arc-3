@@ -46,7 +46,7 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
             break;
     }
 
-    for (uint i = 0; i <= StepCount; i++) {
+    for (uint i = 0; i < StepCount; i++) {
         float stepF = saturate((i + dither) / StepCount);
         float3 trace_viewPos = lerp(0.0, viewPosEnd, stepF);
         float3 trace_localPos = mul3(ap.camera.viewInv, trace_viewPos);
