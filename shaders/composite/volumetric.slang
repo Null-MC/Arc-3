@@ -1,12 +1,7 @@
 import aperture;
 import lib.common;
 import lib.sampling.IGN;
-import lib.sky.common;
-import lib.sky.scattering;
-import lib.sky.sample_transmit;
 import lib.voxel.froxel;
-
-import lib.shadow;
 
 Sampler2D<float> texDepth;
 Sampler2D<half3> texSource;
@@ -31,10 +26,6 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
     float3 viewPosEnd = viewDir * viewDistFinal;
 
     float dither = InterleavedGradientNoiseTime(pos);
-    // bool shadowIsSun = dot(ap.celestial.position, ap.celestial.sunPosition) > 0.0;
-
-    // float VoL = dot(viewDir, scene[0].SkyLightLocalDir);
-    // float sky_phase = max(getMiePhase(VoL), 0.0);
 
     float3 scattering = 0.0;
     float transmit = 1.0;
@@ -51,7 +42,7 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
             density = 0.020;
             break;
         default:
-            density = lerp(0.004, 0.140, ap.world.rainStrength);
+            density = lerp(0.006, 0.030, ap.world.rainStrength);
             break;
     }
 
@@ -65,29 +56,6 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
         half4 froxel = texFroxel_write.Sample(trace_bufferPos / Froxel_Resolution);
 
         float3 sample_lit = froxel.rgb;
-
-        // if (World_HasSky) {
-        //     float3 shadowViewPos = mul3(ap.celestial.view, trace_localPos);
-        //     int shadowCascade = GetShadowProjection(shadowViewPos, 0.0);
-
-        //     half3 shadow = half3(1.0);
-        //     if (shadowCascade >= 0) {
-        //         float3 shadowPos = mul3(ap.celestial.projection[shadowCascade], shadowViewPos);
-        //         shadow = SampleShadowColor(shadowPos * 0.5 + 0.5, shadowCascade);
-        //     }
-
-        //     float3 skyPos = getSkyPosition(trace_localPos);
-
-        //     half3 sun_color = scene[0].SunColor * sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
-        //     sun_color *= atmosAbsorb(skyPos, scene[0].SunLocalDir);
-        //     // sample_lit += (shadowIsSun ? shadow : (half)0.0) * sun_color;
-
-        //     half3 moon_color = scene[0].MoonColor * sampleSkyTransmit(skyPos, scene[0].MoonLocalDir);
-        //     moon_color *= atmosAbsorb(skyPos, scene[0].MoonLocalDir);
-        //     // sample_lit += (shadowIsSun ? (half)0.0 : shadow) * moon_color;
-
-        //     sample_lit += sky_phase * (shadowIsSun ? sun_color : moon_color) * shadow;
-        // }
 
         scattering += density * stepDist * sample_lit;
     }

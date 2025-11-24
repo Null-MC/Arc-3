@@ -16,7 +16,6 @@ extern static const bool PointLight_Enabled;
 extern static const int PointLight_MaxCount;
 
 groupshared uint sharedLightList[PointLight_MaxCount];
-// groupshared Atomic<uint> depthMinInt, depthMaxInt;
 groupshared Atomic<uint> counter;
 
 [[vk::image_format("rgba16f")]]
@@ -71,11 +70,9 @@ void updateFroxels(ComputeInput input) {
 
         half3 sun_color = scene[0].SunColor * sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
         sun_color *= atmosAbsorb(skyPos, scene[0].SunLocalDir);
-        // scatter += (shadowIsSun ? shadow : (half)0.0) * sun_color;
 
         half3 moon_color = scene[0].MoonColor * sampleSkyTransmit(skyPos, scene[0].MoonLocalDir);
         moon_color *= atmosAbsorb(skyPos, scene[0].MoonLocalDir);
-        // scatter += (shadowIsSun ? (half)0.0 : shadow) * moon_color;
 
         float VoL = dot(localDir, scene[0].SkyLightLocalDir);
         float sky_phase = max(getMiePhase(VoL), 0.0);
@@ -85,8 +82,6 @@ void updateFroxels(ComputeInput input) {
 
     if (PointLight_Enabled) {
         if (input.groupIndex == 0) {
-            // depthMinInt = uint.maxValue;
-            // depthMaxInt = uint.minValue;
             counter = 0;
         }
 
@@ -99,12 +94,8 @@ void updateFroxels(ComputeInput input) {
         float3 groupPosMin = groupPos / float3(Froxel_Resolution);
         float3 groupPosMax = (groupPos + WorkgroupSize()) / float3(Froxel_Resolution);
 
-        // TODO: set these from the min/max of depth slices
         float depthMin = pow2(groupPosMin.z) * Froxel_MaxDist;
         float depthMax = pow2(groupPosMax.z) * Froxel_MaxDist;
-
-        // float depthMin = pow2(groupPosMin.z);
-        // depthMin = delinearizeDepth(depthMin * Froxel_MaxDist, ap.camera.near, ap.camera.far);
 
         if (input.groupIndex < PointLight_MaxCount) {
             PointLight light = ap.lights[input.groupIndex];
@@ -120,10 +111,6 @@ void updateFroxels(ComputeInput input) {
                 if (-lightViewPos.z - lightRange > depthMax) hit = false;
 
                 // test X/Y
-                // uint2 groupPos = input.groupPos.xy * WorkgroupSize().xy;
-                // float2 groupPosMin = groupPos / float2(Froxel_Resolution.xy);
-                // float2 groupPosMax = (groupPos + WorkgroupSize().xy) / float2(Froxel_Resolution.xy);
-                
                 float3 c1 = unprojectCorner(groupPosMin.x, groupPosMin.y);
                 float3 c2 = unprojectCorner(groupPosMax.x, groupPosMin.y);
                 float3 c3 = unprojectCorner(groupPosMin.x, groupPosMax.y);
@@ -189,7 +176,7 @@ void updateFroxels(ComputeInput input) {
         }
     }
 
-    // TODO: project to last frame pos
+    // project last frame position and accumulate
     float3 bufferPosLast = input.globalPos + 0.5;
     float3 ndcPosLast = Froxel_GetNdcPosition(bufferPosLast);
     float3 viewPosLast = project(ap.camera.projectionInv, ndcPosLast);

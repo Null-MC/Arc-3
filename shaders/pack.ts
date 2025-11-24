@@ -1120,16 +1120,6 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             }
 
             if (FROXEL_ENABLED) {
-                // compositeStage.createCompute("composite-froxels")
-                //     .location("composite/froxels", "updateFroxels")
-                //     .workGroups(
-                //         Math.ceil(Froxel_Width / 8),
-                //         Math.ceil(Froxel_Height / 8),
-                //         Math.ceil(Froxel_Depth / 8))
-                //     .overrideObject('imgFroxel_write', texFroxel.imageName())
-                //     .exportInt('Froxel_Width', Froxel_Width)
-                //     .exportInt('Froxel_Height', Froxel_Height)
-                //     .exportInt('Froxel_Depth', Froxel_Depth)
                 froxels.create(compositeStage).compile();
 
                 finalFlipper.flip();
@@ -1341,28 +1331,6 @@ export function getBlockId(block: BlockState) : number {
 }
 
 type CommandListAction = (list: CommandList) => void;
-
-// declare global {
-//     interface PipelineConfig {
-//         withStage(stage: ProgramStage, action: CommandListAction): void;
-//     }
-
-//     interface CommandList {
-//         withSubList(name: string, action: CommandListAction): void;
-//     }
-// }
-
-// PipelineConfig.prototype.withStage = function(this: PipelineConfig, stage: ProgramStage, action: CommandListAction): void {
-//     const list = this.forStage(stage);
-//     action(list);
-//     list.end();
-// };
-
-// CommandList.prototype.withSubList = function(this: CommandList, name: string, action: CommandListAction): void {
-//     const list = this.subList(name);
-//     action(list);
-//     list.end();
-// };
 
 function withStage(context: PipelineConfig, stage: ProgramStage, action: CommandListAction): void {
     const list = context.forStage(stage);

@@ -2,7 +2,6 @@ import aperture;
 import buffers.ObjectData;
 import lib.common;
 import lib.octohedral;
-import lib.sampling.IGN;
 
 extern static const int DEBUG_MATERIAL;
 extern static const bool DEBUG_HISTOGRAM;
@@ -81,9 +80,6 @@ half4 renderDebugOverlay(float2 pos : SV_Position) : SV_Target0 {
         float z = sin(ap.timing.timeElapsed * 0.2) * 0.5 + 0.5;
 
         if (all(saturate(previewCoord) == previewCoord)) {
-            // float dither = InterleavedGradientNoiseTime(pos);
-            // float z_d = z + (dither - 0.5)/64.0;
-
             color.rgb = texFroxel_write.Sample(float3(previewCoord, z)).rgb;
             color.a = (half)1.0;
         }
