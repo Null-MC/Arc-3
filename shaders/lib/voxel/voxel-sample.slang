@@ -107,13 +107,11 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
 
         half3 sun_color = scene[0].SunColor * sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
         sun_color *= atmosAbsorb(skyPos, scene[0].SunLocalDir);
-
-        half3 moon_color = scene[0].MoonColor * sampleSkyTransmit(skyPos, scene[0].MoonLocalDir);
-        moon_color *= atmosAbsorb(skyPos, scene[0].MoonLocalDir);
-
         float NoLm_sun = max(dot(normal, scene[0].SunLocalDir), 0.0);
         diffuse += NoLm_sun * (shadowIsSun ? shadow : (half)0.0) * sun_color;
 
+        half3 moon_color = scene[0].MoonColor * sampleSkyTransmit(skyPos, scene[0].MoonLocalDir);
+        moon_color *= atmosAbsorb(skyPos, scene[0].MoonLocalDir);
         float NoLm_moon = max(dot(normal, scene[0].MoonLocalDir), 0.0);
         diffuse += NoLm_moon * (shadowIsSun ? (half)0.0 : shadow) * moon_color;
     }

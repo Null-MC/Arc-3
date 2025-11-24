@@ -165,6 +165,10 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
 
     iris_discardIfNeeded(color);
 
+    if (RENDER_PARTICLES) {
+        if (color.a < (0.5/255.0)) discard;
+    }
+
     if (Material_SmoothNormals) {
         float2 atlasSize;
         normalTex.GetDimensions(0, atlasSize.x, atlasSize.y);

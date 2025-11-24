@@ -1,8 +1,8 @@
 export class FloodFill {
     private texFloodFillA: BuiltTexture;
     private texFloodFillB: BuiltTexture;
-    private texFloodFill_read: ActiveTextureReference;
-    private imgFloodFill_write: ActiveTextureReference;
+    private reader: ActiveTextureReference;
+    private writer: ActiveTextureReference;
 
     
     constructor(pipeline: PipelineConfig, size: number) {
@@ -22,22 +22,21 @@ export class FloodFill {
             .clear(false)
             .build();
 
-        this.texFloodFill_read = pipeline.createTextureReference('texFloodFill_read', 'imgFloodFill_read', size, size, size, Format.RGBA16F);
-        this.imgFloodFill_write = pipeline.createTextureReference('texFloodFill_write', 'imgFloodFill_write', size, size, size, Format.RGBA16F);
+        this.reader = pipeline.createTextureReference('texFloodFill_read', 'imgFloodFill_read', size, size, size, Format.RGBA16F);
+        this.writer = pipeline.createTextureReference('texFloodFill_write', 'imgFloodFill_write', size, size, size, Format.RGBA16F);
     }
 
-    create(stage: CommandList, size: number) {
-        stage.createCompute("floodfill")
+    create(stage: CommandList, size: number): Compute {
+        return stage.createCompute("floodfill")
             .location("pre/floodfill", "floodfill")
             .workGroups(
                 Math.ceil(size / 8),
                 Math.ceil(size / 8),
-                Math.ceil(size / 8))
-            .compile();
+                Math.ceil(size / 8));
     }
 
     update(altFrame: boolean) {
-        this.texFloodFill_read.pointTo(altFrame ? this.texFloodFillA : this.texFloodFillB);
-        this.imgFloodFill_write.pointTo(altFrame ? this.texFloodFillB : this.texFloodFillA);
+        this.reader.pointTo(altFrame ? this.texFloodFillA : this.texFloodFillB);
+        this.writer.pointTo(altFrame ? this.texFloodFillB : this.texFloodFillA);
     }
 }

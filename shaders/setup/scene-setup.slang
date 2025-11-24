@@ -4,7 +4,6 @@ import buffers.scene;
 import lib.common;
 import lib.sky.common;
 
-extern static const int DIMENSION;
 
 RWStructuredBuffer<SceneBuffer> scene_writer;
 

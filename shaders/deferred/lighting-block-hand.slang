@@ -62,7 +62,7 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
             lpvPos += normals.tex * 0.75;
             
             if (FloodFill_InBounds(lpvPos)) {
-                diffuse += floodfill_sample(lpvPos) * BLOCK_LUX * (1.0/4.0);
+                diffuse += floodfill_sample(lpvPos) * BLOCK_LUX;
                 lmcoord_x = (half)0.0;
             }
         }

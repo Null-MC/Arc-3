@@ -191,8 +191,6 @@ void applyPointLights(ComputeInput input) {
             half4 lightColor = half4(ap.blocks[light.block].lightColor);
             half lightRange = (half)ap.blocks[light.block].emission;
 
-            // float3 lightDir = light.position - localSamplePos;
-
             float3 lightOffset = light.position - localPos;
             half lightDist = (half)length(lightOffset);
             float3 lightDir = lightOffset / lightDist;
@@ -206,12 +204,12 @@ void applyPointLights(ComputeInput input) {
             lightDist = (half)length(lightOffset);
             lightDir = lightOffset / lightDist;
 
-            half lightRadius = clamp(lightColor.a, EPSILON, 1.0) * 0.5;// (half)0.5; // TODO: build a LUT for this
+            half lightRadius = clamp(lightColor.a, EPSILON, 1.0) * 0.5;
             half lightAtt = GetLightAttenuation(lightDist, lightRange, lightRadius);
             if (lightAtt < EPSILON) continue;
 
             lightColor.rgb = RgbToLinear(lightColor.rgb);
-            lightColor *= saturate(lightRange / (half)15.0) * BLOCK_LUX;
+            lightColor.rgb *= saturate(lightRange / (half)15.0) * BLOCK_LUX;
 
             float NoL = dot(normals.tex, lightDir);
             float NoLm = max(NoL, 0.0);
@@ -226,7 +224,7 @@ void applyPointLights(ComputeInput input) {
 
             float shadowDepth = saturate(unmix(ap.lights.nearPlane, ap.lights.farPlane, lightDist - offsetBias));
             half shadow = (half)pointLightFiltered.SampleCmp(float4(-lightDir, lightIndex), shadowDepth).r;
-            lightColor *= shadow * NoLm * lightAtt;
+            lightColor.rgb *= shadow * NoLm * lightAtt;
 
             //float3 F_VoH = material_fresnel(albedo, f0_metal, roughL, VoHm);
             half3 F_VoH = F_schlickRough(VoHm, f0, roughL);

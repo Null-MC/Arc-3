@@ -3,18 +3,21 @@ import {BlockMap} from "./scripts/BlockMap";
 import {TagBuilder} from "./scripts/TagBuilder";
 import {Dimensions} from "./scripts/Dimensions";
 import {FloodFill} from "./scripts/FloodFill";
+import {Froxels} from "./scripts/Froxels";
 import {BufferFlipper} from "./scripts/BufferFlipper";
 import {StreamingBufferBuilder} from "./scripts/StreamingBufferBuilder";
 import {ApplyLightColors} from "./scripts/Lights";
 
 
 const DEBUG = true;
+const DEBUG_FROXELS = false;
 const DEBUG_LIGHT_TILES = false;
-// const VOXEL_TEX_ENABLED = true;
+const FROXEL_ENABLED = true;
 
 let dimension: Dimensions;
 let BlockMappings: BlockMap;
 let floodfill: FloodFill | undefined;
+let froxels: Froxels | undefined;
 
 let texFinalPrevA: BuiltTexture | undefined;
 let texFinalPrevB: BuiltTexture | undefined;
@@ -390,6 +393,10 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         floodfill = new FloodFill(pipeline, options.Lighting_FloodFill_Size);
     }
 
+    if (FROXEL_ENABLED) {
+        froxels = new Froxels(pipeline, screenWidth, screenHeight);
+    }
+
     const texDiffuse = pipeline.createImageTexture('texDiffuse', 'imgDiffuse')
         .width(screenWidth)
         .height(screenHeight)
@@ -576,7 +583,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         }
 
         if (options.Lighting_FloodFill_Enabled) {
-            floodfill.create(beginStage, options.Lighting_FloodFill_Size);
+            floodfill.create(beginStage, options.Lighting_FloodFill_Size).compile();
         }
     });
 
@@ -1064,7 +1071,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 .compile();
         });
 
-        withSubList(postRenderStage, 'translucent-composite', compositeStage => {
+        withSubList(postRenderStage, 'composite', compositeStage => {
             finalFlipper.flip();
 
             let location = options.Lighting_Refraction_Mode == RefractMode.WorldSpace
@@ -1109,6 +1116,32 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .exportInt('BufferWidth', Tracing_width)
                     .exportInt('BufferHeight', Tracing_height)
                     .exportInt('BufferScale', Tracing_scale)
+                    .compile();
+            }
+
+            if (FROXEL_ENABLED) {
+                // compositeStage.createCompute("composite-froxels")
+                //     .location("composite/froxels", "updateFroxels")
+                //     .workGroups(
+                //         Math.ceil(Froxel_Width / 8),
+                //         Math.ceil(Froxel_Height / 8),
+                //         Math.ceil(Froxel_Depth / 8))
+                //     .overrideObject('imgFroxel_write', texFroxel.imageName())
+                //     .exportInt('Froxel_Width', Froxel_Width)
+                //     .exportInt('Froxel_Height', Froxel_Height)
+                //     .exportInt('Froxel_Depth', Froxel_Depth)
+                froxels.create(compositeStage).compile();
+
+                finalFlipper.flip();
+
+                compositeStage.createComposite('composite-volumetric')
+                    .location('composite/volumetric', 'overlayVolumetrics')
+                    .target(0, finalFlipper.getWriteTexture())
+                    .overrideObject('texDepth', 'mainDepthTex')
+                    .overrideObject('texSource', finalFlipper.getReadTexture().name())
+                    .exportInt('Froxel_Width', froxels.BufferWidth)
+                    .exportInt('Froxel_Height', froxels.BufferHeight)
+                    .exportInt('Froxel_Depth', froxels.BufferDepth)
                     .compile();
             }
         });
@@ -1235,7 +1268,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .compile();
             }
 
-            if (options.Debug_Material > 0 || options.Debug_Histogram || DEBUG_LIGHT_TILES) {
+            if (options.Debug_Material > 0 || options.Debug_Histogram || DEBUG_LIGHT_TILES || DEBUG_FROXELS) {
                 finalStage.createComposite("debug")
                     .location("post/debug", "renderDebugOverlay")
                     .target(0, finalFlipper.getWriteTexture())
@@ -1245,6 +1278,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                     .exportInt('DEBUG_MATERIAL', options.Debug_Material)
                     .exportBool('DEBUG_HISTOGRAM', options.Debug_Histogram)
+                    .exportBool('DEBUG_FROXELS', DEBUG_FROXELS)
                     .compile();
             }
         });
@@ -1271,6 +1305,10 @@ export function beginFrame(state : WorldState) : void {
 
     if (floodfill && options.Lighting_FloodFill_Enabled) {
         floodfill.update(alt);
+    }
+
+    if (froxels && FROXEL_ENABLED) {
+        froxels.update(alt);
     }
 
     settings.uploadData();

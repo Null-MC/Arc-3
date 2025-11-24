@@ -2,9 +2,11 @@ import aperture;
 import buffers.ObjectData;
 import lib.common;
 import lib.octohedral;
+import lib.sampling.IGN;
 
 extern static const int DEBUG_MATERIAL;
 extern static const bool DEBUG_HISTOGRAM;
+extern static const bool DEBUG_FROXELS;
 
 static const int DEBUG_GB_ALBEDO = 1;
 static const int DEBUG_GB_NORMAL_GEO = 2;
@@ -15,6 +17,7 @@ static const int DEBUG_GB_OCCLUSION = 5;
 Sampler2D<half4> texAlbedoGB;
 Sampler2D<uint2> texNormalGB;
 Sampler2D<uint2> texMatLightGB;
+Sampler3D<half4> texFroxel_write;
 Sampler1D<uint> texHistogram;
 
 [[shader("fragment")]]
@@ -70,6 +73,25 @@ half4 renderDebugOverlay(float2 pos : SV_Position) : SV_Target0 {
             // float shit2 = saturate(unmix(settings.Exposure_Min, settings.Exposure_Max, log2(Scene_AvgExposure) + Post_ExposureOffset));
             // if (abs(previewCoord.x - shit2) < 0.008)
             //     color.b = 1.0 - color.b;
+        }
+    }
+
+    if (DEBUG_FROXELS) {
+        float2 previewCoord = (pos - 8.0) / float2(320.0, 240.0);
+        float z = sin(ap.timing.timeElapsed * 0.2) * 0.5 + 0.5;
+
+        if (all(saturate(previewCoord) == previewCoord)) {
+            // float dither = InterleavedGradientNoiseTime(pos);
+            // float z_d = z + (dither - 0.5)/64.0;
+
+            color.rgb = texFroxel_write.Sample(float3(previewCoord, z)).rgb;
+            color.a = (half)1.0;
+        }
+
+        float2 texcoord = pos / ap.game.screenSize.xy;
+        if (pos.x > ap.game.screenSize.x - 16 && abs(texcoord.y - z) < (4.0/ap.game.screenSize.y)) {
+            color.r = (half)1.0 - color.r;
+            color.a = (half)1.0;
         }
     }
 

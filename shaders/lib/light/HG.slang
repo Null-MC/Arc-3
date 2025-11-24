@@ -2,8 +2,6 @@ public module HG;
 
 import lib.common;
 
-static const float phaseIso = rcp(4.0 * PI);
-
 
 float HG(const in float VoL, const in float G) {
     float G2 = G*G;

@@ -76,9 +76,9 @@ void populateShared(ComputeInput input) {
 
 half3 sampleFloodfillShared(int3 pos, uint mask_index) {
 	int shared_index = getSharedCoord(pos);
-//	uint blockMeta = sharedBlockMetaMap[shared_index];
-//	uint wMask = bitfieldExtract(blockMeta, int(mask_index), 1);
-	return floodfillBuffer[shared_index];// * wMask;
+	// uint blockMeta = sharedBlockMetaMap[shared_index];
+	// uint wMask = bitfieldExtract(blockMeta, mask_index, 1);
+	return floodfillBuffer[shared_index];// * half(1-wMask);
 }
 
 half3 mixNeighbours(const in int3 fragCoord, const in uint mask) {
@@ -156,7 +156,7 @@ void floodfill(ComputeInput input) {
 
 	if (!isFullBlock) {
 		uint faceMask = 0u;
-		if (blockId > 0u)
+		if (blockId >= 0u)
 			faceMask = sharedBlockMetaMap[sharedCoord];
 
 		accumLight = mixNeighbours(localCellIndex, faceMask) * blockTint;

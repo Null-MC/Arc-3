@@ -6,8 +6,6 @@ import lib.sampling.R2;
 import lib.light.floodfill;
 import lib.shadow;
 
-extern static const int DIMENSION;
-
 RWStructuredBuffer<SceneBuffer> scene_writer;
 
 

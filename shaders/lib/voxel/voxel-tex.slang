@@ -5,23 +5,6 @@ import lib.common;
 import lib.voxel.voxel_common;
 
 
-// float3 VoxelTex_GetCenter(const in float3 cameraPos) {
-//     return Voxel_BufferCenter + fract(cameraPos);
-// }
-
-// float3 VoxelTex_GetBufferPosition(const in float3 localPos) {
-//     return localPos + VoxelTex_GetCenter(ap.camera.position);
-// }
-
-// uint VoxelTex_GetBufferIndex(int3 bufferPos) {
-// 	const int3 flatten = int3(1, Voxel_Resolution, Voxel_Resolution*Voxel_Resolution);
-// 	return sumOf(bufferPos * flatten);
-// }
-
-// bool VoxelTex_InBounds(const in int3 bufferPos) {
-//     return all(clamp(bufferPos, 0, Voxel_Resolution-1) == bufferPos);
-// }
-
 struct VoxelTex {
     uint2 uv_min;
     uint2 uv_size;

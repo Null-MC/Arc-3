@@ -10,6 +10,7 @@ StructuredBuffer<SceneBuffer> scene;
 [[vk::image_format("rgba8")]]
 RWTexture2D<float4> imgDebug;
 
+extern static const int DIMENSION;
 extern static const bool World_HasSky;
 extern static const bool TAA_Enabled;
 extern static const bool Debug_WhiteWorld;
@@ -21,6 +22,7 @@ static const half3 BlockLightColor = half3(RgbToLinear(float3(0.859, 0.722, 0.38
 static const half3 WhiteWorldColor = half3(0.65);
 
 static const float PI = 3.14159265358;
+static const float phaseIso = rcp(4.0 * PI);
 static const float EPSILON = 1.0e-6;
 
 static const int DIM_NETHER = -1;
