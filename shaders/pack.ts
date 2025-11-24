@@ -508,6 +508,16 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         pipeline.importPNGTexture('texMoon', 'textures/moon.png', true, false);
     //}
 
+    pipeline.importRawTexture('texFogNoise', 'textures/fog.dat')
+        .type(PixelType.UNSIGNED_BYTE)
+        .format(Format.R8_SNORM)
+        .width(256)
+        .height(32)
+        .depth(256)
+        .clamp(false)
+        .blur(true)
+        .load();
+
 
     withStage(pipeline, Stage.SCREEN_SETUP, setupStage => {
         setupStage.createCompute("setup-scene")

@@ -7,10 +7,13 @@ import lib.light.floodfill;
 import lib.sampling.depth;
 import lib.noise.hash;
 import lib.sky.common;
+import lib.sky.density;
 import lib.sky.scattering;
 import lib.sky.sample_transmit;
+import lib.sky.sample_multiscatter;
 
 
+extern static const int Froxel_MaxFrames = 15;
 extern static const bool FloodFill_Enabled;
 extern static const bool PointLight_Enabled;
 extern static const int PointLight_MaxCount;
@@ -69,15 +72,40 @@ void updateFroxels(ComputeInput input) {
         bool shadowIsSun = dot(ap.celestial.position, ap.celestial.sunPosition) > 0.0;
 
         half3 sun_color = scene[0].SunColor * sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
-        sun_color *= atmosAbsorb(skyPos, scene[0].SunLocalDir);
+        // sun_color *= atmosAbsorb(skyPos, scene[0].SunLocalDir);
 
         half3 moon_color = scene[0].MoonColor * sampleSkyTransmit(skyPos, scene[0].MoonLocalDir);
-        moon_color *= atmosAbsorb(skyPos, scene[0].MoonLocalDir);
+        // moon_color *= atmosAbsorb(skyPos, scene[0].MoonLocalDir);
 
-        float VoL = dot(localDir, scene[0].SkyLightLocalDir);
-        float sky_phase = max(getMiePhase(VoL), 0.0);
+        float3 skyLight = (shadowIsSun ? sun_color : moon_color) * shadow;
 
-        scatter += sky_phase * (shadowIsSun ? sun_color : moon_color) * shadow;
+        // if (FOG_NOISE_ENABLED) {
+            const uint skyTrace_stepCount = 8;
+            const float skyTrace_dist = 64.0;
+
+            float3 skyTrace_localEnd = localPos + scene[0].SkyLightLocalDir * skyTrace_dist;
+            float skyTrace_stepDist = skyTrace_dist / skyTrace_stepCount;
+            float accumDensity = 0.0;
+
+            for (uint i = 0; i < skyTrace_stepCount; i++) {
+                float stepF = (i + 0.5) / skyTrace_stepCount;
+                float3 trace_localPos = lerp(localPos, skyTrace_localEnd, stepF);
+
+                accumDensity += SampleFogDensity(trace_localPos) * skyTrace_stepDist;
+            }
+            
+            if (accumDensity > EPSILON) {
+                float extinction = (mieAbsorptionF + mieScatteringF) * accumDensity;
+                skyLight *= exp(-extinction);
+            }
+        // }
+
+        float3 ambient = sampleSkyMultiScatter(skyPos, scene[0].SunLocalDir);
+        // ambient = ambient * scene[0].SkyBrightnessSmooth + VL_MinLight;
+
+        float sky_VoL = dot(localDir, scene[0].SkyLightLocalDir);
+        float miePhase_sky = max(getMiePhase(sky_VoL, 0.2), 0.0);
+        scatter += miePhase_sky * skyLight + ambient;
     }
 
     if (PointLight_Enabled) {
@@ -138,6 +166,8 @@ void updateFroxels(ComputeInput input) {
         uint total = counter.load();
 
         if (on_screen && total > 0) {
+            float density = SampleFogDensity(localPos);
+            
             for (uint i = 0; i < total; i++) {
                 uint lightIndex = sharedLightList[i];
                 PointLight light = ap.lights[lightIndex];
@@ -162,7 +192,27 @@ void updateFroxels(ComputeInput input) {
                 half shadow = (half)pointLightFiltered.SampleCmp(float4(-lightDir, lightIndex), shadowDepth).r;
                 lightColor.rgb *= lightPhase * shadow * lightAtt;
 
-                // TODO: More
+                if (FOG_NOISE_ENABLED) {
+                    const uint pointTrace_stepCount = 4;
+                    float accumDensity = 0.0;
+
+                    for (uint i = 0; i < pointTrace_stepCount; i++) {
+                        float stepF = (i + 0.5) / pointTrace_stepCount;
+                        float3 trace_localPos = lerp(localPos, light.position, stepF);
+
+                        accumDensity += SampleFogDensity(trace_localPos);
+                    }
+                    
+                    if (accumDensity > EPSILON) {
+                        float extinction = (mieAbsorptionF + mieScatteringF) * accumDensity;
+                        lightColor.rgb *= exp(-extinction * lightDist);
+                    }
+                }
+                else {
+                    float extinction = (mieAbsorptionF + mieScatteringF) * density;
+                    lightColor.rgb *= exp(-max(extinction * lightDist, EPSILON));
+                }
+
                 scatter += lightColor.rgb;
             }
         }
@@ -175,6 +225,10 @@ void updateFroxels(ComputeInput input) {
             scatter += floodfill_sample(lpvPos) * BLOCK_LUX * phaseIso;
         }
     }
+
+    // float density = SampleFogDensity(localPos);
+    // float mieScattering = mieScatteringF * density;
+    scatter *= mieScatteringF;
 
     // project last frame position and accumulate
     float3 bufferPosLast = input.globalPos + 0.5;
@@ -193,7 +247,7 @@ void updateFroxels(ComputeInput input) {
         froxelPrev = texFroxel_read.Sample(bufferPosLast / Froxel_Resolution);
     }
 
-    float counter = clamp(froxelPrev.a + 1.0, 1.0, 30.0);
+    float counter = clamp(froxelPrev.a + 1.0, 1.0, Froxel_MaxFrames);
     float3 final = lerp(froxelPrev.rgb, scatter, rcp(counter));
 
     imgFroxel_write[input.globalPos] = (half4)float4(final, counter);

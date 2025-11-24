@@ -3,6 +3,9 @@ public module scattering;
 import lib.common;
 import lib.sky.common;
 
+static const float mieScatteringF = 0.420;
+static const float mieAbsorptionF = 0.001;
+
 
 void getScatteringValues(float3 pos, out float3 rayleighScattering, out float mieScattering, out float3 extinction) {
     float altitudeKM = (length(pos)-groundRadiusMM) * 1000.0;

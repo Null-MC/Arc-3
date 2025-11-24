@@ -121,7 +121,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
 
         if (!Lighting_GI || RENDER_TRANSLUCENT) {
             half3 sky_ambient = sampleSkyIrradiance(normals.tex);
-            diffuse += sky_ambient * lmcoord_y * mat_lit.occlusion;
+            diffuse += PI * sky_ambient * lmcoord_y * mat_lit.occlusion;
         }
 
         float VoL = dot(-viewLocalDir, scene[0].SkyLightLocalDir);
