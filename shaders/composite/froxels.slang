@@ -95,9 +95,16 @@ void updateFroxels(ComputeInput input) {
         uint2 uv = input.globalPos.xy;
         bool on_screen = all(uv < Froxel_Resolution.xy);
 
+        uint3 groupPos = input.groupPos * WorkgroupSize();
+        float3 groupPosMin = groupPos / float3(Froxel_Resolution);
+        float3 groupPosMax = (groupPos + WorkgroupSize()) / float3(Froxel_Resolution);
+
         // TODO: set these from the min/max of depth slices
-        float depthMin = 0.0;
-        float depthMax = Froxel_MaxDist;
+        float depthMin = pow2(groupPosMin.z) * Froxel_MaxDist;
+        float depthMax = pow2(groupPosMax.z) * Froxel_MaxDist;
+
+        // float depthMin = pow2(groupPosMin.z);
+        // depthMin = delinearizeDepth(depthMin * Froxel_MaxDist, ap.camera.near, ap.camera.far);
 
         if (input.groupIndex < PointLight_MaxCount) {
             PointLight light = ap.lights[input.groupIndex];
@@ -113,9 +120,9 @@ void updateFroxels(ComputeInput input) {
                 if (-lightViewPos.z - lightRange > depthMax) hit = false;
 
                 // test X/Y
-                uint2 groupPos = input.groupPos.xy * WorkgroupSize().xy;
-                float2 groupPosMin = groupPos / float2(Froxel_Resolution.xy);
-                float2 groupPosMax = (groupPos + WorkgroupSize().xy) / float2(Froxel_Resolution.xy);
+                // uint2 groupPos = input.groupPos.xy * WorkgroupSize().xy;
+                // float2 groupPosMin = groupPos / float2(Froxel_Resolution.xy);
+                // float2 groupPosMax = (groupPos + WorkgroupSize().xy) / float2(Froxel_Resolution.xy);
                 
                 float3 c1 = unprojectCorner(groupPosMin.x, groupPosMin.y);
                 float3 c2 = unprojectCorner(groupPosMax.x, groupPosMin.y);
