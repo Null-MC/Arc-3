@@ -1,3 +1,12 @@
+screen.SKY=Sky
+
+option.SKY.SEA_LEVEL=Sea Level
+
+option.SKY.FOG_DENSITY=Fog Density
+
+option.SKY.FOG_NOISE=Chunky Fog
+
+
 screen.WATER=Water
 
 option.WATER_WAVES_ENABLED=Waves Enabled

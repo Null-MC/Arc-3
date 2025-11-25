@@ -1,20 +1,22 @@
 export class Options {
-    get Sky_SeaLevel(): number {return 62;}
+    get Sky_SeaLevel(): number {return getIntSetting('SKY.SEA_LEVEL');}
+    get Sky_FogDensity(): number {return getIntSetting('SKY.FOG_DENSITY');}
+    get Sky_FogNoise(): boolean {return getBoolSetting('SKY.FOG_NOISE');}
 
-    get Water_WavesEnabled(): boolean {return getBoolSetting('WATER_WAVES_ENABLED');}
-    get Water_WaveSize(): number {return getIntSetting('WATER_WAVE_SIZE');}
+    get Water_WavesEnabled(): boolean {return getBoolSetting('WATER.WAVES_ENABLED');}
+    get Water_WaveSize(): number {return getIntSetting('WATER.WAVE_SIZE');}
     get Water_WaveDetail(): number {return 18;}
 
-    get Material_Format(): number {return getIntSetting('MATERIAL_FORMAT');}
+    get Material_Format(): number {return getIntSetting('MATERIAL.FORMAT');}
 
-    // get Material_Normals_Rough(): boolean {return getBoolSetting('MATERIAL_NORMALS_ROUGH');}
-    get Material_Normals_Smooth(): boolean {return getBoolSetting('MATERIAL_NORMALS_SMOOTH');}
+    // get Material_Normals_Rough(): boolean {return getBoolSetting('MATERIAL.NORMALS_ROUGH');}
+    get Material_Normals_Smooth(): boolean {return getBoolSetting('MATERIAL.NORMALS.SMOOTH');}
 
-    get Material_Parallax_Enabled(): boolean {return getBoolSetting('MATERIAL_PARALLAX_ENABLED');}
-    get Material_Parallax_Type(): number {return getIntSetting('MATERIAL_PARALLAX_TYPE');}
-    get Material_Parallax_Depth(): number {return getIntSetting('MATERIAL_PARALLAX_DEPTH');}
-    get Material_Parallax_SampleCount(): number {return getIntSetting('MATERIAL_PARALLAX_SAMPLES');}
-    get Material_Parallax_Optimize(): boolean {return getBoolSetting('MATERIAL_PARALLAX_OPTIMIZE');}
+    get Material_Parallax_Enabled(): boolean {return getBoolSetting('MATERIAL.PARALLAX_ENABLED');}
+    get Material_Parallax_Type(): number {return getIntSetting('MATERIAL.PARALLAX_TYPE');}
+    get Material_Parallax_Depth(): number {return getIntSetting('MATERIAL.PARALLAX_DEPTH');}
+    get Material_Parallax_SampleCount(): number {return getIntSetting('MATERIAL.PARALLAX_SAMPLES');}
+    get Material_Parallax_Optimize(): boolean {return getBoolSetting('MATERIAL.PARALLAX_OPTIMIZE');}
     
     get Lighting_Resolution(): number {return getIntSetting('LIGHTING.RESOLUTION');}
     get Lighting_VoxelResolution(): number {return getIntSetting('LIGHTING.VOXEL_RESOLUTION');}

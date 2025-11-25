@@ -95,6 +95,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     const globalExports = pipeline.createExportList()
         .addInt('DIMENSION', dimension.Index)
         .addBool('World_HasSky', dimension.World_HasSky)
+        // .addFloat('Sky_SeaLevel', options.Sky_SeaLevel)
+        .addBool('Sky_FogNoise', options.Sky_FogNoise)
         .addInt('MATERIAL_FORMAT', options.Material_Format)
         .addInt('Shadow_Resolution', options.Shadow_Resolution)
         .addInt('Shadow_CascadeCount', renderConfig.shadow.cascades)

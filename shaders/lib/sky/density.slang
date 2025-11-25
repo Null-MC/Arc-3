@@ -4,7 +4,7 @@ import aperture;
 import lib.common;
 
 
-extern static const bool FOG_NOISE_ENABLED = false;
+extern static const bool Sky_FogNoise;
 
 Sampler3D<half> texFogNoise;
 
@@ -36,12 +36,13 @@ float SampleFogDensity(const in float3 localPos) {
             break;
     }
 
-    if (FOG_NOISE_ENABLED) {
+    if (Sky_FogNoise) {
         density += SampleFogNoise(localPos);
     }
 
     float worldPosY = localPos.y + ap.camera.position.y;
-    float vertical_scale = 1.0 - saturate(unmix(60.0, 90.0, worldPosY));
+    float vertical_scale = rcp(1.0 + max(worldPosY - settings.Sky_SeaLevel, 0.0));
+    // float vertical_scale = 1.0 - saturate(unmix(60.0, 90.0, worldPosY));
     density *= vertical_scale;
 
     return density;

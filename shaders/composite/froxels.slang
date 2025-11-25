@@ -101,7 +101,7 @@ void updateFroxels(ComputeInput input) {
         // }
 
         float3 ambient = sampleSkyMultiScatter(skyPos, scene[0].SunLocalDir);
-        // ambient = ambient * scene[0].SkyBrightnessSmooth + VL_MinLight;
+        // ambient = ambient * ap.camera.BrightnessSmooth; + VL_MinLight;
 
         float sky_VoL = dot(localDir, scene[0].SkyLightLocalDir);
         float miePhase_sky = max(getMiePhase(sky_VoL, 0.2), 0.0);
@@ -192,7 +192,7 @@ void updateFroxels(ComputeInput input) {
                 half shadow = (half)pointLightFiltered.SampleCmp(float4(-lightDir, lightIndex), shadowDepth).r;
                 lightColor.rgb *= lightPhase * shadow * lightAtt;
 
-                if (FOG_NOISE_ENABLED) {
+                if (Sky_FogNoise) {
                     const uint pointTrace_stepCount = 4;
                     float accumDensity = 0.0;
 
