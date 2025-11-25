@@ -33,7 +33,7 @@ float SampleFogDensity(const in float3 localPos) {
             break;
         default:
             float dayF = smoothstep(-0.08, 0.002, scene[0].SunLocalDir.y);
-            density = lerp(0.034, 0.009, dayF);
+            density = lerp(0.048, 0.009, dayF);
             density = lerp(density, 0.07, ap.world.rainStrength);
             break;
     }
@@ -44,7 +44,7 @@ float SampleFogDensity(const in float3 localPos) {
 
     if (World_HasSky) {
         float worldPosY = localPos.y + ap.camera.position.y;
-        float vertical_scale = rcp(1.0 + max(worldPosY - settings.Sky_SeaLevel, 0.0));
+        float vertical_scale = rcp(1.0 + 0.2*max(worldPosY - settings.Sky_SeaLevel, 0.0));
         density *= vertical_scale;
     }
 
