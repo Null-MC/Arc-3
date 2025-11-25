@@ -57,8 +57,8 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
         float sampleTransmittance = 1.0;
         float3 scatteringIntegral = 0.0;
         if (extinction > EPSILON) {
-            sampleTransmittance = exp(-extinction * stepDist);
-            scatteringIntegral = (inScattering - inScattering * sampleTransmittance) / extinction;
+            sampleTransmittance = exp(-max(extinction * stepDist, EPSILON));
+            scatteringIntegral = (inScattering - inScattering * sampleTransmittance) / max(extinction, EPSILON);
         }
 
         scattering += scatteringIntegral * transmittance;

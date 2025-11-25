@@ -16,7 +16,7 @@ float SampleFogNoise(const in float3 localPos) {
     float3 samplePos = worldPos * scale;
 
     float density = texFogNoise.Sample(samplePos);
-    return 100.0 * smoothstep(0.62, 0.68, density);
+    return 1.0 * smoothstep(0.62, 0.68, density);
     // return 100.0 * step(0.62, density) * vertical_scale;
 }
 

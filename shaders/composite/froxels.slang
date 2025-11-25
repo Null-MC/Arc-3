@@ -203,10 +203,8 @@ void updateFroxels(ComputeInput input) {
                         accumDensity += SampleFogDensity(trace_localPos);
                     }
                     
-                    if (accumDensity > EPSILON) {
-                        float extinction = (mieAbsorptionF + mieScatteringF) * accumDensity;
-                        lightColor.rgb *= exp(-extinction * lightDist);
-                    }
+                    float extinction = (mieAbsorptionF + mieScatteringF) * accumDensity;
+                    lightColor.rgb *= exp(-max(extinction * lightDist, EPSILON));
                 }
                 else {
                     float extinction = (mieAbsorptionF + mieScatteringF) * density;
