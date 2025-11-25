@@ -194,17 +194,18 @@ void updateFroxels(ComputeInput input) {
 
                 if (Sky_FogNoise) {
                     const uint pointTrace_stepCount = 4;
+                    float stepDist = lightDist / pointTrace_stepCount;
                     float accumDensity = 0.0;
 
                     for (uint i = 0; i < pointTrace_stepCount; i++) {
                         float stepF = (i + 0.5) / pointTrace_stepCount;
                         float3 trace_localPos = lerp(localPos, light.position, stepF);
 
-                        accumDensity += SampleFogDensity(trace_localPos);
+                        accumDensity += SampleFogDensity(trace_localPos) * stepDist;
                     }
                     
                     float extinction = (mieAbsorptionF + mieScatteringF) * accumDensity;
-                    lightColor.rgb *= exp(-max(extinction * lightDist, EPSILON));
+                    lightColor.rgb *= exp(-max(extinction, EPSILON));
                 }
                 else {
                     float extinction = (mieAbsorptionF + mieScatteringF) * density;
