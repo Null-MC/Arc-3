@@ -4,6 +4,7 @@ import buffers.sky;
 import lib.common;
 import lib.sampling.R2;
 import lib.light.floodfill;
+import lib.sky.density;
 import lib.shadow;
 
 RWStructuredBuffer<SceneBuffer> scene_writer;
@@ -27,19 +28,21 @@ void beginScene() {
         GetShadowProjectionBounds(i, scene_writer[0].shadowViewMin[i], scene_writer[0].shadowViewMax[i]);
     }
 
-    if (DIMENSION != DIM_END) {
+    if (DIMENSION != DIM_END && DIMENSION != DIM_NETHER) {
         float blend = smoothstep(0.0, 1.0, ap.world.rainStrength);
         lerp(skyClear, skyRain, blend, scene_writer[0].sky);
         //lerp(scene_writer[0].sky, skyThunder, ap.world.thunderStrength, scene_writer[0].sky);
+
+        float2 windFallSpeed = lerp(
+            float2(0.10, 0.04),
+            float2(0.40, 0.25),
+            ap.world.rainStrength);
+
+        float fall_speed = lerp(0.04, 0.25, ap.world.rainStrength);
+        scene_writer[0].WeatherOffset -= windFallSpeed * ap.timing.lastFrameTime;
     }
 
-    float2 windFallSpeed = lerp(
-        float2(0.10, 0.04),
-        float2(0.40, 0.25),
-        ap.world.rainStrength);
-
-    float fall_speed = lerp(0.04, 0.25, ap.world.rainStrength);
-    scene_writer[0].WeatherOffset -= windFallSpeed * ap.timing.lastFrameTime;
+    scene_writer[0].WorldFogDensity = GetWorldFogDensity();
 
     scene_writer[0].FloodFillCenter = GetVoxelCenter(ap.camera.position);
 

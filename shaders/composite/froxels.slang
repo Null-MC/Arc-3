@@ -72,11 +72,7 @@ void updateFroxels(ComputeInput input) {
         bool shadowIsSun = dot(ap.celestial.position, ap.celestial.sunPosition) > 0.0;
 
         half3 sun_color = scene[0].SunColor * sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
-        // sun_color *= atmosAbsorb(skyPos, scene[0].SunLocalDir);
-
         half3 moon_color = scene[0].MoonColor * sampleSkyTransmit(skyPos, scene[0].MoonLocalDir);
-        // moon_color *= atmosAbsorb(skyPos, scene[0].MoonLocalDir);
-
         float3 skyLight = (shadowIsSun ? sun_color : moon_color) * shadow;
 
         // if (FOG_NOISE_ENABLED) {
@@ -95,7 +91,7 @@ void updateFroxels(ComputeInput input) {
             }
             
             if (accumDensity > EPSILON) {
-                float extinction = (mieAbsorptionF + mieScatteringF) * accumDensity;
+                float extinction = 0.001 * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase) * accumDensity;
                 skyLight *= exp(-extinction);
             }
         // }
@@ -204,11 +200,11 @@ void updateFroxels(ComputeInput input) {
                         accumDensity += SampleFogDensity(trace_localPos) * stepDist;
                     }
                     
-                    float extinction = (mieAbsorptionF + mieScatteringF) * accumDensity;
+                    float extinction = 0.001 * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase) * accumDensity;
                     lightColor.rgb *= exp(-max(extinction, EPSILON));
                 }
                 else {
-                    float extinction = (mieAbsorptionF + mieScatteringF) * density;
+                    float extinction = 0.001 * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase) * density;
                     lightColor.rgb *= exp(-max(extinction * lightDist, EPSILON));
                 }
 
@@ -225,9 +221,7 @@ void updateFroxels(ComputeInput input) {
         }
     }
 
-    // float density = SampleFogDensity(localPos);
-    // float mieScattering = mieScatteringF * density;
-    scatter *= mieScatteringF;
+    scatter *= 0.001 * scene[0].sky.mieScatteringBase;
 
     // project last frame position and accumulate
     float3 bufferPosLast = input.globalPos + 0.5;

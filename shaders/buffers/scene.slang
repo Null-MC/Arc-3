@@ -14,6 +14,7 @@ struct SceneBuffer {
     half3 MoonColor;
     float3 MoonLocalDir;
     float3 SkyLightLocalDir;
+    float WorldFogDensity;
 
     float3 FloodFillCenter;
 

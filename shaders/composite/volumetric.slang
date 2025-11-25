@@ -4,8 +4,9 @@ import lib.sampling.IGN;
 import lib.sky.common;
 import lib.sky.density;
 import lib.sky.scattering;
-import lib.sky.sample_multiscatter;
 import lib.voxel.froxel;
+
+extern static const int VL_StepCount = 32;
 
 Sampler2D<float> texDepth;
 Sampler2D<half3> texSource;
@@ -23,11 +24,11 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
 
     float3 ndcPos = float3(texcoord, depth) * 2.0 - 1.0;
     float3 viewPos = project(ap.camera.projectionInv, ndcPos);
-    // float3 localPos = mul3(ap.camera.viewInv, viewPos);
 
     float viewDist = length(viewPos);
     float3 viewDir = viewPos / viewDist;
     float viewDistFinal = min(viewDist, Froxel_MaxDist);
+
     float3 viewPosEnd = viewDir * viewDistFinal;
     float3 localPosEnd = mul3(ap.camera.viewInv, viewPosEnd);
 
@@ -36,30 +37,24 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
     float3 scattering = 0.0;
     float transmittance = 1.0;
 
-    const int StepCount = 32;
-    float stepDist = viewDistFinal / StepCount;
+    float stepDist = viewDistFinal / VL_StepCount;
+    float extinction_base = 0.001 * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase);
 
-    for (uint i = 0; i < StepCount; i++) {
-        float stepF = saturate((i + dither) / StepCount);
-
-        float3 trace_localPos = localPosEnd * stepF;
-        float sample_density = SampleFogDensity(trace_localPos);
+    for (uint i = 0; i < VL_StepCount; i++) {
+        float stepF = (i + dither) / VL_StepCount;
 
         float3 trace_viewPos = viewPosEnd * stepF;
         float3 ndcPos = project(ap.camera.projection, trace_viewPos);
         float3 trace_bufferPos = Froxel_GetBufferPosition(ndcPos);
-
         half3 froxel = texFroxel_write.Sample(trace_bufferPos / Froxel_Resolution);
 
-        float3 inScattering = froxel * sample_density;
-        float extinction = (mieScatteringF + mieAbsorptionF) * sample_density;
+        float3 trace_localPos = localPosEnd * stepF;
+        float sample_density = SampleFogDensity(trace_localPos);
 
-        float sampleTransmittance = 1.0;
-        float3 scatteringIntegral = 0.0;
-        if (extinction > EPSILON) {
-            sampleTransmittance = exp(-max(extinction * stepDist, EPSILON));
-            scatteringIntegral = (inScattering - inScattering * sampleTransmittance) / max(extinction, EPSILON);
-        }
+        float3 inScattering = froxel * sample_density;
+        float extinction = extinction_base * sample_density;
+        float sampleTransmittance = exp(-max(extinction * stepDist, EPSILON));
+        float3 scatteringIntegral = (inScattering - inScattering * sampleTransmittance) / max(extinction, EPSILON);
 
         scattering += scatteringIntegral * transmittance;
         transmittance *= sampleTransmittance;
