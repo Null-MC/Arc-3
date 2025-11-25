@@ -49,9 +49,9 @@ VertexOutput vertexMain(Vertex input) {
     float3 viewPos = mul3(input.viewMatrix(), modelPos);
     output.position = mul(input.projectionMatrix(), float4(viewPos, 1.0));
 
-    if (SupportsParallax) {
+    // if (SupportsParallax) {
         output.localPos = mul3(ap.camera.viewInv, viewPos);
-    }
+    // }
 
     output.uv = input.uv();
     half4 color = half4(input.color());
@@ -200,7 +200,7 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
 
     mat_lit.lmcoord = half2(input.light);
 
-    bool isWater;
+    bool isWater = false;
     if (RENDER_TERRAIN) {
         mat_lit.blockMapId = ap.blocks[input.blockId].customId;
         isWater = mat_lit.blockMapId == BLOCK_WATER;
@@ -213,17 +213,19 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
         }
     }
 
-    if (SupportsTexNormals && MATERIAL_FORMAT != MAT_NONE) {
-        if (Water_WaveEnabled && isWater && abs(normals.geo.y) > EPSILON) {
-            float3 offsetLocalPos = input.localPos;
-            // offsetLocalPos.y -= input.waveOffset;
+    if (SupportsTexNormals) {
+        if (Water_WaveEnabled && isWater) {
+            if (abs(normals.geo.y) > EPSILON) {
+                float3 offsetLocalPos = input.localPos;
+                // offsetLocalPos.y -= input.waveOffset;
 
-            int octaves = GetWaveOctaveCount(viewDist);
-            float3 waveOffset = GetWaveHeight(ap.camera.position + offsetLocalPos, input.light.y, ap.timing.timeElapsed, octaves);
+                int octaves = GetWaveOctaveCount(viewDist);
+                float3 waveOffset = GetWaveHeight(ap.camera.position + offsetLocalPos, input.light.y, ap.timing.timeElapsed, octaves);
 
-            normals.tex = half3(getSurfaceNormal((waveOffset + offsetLocalPos), float3(0,1,0)));
+                normals.tex = half3(getSurfaceNormal((waveOffset + offsetLocalPos), float3(0,1,0)));
+            }
         }
-        else {
+        else if (MATERIAL_FORMAT != MAT_NONE) {
             normals.tex = mat_normal(normalData.rgb);
 
             if (SupportsParallax && !skipParallax && Parallax_Type == POM_TYPE_SHARP) {

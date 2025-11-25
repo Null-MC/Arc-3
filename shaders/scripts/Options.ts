@@ -12,11 +12,11 @@ export class Options {
     // get Material_Normals_Rough(): boolean {return getBoolSetting('MATERIAL.NORMALS_ROUGH');}
     get Material_Normals_Smooth(): boolean {return getBoolSetting('MATERIAL.NORMALS.SMOOTH');}
 
-    get Material_Parallax_Enabled(): boolean {return getBoolSetting('MATERIAL.PARALLAX_ENABLED');}
-    get Material_Parallax_Type(): number {return getIntSetting('MATERIAL.PARALLAX_TYPE');}
-    get Material_Parallax_Depth(): number {return getIntSetting('MATERIAL.PARALLAX_DEPTH');}
-    get Material_Parallax_SampleCount(): number {return getIntSetting('MATERIAL.PARALLAX_SAMPLES');}
-    get Material_Parallax_Optimize(): boolean {return getBoolSetting('MATERIAL.PARALLAX_OPTIMIZE');}
+    get Material_Parallax_Enabled(): boolean {return getBoolSetting('MATERIAL.PARALLAX.ENABLED');}
+    get Material_Parallax_Type(): number {return getIntSetting('MATERIAL.PARALLAX.TYPE');}
+    get Material_Parallax_Depth(): number {return getIntSetting('MATERIAL.PARALLAX.DEPTH');}
+    get Material_Parallax_SampleCount(): number {return getIntSetting('MATERIAL.PARALLAX.SAMPLES');}
+    get Material_Parallax_Optimize(): boolean {return getBoolSetting('MATERIAL.PARALLAX.OPTIMIZE');}
     
     get Lighting_Resolution(): number {return getIntSetting('LIGHTING.RESOLUTION');}
     get Lighting_VoxelResolution(): number {return getIntSetting('LIGHTING.VOXEL_RESOLUTION');}

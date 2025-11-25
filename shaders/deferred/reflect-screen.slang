@@ -58,11 +58,13 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         half f0_metal = mat_f0_metal(mat_lit.specular.g);
         half metalness = (half)mat_metalness(f0_metal);
 
-        // TODO: wetness
-        half2 wetness_puddle = texWetnessGB[uv_full];
-        Wetness_ApplyRoughness(roughness, wetness_puddle.x);
-        Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
-        // f0_metal = (half)lerp(f0_metal, 0.02, wetness);
+        if (World_HasSky) {
+            // TODO: wetness
+            half2 wetness_puddle = texWetnessGB[uv_full];
+            Wetness_ApplyRoughness(roughness, wetness_puddle.x);
+            Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
+            // f0_metal = (half)lerp(f0_metal, 0.02, wetness);
+        }
 
         half lmcoord_y = pow2(mat_lit.lmcoord.y);
         half roughL = pow2(roughness);

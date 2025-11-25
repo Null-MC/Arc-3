@@ -9,41 +9,41 @@ option.SKY.FOG_NOISE=Chunky Fog
 
 screen.WATER=Water
 
-option.WATER_WAVES_ENABLED=Waves Enabled
+option.WATER.WAVES_ENABLED=Waves Enabled
 
-option.WATER_WAVE_SIZE=Wave Size
-suffix.WATER_WAVE_SIZE=%
+option.WATER.WAVE_SIZE=Wave Size
+suffix.WATER.WAVE_SIZE=%
 
 
 screen.MATERIAL=Materials
 
-option.MATERIAL_FORMAT=Format
-value.MATERIAL_FORMAT.0=None
-value.MATERIAL_FORMAT.1=Old PBR
-value.MATERIAL_FORMAT.2=Lab PBR
+option.MATERIAL.FORMAT=Format
+value.MATERIAL.FORMAT.0=None
+value.MATERIAL.FORMAT.1=Old PBR
+value.MATERIAL.FORMAT.2=Lab PBR
 
 
-screen.MATERIAL_NORMALS=Normals
+screen.MATERIAL.NORMALS=Normals
 
-option.MATERIAL_NORMALS_SMOOTH=Smooth
+option.MATERIAL.NORMALS.SMOOTH=Smooth
 
 
-screen.MATERIAL_PARALLAX=Parallax
+screen.MATERIAL.PARALLAX=Parallax
 
-option.MATERIAL_PARALLAX_ENABLED=Enabled
+option.MATERIAL.PARALLAX.ENABLED=Enabled
 
-option.MATERIAL_PARALLAX_TYPE=Shape/Edges
-value.MATERIAL_PARALLAX_TYPE.0=Basic
-value.MATERIAL_PARALLAX_TYPE.1=Sharp
-value.MATERIAL_PARALLAX_TYPE.2=Smooth
+option.MATERIAL.PARALLAX.TYPE=Shape/Edges
+value.MATERIAL.PARALLAX.TYPE.0=Basic
+value.MATERIAL.PARALLAX.TYPE.1=Sharp
+value.MATERIAL.PARALLAX.TYPE.2=Smooth
 
-option.MATERIAL_PARALLAX_DEPTH=Max Depth
-suffix.MATERIAL_PARALLAX_DEPTH=%
+option.MATERIAL.PARALLAX.DEPTH=Max Depth
+suffix.MATERIAL.PARALLAX.DEPTH=%
 
-option.MATERIAL_PARALLAX_SAMPLES=Sample Count
+option.MATERIAL.PARALLAX.SAMPLES=Sample Count
 
-option.MATERIAL_PARALLAX_OPTIMIZE=Optimize Samples
-option.MATERIAL_PARALLAX_OPTIMIZE.comment=Attempts to increase quality by focusing sample distribution. May not always work well.
+option.MATERIAL.PARALLAX.OPTIMIZE=Optimize Samples
+option.MATERIAL.PARALLAX.OPTIMIZE.comment=Attempts to increase quality by focusing sample distribution. May not always work well.
 
 
 screen.LIGHTING=Lighting

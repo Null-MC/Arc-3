@@ -78,9 +78,11 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
         half f0_metal = mat_f0_metal(mat_lit.specular.g);
         half metalness = mat_metalness(f0_metal);
 
-        half2 wetness_puddle = texWetnessGB[uv];
-        Wetness_ApplyRoughness(roughness, wetness_puddle.x);
-        Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
+        if (World_HasSky) {
+            half2 wetness_puddle = texWetnessGB[uv];
+            Wetness_ApplyRoughness(roughness, wetness_puddle.x);
+            Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
+        }
 
         half3 f0 = lerp(f0_metal, albedo, metalness);
         half roughL = roughness*roughness;

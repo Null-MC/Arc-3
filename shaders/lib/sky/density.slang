@@ -16,8 +16,8 @@ float SampleFogNoise(const in float3 localPos) {
     float3 samplePos = worldPos * scale;
 
     float density;
-    density  = texFogNoise.Sample(samplePos + 0.012*float3(0.12, 0.74, 0.08)*ap.timing.timeElapsed);
-    density *= texFogNoise.Sample((samplePos + 0.012*float3(0.25, 0.65, 0.02)*ap.timing.timeElapsed)*2.0);
+    density  = texFogNoise.Sample(samplePos - 0.012*float3(0.12, 0.74, 0.08)*ap.timing.timeElapsed);
+    density *= texFogNoise.Sample((samplePos + 0.012*float3(0.25, 0.65, -0.02)*ap.timing.timeElapsed)*2.0);
 
     return smoothstep(0.32, 0.38, density);
 }
@@ -42,9 +42,11 @@ float SampleFogDensity(const in float3 localPos) {
         density += SampleFogNoise(localPos);
     }
 
-    float worldPosY = localPos.y + ap.camera.position.y;
-    float vertical_scale = rcp(1.0 + max(worldPosY - settings.Sky_SeaLevel, 0.0));
-    density *= vertical_scale;
+    if (World_HasSky) {
+        float worldPosY = localPos.y + ap.camera.position.y;
+        float vertical_scale = rcp(1.0 + max(worldPosY - settings.Sky_SeaLevel, 0.0));
+        density *= vertical_scale;
+    }
 
     return density;
 }
