@@ -1,12 +1,12 @@
 import aperture;
 import buffers.ObjectData;
 import lib.common;
+import lib.noise.IGN;
 import lib.noise.hash;
 import lib.material.pbr;
 import lib.material.rough_normal;
 import lib.light.fresnel;
 import lib.sampling.depth;
-import lib.sampling.IGN;
 import lib.sampling.R2;
 import lib.sky.common;
 import lib.sky.sample_view;
@@ -14,8 +14,8 @@ import lib.water.common;
 import lib.voxel.voxel_common;
 import lib.voxel.voxel_mask;
 import lib.voxel.voxel_sample;
+import lib.voxel.dda;
 import lib.screen_trace;
-import lib.dda;
 
 import lib.sky.sample_irradiance;
 

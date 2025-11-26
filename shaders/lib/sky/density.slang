@@ -21,11 +21,11 @@ float GetWorldFogDensity() {
             break;
         default:
             float dayF = smoothstep(-0.08, 0.002, scene[0].SunLocalDir.y);
-            density = lerp(0.220, 0.009, dayF);
-            density = lerp(density, 0.6, ap.world.rainStrength);
+            density = lerp(0.420, 0.009, dayF);
+            density = lerp(density, 0.48, ap.world.rainStrength);
             break;
     }
-    return density;
+    return 0.5;//density;
 }
 
 static const uint3 texFogSize = uint3(256, 32, 256);
@@ -54,21 +54,25 @@ float SampleFogDensity(const in float3 localPos) {
     // float altitudeKM = getSkyAltitude(skyPos);
     // float density = getMieDensity(altitudeKM);// * 0.01;
 
-    float density = scene[0].WorldFogDensity;
+    float density = 1.0;//GetWorldFogDensity();
+    // float density = scene[0].WorldFogDensity;
+    float3 worldPos = localPos + ap.camera.position;
 
     if (Sky_FogNoise) {
-        float3 worldPos = localPos + ap.camera.position;
         density *= SampleFogNoise_low(worldPos) + 0.5;
     }
 
     float worldPosY = localPos.y + ap.camera.position.y;
 
     if (World_HasSky) {
-        float falloff = 0.5;//lerp(1.0, 0.5, ap.world.rainStrength);
-        density *= rcp(1.0 + falloff*max(worldPosY - settings.Sky_SeaLevel, 0.0));
+        density *= rcp(1.0 + 0.1*max(worldPosY - settings.Sky_SeaLevel, 0.0));
+
+        float groundFogDensity = smoothstep(0.002, -0.08, scene[0].SunLocalDir.y);
+        groundFogDensity = lerp(groundFogDensity, 1.0, ap.world.rainStrength);
 
         // float ground_scale = smoothstep(8.0, 0.0, worldPosY - settings.Sky_SeaLevel);
-        // density += 8.0 * ground_scale;
+        // if (Sky_FogNoise) ground_scale *= SampleFogNoise_high(worldPos);
+        // density += 2.0 * ground_scale * groundFogDensity;
     }
 
     // if (Sky_FogNoise) {

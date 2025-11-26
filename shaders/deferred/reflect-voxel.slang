@@ -6,7 +6,7 @@ import lib.material.pbr;
 import lib.material.rough_normal;
 import lib.light.fresnel;
 import lib.sampling.depth;
-import lib.sampling.IGN;
+import lib.noise.IGN;
 import lib.sky.sample_final;
 import lib.water.common;
 import lib.water.wetness;
@@ -14,8 +14,8 @@ import lib.voxel.voxel_common;
 import lib.voxel.voxel_tex;
 import lib.voxel.voxel_mask;
 import lib.voxel.voxel_sample;
+import lib.voxel.dda;
 import lib.screen_trace;
-import lib.dda;
 
 extern static const bool Reflect_Rough;
 extern static const bool Reflect_SS_Fallback;
@@ -217,7 +217,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         half3 f0 = lerp(half3(f0_metal), albedo.rgb, metalness);
         half NoVm = max(dot(reflectNormal, -localDir), (half)0.0);
-        half3 F_NoV = F_schlickRough(NoVm, f0, roughL);
+        half3 F_NoV = F_Lazanyi2019(NoVm, f0);
 
         half3 specular_tint = lerp((half)1.0, albedo, metalness);
 

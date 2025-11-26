@@ -51,8 +51,6 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
         float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
-        // float3 viewPos = project(ap.camera.projectionInv, clipPos);
-        // float3 localPos = mul3(ap.camera.viewInv, viewPos);
         float3 localPos = project(scene[0].viewProjectionInv, clipPos);
         float3 viewLocalDir = -normalize(localPos);
 
@@ -152,7 +150,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
             reflectLocalDir = normalize(reflectLocalDir);
 
             half3 skyColor = sampleSkyView(surface.skyPos, reflectLocalDir, scene[0].SunLocalDir);
-            half3 F_NoV = F_schlickRough(NoVm, surface.f0, surface.roughL);
+            half3 F_NoV = F_Lazanyi2019(NoVm, surface.f0);
             specular += F_NoV * skyColor * (((half)1.0 - surface.roughL) * lmcoord_y);
             diffuse *= 1.0 - F_NoV;
         }

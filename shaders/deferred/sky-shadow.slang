@@ -1,9 +1,9 @@
 import aperture;
 import buffers.ObjectData;
 import lib.common;
+import lib.noise.IGN;
 import lib.material.pbr;
-import lib.sampling.IGN;
-import lib.shadow;
+import lib.light.shadow;
 
 Sampler2D<float> texDepth;
 
@@ -32,8 +32,6 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
         if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
         float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
-        // float3 viewPos = project(ap.camera.projectionInv, clipPos);
-        // float3 localPos = mul3(ap.camera.viewInv, viewPos);
         float3 localPos = project(scene[0].viewProjectionInv, clipPos);
         float3 viewLocalDir = -normalize(localPos);
 

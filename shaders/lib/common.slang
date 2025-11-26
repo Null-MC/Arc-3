@@ -99,6 +99,11 @@ T pow5<T>(const in T value) where T: IArithmetic {
     return sq*sq * value;
 }
 
+T pow6<T>(const in T value) where T: IArithmetic {
+    T sq = value*value;
+    return sq*sq*sq;
+}
+
 // float pow5(const in float value) {
 //     float sq = value*value;
 //     return sq*sq * value;

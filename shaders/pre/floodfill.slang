@@ -164,7 +164,7 @@ void floodfill(ComputeInput input) {
 
 	if (lightRange > 0) {
 		float3 hsv = RgbToHsv(lightColor);
-		hsv.z = exp2(lightRange / 15.0) - 1.0;
+		hsv.z *= exp2(lightRange / 15.0) - 1.0;
 		accumLight += half3(HsvToRgb(hsv));
 	}
 

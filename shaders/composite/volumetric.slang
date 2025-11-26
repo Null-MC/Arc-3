@@ -1,6 +1,6 @@
 import aperture;
 import lib.common;
-import lib.sampling.IGN;
+import lib.noise.IGN;
 import lib.sky.common;
 import lib.sky.density;
 import lib.sky.scattering;

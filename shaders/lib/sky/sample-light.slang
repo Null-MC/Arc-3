@@ -25,7 +25,7 @@ void SampleCelestial(inout float3 diffuse, inout float3 specular, CelestialLight
     float VoHm = max(dot(viewDir, H), 0.0);
 
     //float3 F_VoH = material_fresnel(albedo, f0_metal, roughL, VoHm);
-    half3 F_VoH = F_schlickRough(VoHm, surface.f0, surface.roughL);
+    half3 F_VoH = F_Lazanyi2019(VoHm, surface.f0);
 
     half D = SampleLightDiffuse(NoVm, NoLm, LoHm, surface.roughL);
     diffuse += NoLm * D * light.color * saturate((half)1.0 - F_VoH);

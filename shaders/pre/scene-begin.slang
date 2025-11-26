@@ -1,11 +1,11 @@
 import aperture;
-import buffers.scene;
 import buffers.sky;
+import buffers.scene;
 import lib.common;
 import lib.sampling.R2;
 import lib.light.floodfill;
+import lib.light.shadow;
 import lib.sky.density;
-import lib.shadow;
 
 RWStructuredBuffer<SceneBuffer> scene_writer;
 
@@ -48,4 +48,5 @@ void beginScene() {
 
     // scene_writer[0].viewProjection = mul(ap.camera.view, ap.camera.projection);
     scene_writer[0].viewProjectionInv = mul(ap.camera.viewInv, ap.camera.projectionInv);
+    scene_writer[0].viewProjectionLast = mul(ap.temporal.projection, ap.temporal.view);
 }

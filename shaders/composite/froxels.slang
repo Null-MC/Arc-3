@@ -1,11 +1,11 @@
 import aperture;
 import lib.common;
-import lib.shadow;
-import lib.voxel.froxel;
+import lib.noise.hash;
+import lib.sampling.depth;
 import lib.light.brdf;
 import lib.light.floodfill;
-import lib.sampling.depth;
-import lib.noise.hash;
+import lib.light.shadow;
+import lib.voxel.froxel;
 import lib.sky.common;
 import lib.sky.density;
 import lib.sky.scattering;
@@ -14,6 +14,9 @@ import lib.sky.sample_multiscatter;
 
 
 extern static const int Froxel_MaxFrames = 15;
+extern static const uint Froxel_SkyLight_StepCount = 8;
+extern static const float Froxel_SkyLight_TraceDist = 16.0;
+extern static const uint Froxel_PointLight_StepCount = 4;
 extern static const bool FloodFill_Enabled;
 extern static const bool PointLight_Enabled;
 extern static const int PointLight_MaxCount;
@@ -34,6 +37,89 @@ float3 unprojectCorner(const in float screenPosX, const in float screenPosY) {
     return project(ap.camera.projectionInv, ndcPos);
 }
 
+bool LightCollisionTest(const in uint3 groupPos, const in uint lightIndex) {
+    PointLight light = ap.lights[lightIndex];
+    if (light.block < 0) return false;
+
+    half lightRange = (half)ap.blocks[light.block].emission + (half)0.5;
+
+    // compute view-space position and collision test
+    float3 lightViewPos = mul3(ap.camera.view, light.position);
+
+    uint3 groupPosBase = groupPos * WorkgroupSize();
+    float3 groupPosMin = groupPosBase / float3(Froxel_Resolution);
+    float3 groupPosMax = (groupPosBase + WorkgroupSize()) / float3(Froxel_Resolution);
+
+    float depthMin = pow2(groupPosMin.z) * Froxel_MaxDist;
+    float depthMax = pow2(groupPosMax.z) * Froxel_MaxDist;
+
+    bool hit = true;
+    if (-lightViewPos.z + lightRange < depthMin) hit = false;
+    if (-lightViewPos.z - lightRange > depthMax) hit = false;
+
+    // test X/Y
+    float3 c1 = unprojectCorner(groupPosMin.x, groupPosMin.y);
+    float3 c2 = unprojectCorner(groupPosMax.x, groupPosMin.y);
+    float3 c3 = unprojectCorner(groupPosMin.x, groupPosMax.y);
+    float3 c4 = unprojectCorner(groupPosMax.x, groupPosMax.y);
+
+    float3 clipDown  = normalize(cross(c2, c1));
+    float3 clipRight = normalize(cross(c4, c2));
+    float3 clipUp    = normalize(cross(c3, c4));
+    float3 clipLeft  = normalize(cross(c1, c3));
+    
+    if (dot(clipDown,  lightViewPos) > lightRange) hit = false;
+    if (dot(clipRight, lightViewPos) > lightRange) hit = false;
+    if (dot(clipUp,    lightViewPos) > lightRange) hit = false;
+    if (dot(clipLeft,  lightViewPos) > lightRange) hit = false;
+
+    return hit;
+}
+
+float3 SamplePointLight(const in uint lightIndex, const in float3 localPos, const in float3 localDir, const in float extinction, const in float dither) {
+    PointLight light = ap.lights[lightIndex];
+    half4 lightColor = half4(ap.blocks[light.block].lightColor);
+    half lightRange = (half)ap.blocks[light.block].emission;
+
+    float3 lightOffset = light.position - localPos;
+    half lightDist = (half)length(lightOffset);
+    float3 lightDir = lightOffset / lightDist;
+
+    half lightRadius = clamp(lightColor.a, EPSILON, 1.0) * 0.5;
+    half lightAtt = GetLightAttenuation(lightDist, lightRange, lightRadius);
+    if (lightAtt < EPSILON) return 0.0;
+
+    lightColor.rgb = RgbToLinear(lightColor.rgb);
+    lightColor.rgb *= saturate(lightRange / (half)15.0) * BLOCK_LUX;
+
+    float light_VoL = dot(localDir, lightDir);
+    float lightPhase = max(getMiePhase(light_VoL), 0.0);
+
+    float shadowDepth = saturate(unmix(ap.lights.nearPlane, ap.lights.farPlane, lightDist));
+    half shadow = (half)pointLightFiltered.SampleCmp(float4(-lightDir, lightIndex), shadowDepth).r;
+    lightColor.rgb *= lightPhase * shadow * lightAtt;
+
+    if (Sky_FogNoise) {
+        float stepDist = lightDist / Froxel_PointLight_StepCount;
+        float accumDensity = 0.0;
+
+        for (uint i = 0; i < Froxel_PointLight_StepCount; i++) {
+            float stepF = (i + dither) / Froxel_PointLight_StepCount;
+            // float3 trace_localPos = lerp(localPos, light.position, stepF);
+            float3 trace_localPos = localPos + stepF * lightOffset;
+
+            accumDensity += SampleFogDensity(trace_localPos) * stepDist;
+        }
+        
+        lightColor.rgb *= exp(-max(extinction * accumDensity, EPSILON));
+    }
+    else {
+        lightColor.rgb *= exp(-max(extinction * lightDist, EPSILON));
+    }
+
+    return lightColor.rgb;
+}
+
 
 struct ComputeInput {
     uint groupIndex : SV_GroupIndex;
@@ -47,61 +133,58 @@ struct ComputeInput {
 void updateFroxels(ComputeInput input) {
 	if (any(input.globalPos >= Froxel_Resolution)) return;
 
-    float3 bufferPos = input.globalPos + hash33(input.globalPos + float3(3,9,13)*ap.timing.frameCounter);
+    float3 seed = input.globalPos + float3(3,9,13)*ap.timing.frameCounter;
+    float3 bufferPos = input.globalPos + hash33(seed);
 
     float3 ndcPos = Froxel_GetNdcPosition(bufferPos);
-    float3 viewPos = project(ap.camera.projectionInv, ndcPos);
-    float3 localPos = mul3(ap.camera.viewInv, viewPos);
+    float3 localPos = project(scene[0].viewProjectionInv, ndcPos);
     float3 localDir = normalize(localPos);
+
+    float dither = hash13(seed);
 
     float3 scatter = 0.0;
     float transmit = 1.0;
 
     if (World_HasSky) {
-        float3 shadowViewPos = mul3(ap.celestial.view, localPos);
-
-        int shadowCascade = GetShadowProjection(shadowViewPos, 0.0);
-
-        half3 shadow = half3(1.0);
-        if (shadowCascade >= 0) {
-            float3 shadowPos = mul3(ap.celestial.projection[shadowCascade], shadowViewPos);
-            shadow = SampleShadowColor(shadowPos * 0.5 + 0.5, shadowCascade);
-        }
-
         float3 skyPos = getSkyPosition(localPos);
         bool shadowIsSun = dot(ap.celestial.position, ap.celestial.sunPosition) > 0.0;
 
         half3 sun_color = scene[0].SunColor * sampleSkyTransmit(skyPos, scene[0].SunLocalDir);
         half3 moon_color = scene[0].MoonColor * sampleSkyTransmit(skyPos, scene[0].MoonLocalDir);
-        float3 skyLight = (shadowIsSun ? sun_color : moon_color) * shadow;
+        float3 skyLight = shadowIsSun ? sun_color : moon_color;
 
-        // if (FOG_NOISE_ENABLED) {
-            const uint skyTrace_stepCount = 8;
-            const float skyTrace_dist = 64.0;
+        float3 shadowViewPos = mul3(ap.celestial.view, localPos);
+        int shadowCascade = GetShadowProjection(shadowViewPos, 0.0);
 
-            float3 skyTrace_localEnd = localPos + scene[0].SkyLightLocalDir * skyTrace_dist;
-            float skyTrace_stepDist = skyTrace_dist / skyTrace_stepCount;
-            float accumDensity = 0.0;
+        if (shadowCascade >= 0) {
+            float3 shadowPos = mul3(ap.celestial.projection[shadowCascade], shadowViewPos);
+            skyLight *= SampleShadowColor(shadowPos * 0.5 + 0.5, shadowCascade);
 
-            for (uint i = 0; i < skyTrace_stepCount; i++) {
-                float stepF = (i + 0.5) / skyTrace_stepCount;
-                float3 trace_localPos = lerp(localPos, skyTrace_localEnd, stepF);
+            // TODO: shadow water depth?
+        }
 
-                accumDensity += SampleFogDensity(trace_localPos) * skyTrace_stepDist;
-            }
-            
-            if (accumDensity > EPSILON) {
-                float extinction = 0.001 * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase) * accumDensity;
-                skyLight *= exp(-extinction);
-            }
-        // }
+        float3 skyTrace_localEnd = localPos + scene[0].SkyLightLocalDir * Froxel_SkyLight_TraceDist;
+        float skyTrace_stepDist = Froxel_SkyLight_TraceDist / Froxel_SkyLight_StepCount;
+        float accumDensity = 0.0;
+
+        for (uint i = 0; i < Froxel_SkyLight_StepCount; i++) {
+            float stepF = (i + dither) / Froxel_SkyLight_StepCount;
+            float3 trace_localPos = lerp(localPos, skyTrace_localEnd, stepF);
+
+            accumDensity += SampleFogDensity(trace_localPos) * skyTrace_stepDist;
+        }
+        
+        if (accumDensity > EPSILON) {
+            float extinction = accumDensity * 0.001 * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase);
+            skyLight *= exp(-extinction);
+        }
 
         float3 ambient = sampleSkyMultiScatter(skyPos, scene[0].SunLocalDir);
         // ambient = ambient * ap.camera.BrightnessSmooth; + VL_MinLight;
 
         float sky_VoL = dot(localDir, scene[0].SkyLightLocalDir);
         float miePhase_sky = max(getMiePhase(sky_VoL, 0.2), 0.0);
-        scatter += miePhase_sky * skyLight + 0.3*ambient;
+        scatter += miePhase_sky * skyLight + ambient;
     }
 
     if (PointLight_Enabled) {
@@ -114,46 +197,10 @@ void updateFroxels(ComputeInput input) {
         uint2 uv = input.globalPos.xy;
         bool on_screen = all(uv < Froxel_Resolution.xy);
 
-        uint3 groupPos = input.groupPos * WorkgroupSize();
-        float3 groupPosMin = groupPos / float3(Froxel_Resolution);
-        float3 groupPosMax = (groupPos + WorkgroupSize()) / float3(Froxel_Resolution);
-
-        float depthMin = pow2(groupPosMin.z) * Froxel_MaxDist;
-        float depthMax = pow2(groupPosMax.z) * Froxel_MaxDist;
-
         if (input.groupIndex < PointLight_MaxCount) {
-            PointLight light = ap.lights[input.groupIndex];
-
-            if (light.block >= 0) {
-                half lightRange = (half)ap.blocks[light.block].emission + (half)0.5;
-
-                // compute view-space position and collision test
-                float3 lightViewPos = mul3(ap.camera.view, light.position);
-                bool hit = true;
-
-                if (-lightViewPos.z + lightRange < depthMin) hit = false;
-                if (-lightViewPos.z - lightRange > depthMax) hit = false;
-
-                // test X/Y
-                float3 c1 = unprojectCorner(groupPosMin.x, groupPosMin.y);
-                float3 c2 = unprojectCorner(groupPosMax.x, groupPosMin.y);
-                float3 c3 = unprojectCorner(groupPosMin.x, groupPosMax.y);
-                float3 c4 = unprojectCorner(groupPosMax.x, groupPosMax.y);
-
-                float3 clipDown  = normalize(cross(c2, c1));
-                float3 clipRight = normalize(cross(c4, c2));
-                float3 clipUp    = normalize(cross(c3, c4));
-                float3 clipLeft  = normalize(cross(c1, c3));
-                
-                if (dot(clipDown,  lightViewPos) > lightRange) hit = false;
-                if (dot(clipRight, lightViewPos) > lightRange) hit = false;
-                if (dot(clipUp,    lightViewPos) > lightRange) hit = false;
-                if (dot(clipLeft,  lightViewPos) > lightRange) hit = false;
-
-                if (hit) {
-                    uint index = counter.increment();
-                    sharedLightList[index] = input.groupIndex;
-                }
+            if (LightCollisionTest(input.groupPos, input.groupIndex)) {
+                uint index = counter.increment();
+                sharedLightList[index] = input.groupIndex;
             }
         }
 
@@ -162,55 +209,14 @@ void updateFroxels(ComputeInput input) {
         uint total = counter.load();
 
         if (on_screen && total > 0) {
-            float extinction;
-            if (!Sky_FogNoise) {
-                float density = SampleFogDensity(localPos);
-                extinction = 0.001 * density * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase);
-            }
+            float extinction_base = 0.001 * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase);
+
+            // premultiply density when noise is disabled
+            if (!Sky_FogNoise) extinction_base *= SampleFogDensity(localPos);
             
             for (uint i = 0; i < total; i++) {
                 uint lightIndex = sharedLightList[i];
-                PointLight light = ap.lights[lightIndex];
-                half4 lightColor = half4(ap.blocks[light.block].lightColor);
-                half lightRange = (half)ap.blocks[light.block].emission;
-
-                float3 lightOffset = light.position - localPos;
-                half lightDist = (half)length(lightOffset);
-                float3 lightDir = lightOffset / lightDist;
-
-                half lightRadius = clamp(lightColor.a, EPSILON, 1.0) * 0.5;
-                half lightAtt = GetLightAttenuation(lightDist, lightRange, lightRadius);
-                if (lightAtt < EPSILON) continue;
-
-                lightColor.rgb = RgbToLinear(lightColor.rgb);
-                lightColor.rgb *= saturate(lightRange / (half)15.0) * BLOCK_LUX;
-
-                float light_VoL = dot(localDir, lightDir);
-                float lightPhase = max(getMiePhase(light_VoL), 0.0);
-
-                float shadowDepth = saturate(unmix(ap.lights.nearPlane, ap.lights.farPlane, lightDist));
-                half shadow = (half)pointLightFiltered.SampleCmp(float4(-lightDir, lightIndex), shadowDepth).r;
-                lightColor.rgb *= lightPhase * shadow * lightAtt;
-
-                if (Sky_FogNoise) {
-                    const uint pointTrace_stepCount = 4;
-                    float stepDist = lightDist / pointTrace_stepCount;
-                    float accumDensity = 0.0;
-
-                    for (uint i = 0; i < pointTrace_stepCount; i++) {
-                        float stepF = (i + 0.5) / pointTrace_stepCount;
-                        float3 trace_localPos = lerp(localPos, light.position, stepF);
-
-                        accumDensity += SampleFogDensity(trace_localPos) * stepDist;
-                    }
-                    
-                    lightColor.rgb *= exp(-max(extinction * accumDensity, EPSILON));
-                }
-                else {
-                    lightColor.rgb *= exp(-max(extinction * lightDist, EPSILON));
-                }
-
-                scatter += lightColor.rgb;
+                scatter += SamplePointLight(lightIndex, localPos, localDir, extinction_base, dither);
             }
         }
     }
@@ -228,22 +234,20 @@ void updateFroxels(ComputeInput input) {
     // project last frame position and accumulate
     float3 bufferPosLast = input.globalPos + 0.5;
     float3 ndcPosLast = Froxel_GetNdcPosition(bufferPosLast);
-    float3 viewPosLast = project(ap.camera.projectionInv, ndcPosLast);
-    float3 localPosLast = mul3(ap.camera.viewInv, viewPosLast);
+    float3 localPosLast = project(scene[0].viewProjectionInv, ndcPosLast);
 
     localPosLast += (ap.camera.position - ap.temporal.position);
 
-    viewPosLast = mul3(ap.temporal.view, localPosLast);
-    ndcPosLast = project(ap.temporal.projection, viewPosLast);
+    ndcPosLast = project(scene[0].viewProjectionLast, localPosLast);
     bufferPosLast = Froxel_GetBufferPosition(ndcPosLast);
 
-    half4 froxelPrev = 0.0;
+    half4 froxelPrev = half4(0.0);
     if (Froxel_InBufferBounds(bufferPosLast)) {
         froxelPrev = texFroxel_read.Sample(bufferPosLast / Froxel_Resolution);
     }
 
-    float counter = clamp(froxelPrev.a + 1.0, 1.0, Froxel_MaxFrames);
-    float3 final = lerp(froxelPrev.rgb, scatter, rcp(counter));
+    half counter = (half)clamp(froxelPrev.a + 1.0, 1.0, Froxel_MaxFrames);
+    half3 final = (half3)lerp(froxelPrev.rgb, scatter, rcp(counter));
 
-    imgFroxel_write[input.globalPos] = (half4)float4(final, counter);
+    imgFroxel_write[input.globalPos] = half4(final, counter);
 }

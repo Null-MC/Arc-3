@@ -6,11 +6,11 @@ import lib.material.rough_normal;
 import lib.water.wetness;
 import lib.light.fresnel;
 import lib.sampling.depth;
-import lib.sampling.IGN;
+import lib.noise.IGN;
 import lib.sky.common;
 import lib.sky.sample_final;
 import lib.screen_trace;
-import lib.dda;
+import lib.voxel.dda;
 
 extern static const bool Reflect_Rough;
 extern static const int Reflect_ScreenSteps;
@@ -147,7 +147,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         float3 localDir = localPos / viewDist;
         float NoVm = max(dot(reflectNormal, -localDir), 0.0);
-        half3 F_NoV = F_schlickRough(NoVm, f0, roughL);
+        half3 F_NoV = F_Lazanyi2019(NoVm, f0);
         half3 specular_tint = lerp((half)1.0, albedo, metalness);
 
         // imgDebug[uv] = float4(LinearToRgb(reflectColor * 0.008), 1.0);

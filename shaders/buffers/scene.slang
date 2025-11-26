@@ -18,12 +18,12 @@ struct SceneBuffer {
 
     float3 FloodFillCenter;
 
-    float2 shadowViewMin[Shadow_CascadeCount]; // 2*4
-    float2 shadowViewMax[Shadow_CascadeCount]; // 2*4
+    float2 shadowViewMin[Shadow_CascadeCount]; // 2*4 =8
+    float2 shadowViewMax[Shadow_CascadeCount]; // 2*4 =8
 
     float2 WeatherOffset;
-    SkyParameters sky;
+    SkyParameters sky;              // 9
 
-    // float4x4 viewProjection;
-    float4x4 viewProjectionInv;
+    float4x4 viewProjectionInv;     // 16
+    float4x4 viewProjectionLast;    // 16
 };

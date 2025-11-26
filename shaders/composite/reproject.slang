@@ -25,30 +25,25 @@ FragmentOutput reprojectScene(float2 pos : SV_Position) {
 
     float3 screenPos = float3(texcoord, depth);
     float3 clipPos = screenPos * 2.0 - 1.0;
-    // float3 viewPos = project(ap.camera.projectionInv, clipPos);
-    // float3 localPos = mul3(ap.camera.viewInv, viewPos.xyz);
     float3 localPos = project(scene[0].viewProjectionInv, clipPos);
 
-    // if (depth < 1.0) {
-        float3 prev_localPos = localPos + (ap.camera.position - ap.temporal.position);
+    float3 prev_localPos = localPos + (ap.camera.position - ap.temporal.position);
 
-        float3 prev_viewPos = mul3(ap.temporal.view, prev_localPos);
-        float3 prev_clipPos = project(ap.temporal.projection, prev_viewPos);
-        float3 prev_screenPos = prev_clipPos * 0.5 + 0.5;
-        // TODO: apply prev-frame TAA jitter?
-        // if (TAA_Enabled) prev_screenPos.xy += scene[0].taa_jitter_prev;
+    float3 prev_clipPos = project(scene[0].viewProjectionLast, prev_localPos);
+    float3 prev_screenPos = prev_clipPos * 0.5 + 0.5;
+    // TODO: apply prev-frame TAA jitter?
+    // if (TAA_Enabled) prev_screenPos.xy += scene[0].taa_jitter_prev;
 
-        // prev_screenPos.xy -= texVelocity[uv];
-        offset = prev_screenPos.xy - screenPos.xy;
+    // prev_screenPos.xy -= texVelocity[uv];
+    offset = prev_screenPos.xy - screenPos.xy;
 
-        float viewDist = length(localPos);
-        float distThreshold = 0.004 * viewDist;
-        float3 last_localPos = texPositionPrev.Sample(prev_screenPos.xy);
-        float3 localOffset = last_localPos - prev_localPos;
-        if (dot(localOffset, localOffset) > distThreshold) weight = 0.5;
+    float viewDist = length(localPos);
+    float distThreshold = 0.004 * viewDist;
+    float3 last_localPos = texPositionPrev.Sample(prev_screenPos.xy);
+    float3 localOffset = last_localPos - prev_localPos;
+    if (dot(localOffset, localOffset) > distThreshold) weight = 0.5;
 
-        if (!all(saturate(prev_screenPos.xy) == prev_screenPos.xy)) weight = 0.0;
-    // }
+    if (!all(saturate(prev_screenPos.xy) == prev_screenPos.xy)) weight = 0.0;
 
     FragmentOutput output;
     output.offset = half3(float3(offset, weight));

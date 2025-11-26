@@ -227,7 +227,7 @@ void applyPointLights(ComputeInput input) {
             lightColor.rgb *= shadow * NoLm * lightAtt;
 
             //float3 F_VoH = material_fresnel(albedo, f0_metal, roughL, VoHm);
-            half3 F_VoH = F_schlickRough(VoHm, f0, roughL);
+            half3 F_VoH = F_Lazanyi2019(VoHm, f0);
             
             diffuse += lightColor.rgb * SampleLightDiffuse(NoVm, NoLm, LoHm, roughL) * saturate((half)1.0 - F_VoH);
             specular += lightColor.rgb * SampleLightSpecular(NoLm, NoHm, NoVm, F_VoH, roughL);

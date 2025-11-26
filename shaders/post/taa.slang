@@ -3,8 +3,8 @@ import lib.common;
 import lib.sampling.catmull_rom;
 
 extern static const bool TAA_SharpenHistory;
-extern static const float TAA_RejectionStrength = 0.04;
-extern static const int EFFECT_TAA_MAX_ACCUM = 32;
+extern static const float TAA_RejectionStrength = 0.4;
+extern static const int EFFECT_TAA_MAX_ACCUM = 8;
 static const uint groupResX = 16;
 static const uint groupResY = 16;
 
@@ -85,7 +85,8 @@ void applyTaa(ComputeInput input) {
             lastColor = texFinalPrev.SampleLevel(uv_prev, 0);
         }
 
-        float mixRate = clamp(lastColor.a * step(0.1, reproj.z), 0.0, EFFECT_TAA_MAX_ACCUM);
+        // float mixRate = clamp(lastColor.a * step(0.1, reproj.z), 0.0, EFFECT_TAA_MAX_ACCUM);
+        float mixRate = clamp(lastColor.a, 0.0, EFFECT_TAA_MAX_ACCUM);
 
         if (any(saturate(uv_prev) != uv_prev)) mixRate = 0.0;
         
@@ -120,16 +121,14 @@ void applyTaa(ComputeInput input) {
         half3 maxColor = maxOf(maxOf(in0, in1, in2), in3, in4);
         maxColor = maxOf(maxOf(in5, in6, in7), in8, maxColor);
         
-        float3 preclamping = antialiased;
-        antialiased = clamp(antialiased, minColor, maxColor);
+        half3 clamped = (half3)clamp(antialiased, minColor, maxColor);
             
-        float3 diff = antialiased - preclamping;
-        float clampAmount = dot(diff, diff);
-        mixRate *= rcp(1.0 + TAA_RejectionStrength*clampAmount);
+        float3 diff = clamped - antialiased;
+        mixRate *= rcp(1.0 + dot(diff, diff) * TAA_RejectionStrength);
         
-        //antialiased = mul(YUV_TO_RGB, antialiased);
+        //clamped = mul(YUV_TO_RGB, clamped);
         
-        imgFinal[input.globalPos.xy] = half4(half3(antialiased), (half)1.0);
-        imgFinalPrev[input.globalPos.xy] = half4(half3(antialiased), (half)(mixRate + 1.0));
+        imgFinal[input.globalPos.xy] = half4(clamped, (half)1.0);
+        imgFinalPrev[input.globalPos.xy] = half4(clamped, (half)(mixRate + 1.0));
     }
 }

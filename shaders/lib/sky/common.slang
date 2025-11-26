@@ -13,7 +13,7 @@ static const float3 groundAlbedo = 0.65;
 
 static const float SUN_LUMINANCE = 2000.0;
 static const float MOON_LUMINANCE = 2.2;
-static const float STAR_LUMINANCE = 2.2;
+static const float STAR_LUMINANCE = 1.2;
 
 static const float Sky_MinLight = 0.0;//0.08;
 

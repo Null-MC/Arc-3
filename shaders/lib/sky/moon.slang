@@ -51,8 +51,7 @@ float3 renderMoon(const in float3 viewLocalDir, const in float3 moonLocalPos, co
     float LoHm = max(dot(fakeSunDir, H), 0.0);
     float VoHm = max(dot(-viewLocalDir, H), 0.0);
 
-    // float F = F_schlickRough(VoHm, moon_f0, moon_roughL);
-    float F_NoV = F_schlickRough(NoVm, moon_f0, moon_roughL);
+    float F_NoV = F_Lazanyi2019(NoVm, moon_f0);
     // float D = SampleLightDiffuse(NoVm, NoLm, LoHm, moon_roughL) * (1.0 - F);
     // float S = SampleLightSpecular(NoLm, NoHm, NoVm, F, moon_roughL);
     // return MOON_LUMINANCE * NoLm * (D * albedo + S) * scene.sunColor;

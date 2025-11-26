@@ -2,17 +2,17 @@ public module voxel_sample;
 
 import aperture;
 import lib.common;
-import lib.shadow;
 import lib.material.pbr;
 import lib.sampling.atlas;
+import lib.light.shadow;
 import lib.light.floodfill;
 import lib.water.wetness;
-import lib.voxel.voxel_tex;
-import lib.voxel.voxel_common;
 import lib.sky.common;
 import lib.sky.scattering;
 import lib.sky.sample_transmit;
 import lib.sky.sample_irradiance;
+import lib.voxel.voxel_tex;
+import lib.voxel.voxel_common;
 
 extern static const bool FloodFill_Enabled;
 

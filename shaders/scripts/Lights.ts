@@ -11,7 +11,7 @@ export function ApplyLightColors(coloredCandles: boolean) {
     setLightColorEx('#371559', 1, 'enchanting_table');
     setLightColorEx('#ac9833', 1, 'end_gateway');
     setLightColorEx('#5f33ac', 1, 'end_portal');
-    setLightColorEx('#bea935', 1, 'firefly_bush');
+    setLightColorEx('#81742c', 1, 'firefly_bush');
     setLightColorEx('#5f9889', 1, 'glow_lichen');
     setLightColorEx('#d3b178', 1, 'glowstone');
     setLightColorEx('#c2985a', 1, 'jack_o_lantern');

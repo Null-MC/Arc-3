@@ -84,6 +84,7 @@ export function configureRenderer(config: RendererConfig): void {
     config.pointLight.resolution = options.Lighting_Point_Resolution;
     config.pointLight.realTimeCount = options.Lighting_Point_RealTime;
     config.pointLight.cacheRealTimeTerrain = false;
+    config.pointLight.maxUpdates = 4;
     config.pointLight.nearPlane = 0.1;
     config.pointLight.farPlane = 16.0;
 }
@@ -177,7 +178,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     ApplyLightColors(options.Lighting_ColorCandles);
 
     pipeline.createBuffer("scene", 1024, false);
-    settings = pipeline.createStreamingBuffer("settings", 128);
+    settings = pipeline.createStreamingBuffer("settings", 64);
 
     if (options.VoxelEnabled) {
         const voxelSize = cubed(options.Lighting_VoxelResolution);
