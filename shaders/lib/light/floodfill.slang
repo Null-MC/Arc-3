@@ -52,5 +52,5 @@ half3 floodfill_sample(const in float3 bufferPos) {
     if (!FloodFill_InBounds(bufferPos)) return half3(0.0);
 
     float3 texcoord = bufferPos / FloodFill_BufferSize;
-    return texFloodFill_write.Sample(texcoord) * (1.0/4.0);
+    return texFloodFill_write.Sample(texcoord) * 0.5;// * (1.0/4.0);
 }

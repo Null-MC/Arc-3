@@ -101,7 +101,7 @@ void updateFroxels(ComputeInput input) {
 
         float sky_VoL = dot(localDir, scene[0].SkyLightLocalDir);
         float miePhase_sky = max(getMiePhase(sky_VoL, 0.2), 0.0);
-        scatter += miePhase_sky * skyLight + ambient;
+        scatter += miePhase_sky * skyLight + 0.3*ambient;
     }
 
     if (PointLight_Enabled) {
@@ -162,7 +162,11 @@ void updateFroxels(ComputeInput input) {
         uint total = counter.load();
 
         if (on_screen && total > 0) {
-            float density = SampleFogDensity(localPos);
+            float extinction;
+            if (!Sky_FogNoise) {
+                float density = SampleFogDensity(localPos);
+                extinction = 0.001 * density * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase);
+            }
             
             for (uint i = 0; i < total; i++) {
                 uint lightIndex = sharedLightList[i];
@@ -200,11 +204,9 @@ void updateFroxels(ComputeInput input) {
                         accumDensity += SampleFogDensity(trace_localPos) * stepDist;
                     }
                     
-                    float extinction = 0.001 * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase) * accumDensity;
-                    lightColor.rgb *= exp(-max(extinction, EPSILON));
+                    lightColor.rgb *= exp(-max(extinction * accumDensity, EPSILON));
                 }
                 else {
-                    float extinction = 0.001 * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase) * density;
                     lightColor.rgb *= exp(-max(extinction * lightDist, EPSILON));
                 }
 

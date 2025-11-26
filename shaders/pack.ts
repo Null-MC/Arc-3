@@ -95,7 +95,6 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     const globalExports = pipeline.createExportList()
         .addInt('DIMENSION', dimension.Index)
         .addBool('World_HasSky', dimension.World_HasSky)
-        // .addFloat('Sky_SeaLevel', options.Sky_SeaLevel)
         .addBool('Sky_FogNoise', options.Sky_FogNoise)
         .addInt('MATERIAL_FORMAT', options.Material_Format)
         .addInt('Shadow_Resolution', options.Shadow_Resolution)
@@ -506,6 +505,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
     pipeline.importPNGTexture('texBlueNoise', 'textures/blue_noise.png', true, false);
 
+    pipeline.importPNGTexture('texStars', 'textures/stars.png', true, false);
+
     //if (_dimensions.Index == 0) {
         pipeline.importPNGTexture('texMoon', 'textures/moon.png', true, false);
     //}
@@ -535,19 +536,19 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 .compile();
         }
 
-        if (dimension.World_HasSky) {
-            setupStage.createComposite('sky-transmit')
-                .location('setup/sky-transmit', 'bakeSkyTransmission')
-                .target(0, texSkyTransmit)
-                .exportInt('BufferWidth', texSkyTransmit.width())
-                .exportInt('BufferHeight', texSkyTransmit.height())
-                .compile();
+        // if (dimension.World_HasSky) {
+        //     setupStage.createComposite('sky-transmit')
+        //         .location('setup/sky-transmit', 'bakeSkyTransmission')
+        //         .target(0, texSkyTransmit)
+        //         .exportInt('BufferWidth', texSkyTransmit.width())
+        //         .exportInt('BufferHeight', texSkyTransmit.height())
+        //         .compile();
 
-            setupStage.createComposite('sky-multi-scatter')
-                .location('setup/sky-multi-scatter', 'bakeSkyMultiScattering')
-                .target(0, texSkyMultiScatter)
-                .compile();
-        }
+        //     setupStage.createComposite('sky-multi-scatter')
+        //         .location('setup/sky-multi-scatter', 'bakeSkyMultiScattering')
+        //         .target(0, texSkyMultiScatter)
+        //         .compile();
+        // }
     });
 
 
@@ -578,6 +579,18 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         //     .compile();
 
         if (dimension.World_HasSky) {
+            beginStage.createComposite('sky-transmit')
+                .location('setup/sky-transmit', 'bakeSkyTransmission')
+                .target(0, texSkyTransmit)
+                .exportInt('BufferWidth', texSkyTransmit.width())
+                .exportInt('BufferHeight', texSkyTransmit.height())
+                .compile();
+
+            beginStage.createComposite('sky-multi-scatter')
+                .location('setup/sky-multi-scatter', 'bakeSkyMultiScattering')
+                .target(0, texSkyMultiScatter)
+                .compile();
+
             beginStage.createComposite('sky-view')
                 .location('pre/sky-view', 'bakeSkyView')
                 .target(0, texSkyView)
@@ -1149,6 +1162,25 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         });
 
         withSubList(postRenderStage, 'final', finalStage => {
+            if (options.Post_TAA_Enabled) {
+                texFinalPrevRef = pipeline.createTextureReference("texFinalPrev", null, screenWidth, screenHeight, 1, Format.RGBA16F);
+                imgFinalPrevRef = pipeline.createTextureReference(null, "imgFinalPrev", screenWidth, screenHeight, 1, Format.RGBA16F);
+
+                finalFlipper.flip();
+
+                finalStage.createCompute("taa")
+                    .location("post/taa", "applyTaa")
+                    .workGroups(
+                        Math.ceil(screenWidth / 16),
+                        Math.ceil(screenHeight / 16),
+                        1)
+                    .overrideObject("texSource", finalFlipper.getReadTexture().name())
+                    .overrideObject("imgFinal", finalFlipper.getWriteTexture().imageName())
+                    .overrideObject('texDepth', 'solidDepthTex')
+                    .exportBool('TAA_SharpenHistory', options.Post_TAA_CubicHistory)
+                    .compile();
+            }
+
             finalFlipper.flip();
                 
             if (options.Debug_Histogram) {
@@ -1229,25 +1261,6 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 });
             }
 
-            if (options.Post_TAA_Enabled) {
-                texFinalPrevRef = pipeline.createTextureReference("texFinalPrev", null, screenWidth, screenHeight, 1, Format.RGBA16F);
-                imgFinalPrevRef = pipeline.createTextureReference(null, "imgFinalPrev", screenWidth, screenHeight, 1, Format.RGBA16F);
-
-                finalFlipper.flip();
-
-                finalStage.createCompute("taa")
-                    .location("post/taa", "applyTaa")
-                    .workGroups(
-                        Math.ceil(screenWidth / 16),
-                        Math.ceil(screenHeight / 16),
-                        1)
-                    .overrideObject("texSource", finalFlipper.getReadTexture().name())
-                    .overrideObject("imgFinal", finalFlipper.getWriteTexture().imageName())
-                    .overrideObject('texDepth', 'solidDepthTex')
-                    .exportBool('TAA_SharpenHistory', options.Post_TAA_CubicHistory)
-                    .compile();
-            }
-
             finalFlipper.flip();
 
             finalStage.createComposite("tonemap")
@@ -1323,6 +1336,7 @@ export function onSettingsChanged(pipeline: PipelineConfig) {
 
     new StreamingBufferBuilder(settings)
         .appendFloat(options.Sky_SeaLevel)
+        .appendFloat(options.Sky_FogDensity * 0.01)
         .appendInt(options.Water_WaveDetail)
         .appendFloat(options.Water_WaveSize * 0.01)
         .appendFloat(options.Material_Parallax_Depth * 0.01)

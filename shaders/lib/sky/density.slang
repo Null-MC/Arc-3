@@ -2,7 +2,8 @@ public module density;
 
 import aperture;
 import lib.common;
-
+import lib.sky.common;
+import lib.sky.scattering;
 
 extern static const bool Sky_FogNoise;
 
@@ -21,8 +22,7 @@ float GetWorldFogDensity() {
         default:
             float dayF = smoothstep(-0.08, 0.002, scene[0].SunLocalDir.y);
             density = lerp(0.220, 0.009, dayF);
-            density = lerp(density, 0.440, ap.world.rainStrength);
-            density = 1.0;
+            density = lerp(density, 0.6, ap.world.rainStrength);
             break;
     }
     return density;
@@ -31,7 +31,7 @@ float GetWorldFogDensity() {
 static const uint3 texFogSize = uint3(256, 32, 256);
 
 float SampleFogNoise_low(const in float3 worldPos) {
-    const float3 scale = 0.8 / texFogSize;
+    const float3 scale = 2.0 / texFogSize;
     float3 samplePos = worldPos * scale;
 
     float density = texFogNoise.Sample(samplePos - 0.012*float3(0.7, -0.2, 0.08)*ap.timing.timeElapsed);
@@ -50,6 +50,10 @@ float SampleFogNoise_high(const in float3 worldPos) {
 }
 
 float SampleFogDensity(const in float3 localPos) {
+    // float3 skyPos = getSkyPosition(localPos);
+    // float altitudeKM = getSkyAltitude(skyPos);
+    // float density = getMieDensity(altitudeKM);// * 0.01;
+
     float density = scene[0].WorldFogDensity;
 
     if (Sky_FogNoise) {
@@ -60,7 +64,11 @@ float SampleFogDensity(const in float3 localPos) {
     float worldPosY = localPos.y + ap.camera.position.y;
 
     if (World_HasSky) {
-        density *= rcp(1.0 + max(worldPosY - settings.Sky_SeaLevel, 0.0));
+        float falloff = 0.5;//lerp(1.0, 0.5, ap.world.rainStrength);
+        density *= rcp(1.0 + falloff*max(worldPosY - settings.Sky_SeaLevel, 0.0));
+
+        // float ground_scale = smoothstep(8.0, 0.0, worldPosY - settings.Sky_SeaLevel);
+        // density += 8.0 * ground_scale;
     }
 
     // if (Sky_FogNoise) {

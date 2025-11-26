@@ -97,10 +97,10 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         bool shadowIsSun = dot(ap.celestial.position, ap.celestial.sunPosition) > 0.0;
 
         float3 sun_color = scene[0].SunColor * sampleSkyTransmit(surface.skyPos, scene[0].SunLocalDir);
-        sun_color *= atmosAbsorb(surface.skyPos, scene[0].SunLocalDir);
+        // sun_color *= atmosAbsorb(surface.skyPos, scene[0].SunLocalDir);
         
         float3 moon_color = scene[0].MoonColor * sampleSkyTransmit(surface.skyPos, scene[0].MoonLocalDir);
-        moon_color *= atmosAbsorb(surface.skyPos, scene[0].MoonLocalDir);
+        // moon_color *= atmosAbsorb(surface.skyPos, scene[0].MoonLocalDir);
         
         CelestialLight sun;
         sun.localDir = GetAreaLightDir(normals.tex, viewLocalDir, scene[0].SunLocalDir, sun_distanceMm, sun_radiusMm);

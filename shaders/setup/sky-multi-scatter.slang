@@ -22,8 +22,6 @@ void getMulScattValues(float3 pos, float3 sunDir, out float3 lumTotal, out float
     lumTotal = 0.0;
     fms = 0.0;
 
-    const float invSamples = 1.0 / float(sqrtSamples*sqrtSamples);
-
     for (int i = 0; i < sqrtSamples; i++) {
         for (int j = 0; j < sqrtSamples; j++) {
             // This integral is symmetric about theta = 0 (or theta = PI), so we
@@ -99,10 +97,14 @@ void getMulScattValues(float3 pos, float3 sunDir, out float3 lumTotal, out float
                 }
             }
 
-            fms += lumFactor*invSamples;
-            lumTotal += lum*invSamples;
+            fms += lumFactor;
+            lumTotal += lum;
         }
     }
+
+    const float invSamples = rcp(sqrtSamples*sqrtSamples);
+    fms *= invSamples;
+    lumTotal *= invSamples;
 }
 
 

@@ -29,7 +29,7 @@ FragmentOutput reprojectScene(float2 pos : SV_Position) {
     // float3 localPos = mul3(ap.camera.viewInv, viewPos.xyz);
     float3 localPos = project(scene[0].viewProjectionInv, clipPos);
 
-    if (depth < 1.0) {
+    // if (depth < 1.0) {
         float3 prev_localPos = localPos + (ap.camera.position - ap.temporal.position);
 
         float3 prev_viewPos = mul3(ap.temporal.view, prev_localPos);
@@ -48,7 +48,7 @@ FragmentOutput reprojectScene(float2 pos : SV_Position) {
         if (dot(localOffset, localOffset) > distThreshold) weight = 0.5;
 
         if (!all(saturate(prev_screenPos.xy) == prev_screenPos.xy)) weight = 0.0;
-    }
+    // }
 
     FragmentOutput output;
     output.offset = half3(float3(offset, weight));

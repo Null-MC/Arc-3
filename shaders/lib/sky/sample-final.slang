@@ -1,31 +1,48 @@
 public module sample_final;
 
 import lib.common;
+import lib.sampling.ERP;
 import lib.sky.common;
 import lib.sky.sample_transmit;
 import lib.sky.sample_view;
 import lib.sky.moon;
 import lib.sky.sun;
 
-extern static const bool WORLD_OVERWORLD = true;
+Sampler2D<half3> texStars;
+
 
 half3 sampleSkyFinal(const in float3 localPos, const in float3 viewLocalDir, bool isReflection) {
     half3 skyLight = half3(0.0);
     
     // float3 starViewDir = getStarViewDir(viewLocalDir);
     // skyLight += STAR_LUMINANCE * GetStarLight(starViewDir);
+    if (World_HasSky) {
+        float2 skyCoord = DirectionToUV(viewLocalDir);
+        half3 starLight = texStars.Sample(skyCoord);
+        skyLight += STAR_LUMINANCE * RgbToLinear(starLight);
+    }
 
     float3 skyPos;
     bool intersectsPlanet;
-    if (WORLD_OVERWORLD) {
+    if (DIMENSION == DIM_OVERWORLD) {
         skyPos = getSkyPosition(localPos);
         intersectsPlanet = rayIntersectSphere(skyPos, viewLocalDir, groundRadiusMM) >= 0.0;
 
         if (!intersectsPlanet) {
-            // float sunF = sun(viewLocalDir, scene[0].SunLocalDir);
-            float3 sunLocalPos = sun_distanceMm * scene[0].SunLocalDir + localPos;
-            float sunF = step(0.0, rayIntersectSphere(sunLocalPos, -viewLocalDir, sun_radiusMm));
-            if (sunF > 0.0) skyLight = 16.0 * sunF * scene[0].SunColor;
+            float sunF = sun(viewLocalDir, scene[0].SunLocalDir);
+            if (sunF > 0.0) {
+                // float3 hitDir = normalize((localPos - sunHitDist * viewLocalDir) - sunLocalPos);
+                skyLight = 16.0 * sunF * scene[0].SunColor;
+            }
+
+            // // float sunF = sun(viewLocalDir, scene[0].SunLocalDir);
+            // float3 sunLocalPos = sun_distanceMm * scene[0].SunLocalDir + localPos;
+            // float sunHitDist = rayIntersectSphere(sunLocalPos, -viewLocalDir, sun_radiusMm);
+            // // float sunF = step(0.0, rayIntersectSphere(sunLocalPos, -viewLocalDir, sun_radiusMm));
+            // if (sunHitDist > 0.0) {
+            //     float3 hitDir = normalize((localPos - sunHitDist * viewLocalDir) - sunLocalPos);
+            //     skyLight = 1.0 * max(dot(hitDir, -viewLocalDir), 0.0) * scene[0].SunColor;
+            // }
 
             float3 moonLocalPos = moon_distanceKm * scene[0].MoonLocalDir + localPos;
             float moonHitDist = rayIntersectSphere(moonLocalPos, -viewLocalDir, moon_radiusKm);
@@ -58,7 +75,7 @@ half3 sampleSkyFinal(const in float3 localPos, const in float3 viewLocalDir, boo
     //     }
     // }
 
-    if (WORLD_OVERWORLD) {
+    if (DIMENSION == DIM_OVERWORLD) {
         if (intersectsPlanet) skyLight = half3(0.0);
         else skyLight *= sampleSkyTransmit(skyPos, viewLocalDir);
 

@@ -1,15 +1,22 @@
 public module scattering;
 
+import aperture;
 import lib.common;
 import lib.sky.common;
 
 
-void getScatteringValues(float3 pos, out float3 rayleighScattering, out float mieScattering, out float3 extinction) {
-    float altitudeKM = (length(pos)-groundRadiusMM) * 1000.0;
+float getSkyAltitude(const in float3 skyPos) {
+    return (length(skyPos) - groundRadiusMM) * 1000.0;
+}
 
-    // Note: Paper gets these switched up.
+float getMieDensity(const in float altitudeKM) {
+    return exp(-altitudeKM / 1.2);// * lerp(1.0, 2.0, ap.world.rainStrength);
+}
+
+void getScatteringValues(float3 skyPos, out float3 rayleighScattering, out float mieScattering, out float3 extinction) {
+    float altitudeKM = getSkyAltitude(skyPos);
+    float mieDensity = getMieDensity(altitudeKM);
     float rayleighDensity = exp(-altitudeKM/8.0);
-    float mieDensity = exp(-altitudeKM/1.2);
 
     rayleighScattering = scene[0].sky.rayleighScatteringBase*rayleighDensity;
     float rayleighAbsorption = scene[0].sky.rayleighAbsorptionBase*rayleighDensity;
@@ -22,12 +29,12 @@ void getScatteringValues(float3 pos, out float3 rayleighScattering, out float mi
     extinction = rayleighScattering + rayleighAbsorption + mieScattering + mieAbsorption + ozoneAbsorption;
 }
 
-float3 atmosAbsorb(const in float3 skyPos, const in float3 lightDir) {
-    float dist = rayIntersectSphere(skyPos, lightDir, atmosphereRadiusMM);
+// float3 atmosAbsorb(const in float3 skyPos, const in float3 lightDir) {
+//     float dist = rayIntersectSphere(skyPos, lightDir, atmosphereRadiusMM);
 
-    float mieScattering;
-    float3 rayleighScattering, extinction;
-    getScatteringValues(skyPos, rayleighScattering, mieScattering, extinction);
+//     float mieScattering;
+//     float3 rayleighScattering, extinction;
+//     getScatteringValues(skyPos, rayleighScattering, mieScattering, extinction);
     
-    return exp(-max(0.03 * dist * extinction, EPSILON));
-}
+//     return 1.0;//exp(-max(0.03 * dist * extinction, EPSILON));
+// }

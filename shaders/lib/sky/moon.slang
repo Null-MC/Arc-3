@@ -8,7 +8,7 @@ import lib.sampling.dfd_normal;
 import lib.light.fresnel;
 
 static const float moon_radiusKm = 1737.4;
-static const float moon_distanceKm = 384400.0 * 0.5;
+static const float moon_distanceKm = 384400.0 * 0.3;
 
 // static const float moon_AreaDist = 100.0;
 // static const float moon_AreaSize = 8.0;
