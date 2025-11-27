@@ -214,8 +214,8 @@ half2 SSS_PCF(const in float3 shadowPos, const in int cascade, const in float2 p
 
         float3 shadowCoord = float3(sampleShadowPos.xy, cascade);
         float sampleDepth = solidShadowMap.Sample(shadowCoord).r;
-        final.y += max(shadowPos.z - sampleDepth, 0.0);
         final.x += step(shadowPos.z, sampleDepth);
+        final.y += max(shadowPos.z - sampleDepth, 0.0);
     }
 
     return final / half2(Shadow_SssPcfSamples);

@@ -1047,6 +1047,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .exportFloat('Shadow_SssMaxDist', options.Shadow_SssMaxDist)
                     .exportFloat('Shadow_SssMaxRadius', options.Shadow_SssMaxRadius)
                     .exportInt('Shadow_SssPcfSamples', options.Shadow_SssPcfSamples)
+                    .exportBool('RENDER_TRANSLUCENT', true)
                     .compile();
 
                 translucentStage.createCompute("deferred-sky-shadow-filter")
@@ -1338,6 +1339,7 @@ export function onSettingsChanged(pipeline: PipelineConfig) {
     new StreamingBufferBuilder(settings)
         .appendFloat(options.Sky_SeaLevel)
         .appendFloat(options.Sky_FogDensity * 0.01)
+        .appendFloat(options.Sky_WeatherOpacity * 0.01)
         .appendInt(options.Water_WaveDetail)
         .appendFloat(options.Water_WaveSize * 0.01)
         .appendFloat(options.Material_Parallax_Depth * 0.01)

@@ -32,7 +32,7 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
     float3 viewPosEnd = viewDir * viewDistFinal;
     float3 localPosEnd = mul3(ap.camera.viewInv, viewPosEnd);
 
-    float dither = InterleavedGradientNoiseTime(pos);
+    float dither = IGN_TAA(pos);
 
     float3 scattering = 0.0;
     float transmittance = 1.0;

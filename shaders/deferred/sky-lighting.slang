@@ -112,27 +112,33 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         moon.color = moon_color * (shadowIsSun ? (half)0.0 : shadow);
         SampleCelestial(diffuse, specular, moon, surface, viewLocalDir, NoVm);
 
-        // DEBUG
-        // imgDebug[uv] = half4(texSssFinal[uv], (half)1.0);
-
-        // diffuse /= PI;
-
+        // Ambient from Sky Irradiance
         if (!Lighting_GI || RENDER_TRANSLUCENT) {
             half3 sky_ambient = sampleSkyIrradiance(normals.tex);
             diffuse += sky_ambient * lmcoord_y * mat_lit.occlusion;
         }
 
+        // Subsurface Scattering
+        // float s = rcp(sss);
+        // float z = sss_depth;
+        // float3 shit = 0.25*albedo * (exp(-s*z) + 3.0*exp(-(s*z)/3.0));
+
+        // diffuse += shit * RgbToLinear(texSssFinal[uv]);
+
         float VoL = dot(-viewLocalDir, scene[0].SkyLightLocalDir);
-        float sss_phase = saturate(4.0*HG(VoL, 0.3));
+        float sss_phase = saturate(2.0 * HG(VoL, 0.3));
         half3 sss_sky = RgbToLinear(texSssFinal[uv]);
         half3 sssFinal = sss_sky * (sun_color + moon_color) * sss_phase;
         
         if (!Lighting_GI || RENDER_TRANSLUCENT) {
-            half3 sss_ambient = sampleSkyIrradiance(-normals.tex) * lmcoord_y;
-            sssFinal += 0.5 * sss_ambient;
+            // half3 sss_ambient = sampleSkyIrradiance(-normals.tex) * lmcoord_y;
+            half3 sss_ambient = sampleSkyIrradiance(viewLocalDir);
+            sssFinal += sss_ambient * lmcoord_y;
         }
 
-        diffuse = lerp(diffuse, sssFinal, 0.3*sss);
+        float NoLm = max(dot(normals.tex, scene[0].SkyLightLocalDir), 0.0);
+        diffuse = lerp(diffuse, sssFinal, sss * (1.0 - NoLm));
+
 
         diffuse /= PI;
 

@@ -41,7 +41,7 @@ half4 accumulateGI(float2 pos : SV_Position) : SV_Target0 {
             half lmcoord_y = pow2(mat_lit.lmcoord.y);
 
             // fallback default GI to sky irradiance
-            gi_prev.rgb = sampleSkyIrradiance(tex_normal) * lmcoord_y;
+            gi_prev.rgb = sampleSkyIrradiance(tex_normal)/PI * lmcoord_y;
         }
 
         diffuse = texSource.Sample(texcoord);
@@ -49,11 +49,12 @@ half4 accumulateGI(float2 pos : SV_Position) : SV_Target0 {
         // TODO:  try mixing atrous with raw sample based on history
         // diffuse = lerp(texGI[uv], diffuse, rcp(1.0 + counter));
         
-        diffuse = lerp(gi_prev.rgb, diffuse, rcp(counter + 1.0));
+        counter += 1.0;
+        diffuse = lerp(gi_prev.rgb, diffuse, rcp(counter));
     }
 
     // DEBUG
-    imgDebug[uint2(pos)] = half4(diffuse * 0.08, (half)1.0);
+    // imgDebug[uint2(pos)] = half4(diffuse * 0.08, (half)1.0);
 
-    return half4(diffuse, (half)(counter + 1.0));
+    return half4(diffuse, (half)counter);
 }

@@ -111,7 +111,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
             float traceWaterDist = 0.0;
 
             if (Refract_SS_Fallback) {
-                float dither = InterleavedGradientNoiseTime(pos);
+                float dither = IGN_TAA(pos);
 
                 float3 traceViewStart = mul3(ap.camera.view, traceLocalStart);
                 float3 traceClipStart = project(ap.camera.projection, traceViewStart);
@@ -268,7 +268,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
         final_color *= opaqueWaterTint;
     }
     
-    final_color.rgb += weather.rgb * half3(0.25);
+    final_color.rgb += weather.rgb * settings.Sky_WeatherOpacity;
 
     return half4(final_color, half2(1.0).x);
 }

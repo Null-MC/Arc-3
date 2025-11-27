@@ -3,7 +3,7 @@ import lib.common;
 import lib.sampling.catmull_rom;
 
 extern static const bool TAA_SharpenHistory;
-extern static const float TAA_RejectionStrength = 0.4;
+extern static const float TAA_RejectionStrength = 0.1;
 extern static const int EFFECT_TAA_MAX_ACCUM = 8;
 static const uint groupResX = 16;
 static const uint groupResY = 16;

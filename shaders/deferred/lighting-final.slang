@@ -37,6 +37,9 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         half3 specular = texSpecular.Sample(texcoord);
 
         if (Lighting_GI && !RENDER_TRANSLUCENT) {
+            // DEBUG
+            // imgDebug[uint2(pos)] = half4(diffuse * 0.08, (half)1.0);
+            
             diffuse += texGI_final.Sample(texcoord) * mat_lit.occlusion;
         }
         

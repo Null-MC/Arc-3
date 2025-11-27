@@ -5,6 +5,8 @@ import lib.noise.IGN;
 import lib.material.pbr;
 import lib.light.shadow;
 
+extern static const bool RENDER_TRANSLUCENT = false;
+
 Sampler2D<float> texDepth;
 
 Sampler2D<half4> texAlbedoGB;
@@ -43,13 +45,7 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
 
         half sss = mat_sss(mat_lit.specular.b);
 
-        float dither;
-        if (TAA_Enabled) {
-            dither = InterleavedGradientNoiseTime(uint2(pos));
-        }
-        else {
-            dither = InterleavedGradientNoise(uint2(pos));
-        }
+        float dither = IGN_TAA(pos);
 
         // Shadows
         float viewDist = length(localPos) + 1.0;
@@ -86,13 +82,23 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
             float2 pixelRadius = blockRadius * cascadeScale.xy;
             float2 coverage_dist = SSS_PCF(shadowPos, cascade, pixelRadius, bias_scale, sss, dither);
 
-            float absorb_depth = 1.0 * (coverage_dist.y / cascadeScale.z) + 0.1;
+            // float absorb_depth = 1.0 * (coverage_dist.y / cascadeScale.z) + 0.1;
             float3 sss_color = normalize(RgbToLinear(1.0 - colorData.rgb) + 0.02);
-            float3 lit = coverage_dist.x * exp(-(absorb_depth * sss_color + EPSILON));
+            // float3 lit = coverage_dist.x * exp(-(absorb_depth * sss_color + EPSILON));
+
+            float s = rcp(sss) * 10.0;
+            float z = coverage_dist.y / cascadeScale.z + EPSILON;
+            // float3 lit = 0.25*RgbToLinear(colorData.rgb) * (exp(-s*z) + 3.0*exp(-(s*z)/3.0));
+            float3 lit = (exp(-s*z*sss_color) + 3.0*exp(-(s*z*sss_color)/3.0));
 
             // half tex_NoLm = max((half)dot(normals.tex, scene[0].SkyLightLocalDir), (half)0.0);
-            output.sss.rgb = (half3)LinearToRgb(sss * lit);
+            output.sss.rgb = (half3)LinearToRgb(sss * lit * coverage_dist.x);
         }
+    }
+
+    if (!RENDER_TRANSLUCENT) {
+        // DEBUG
+        imgDebug[uint2(pos)] = half4(output.sss.rgb, (half)1.0);
     }
 
     return output;

@@ -46,7 +46,7 @@ bool between(const in float value, const in float _min, const in float _max) {
 }
 
 float3 sample_cosine_weighted_hemisphere(const in float2 rand, out float pdf) {
-    float2 p = rand * 2.0 - 1.0;
+    // float2 p = rand * 2.0 - 1.0;
     
     // Use concentric disk mapping to avoid distortion artifacts in uniform disk sampling
     // This example uses simple square-to-disk for clarity, but a proper
@@ -58,7 +58,8 @@ float3 sample_cosine_weighted_hemisphere(const in float2 rand, out float pdf) {
     float3 dir;
     dir.x = r * cos(phi);
     dir.y = r * sin(phi);
-    dir.z = sqrt(max(1.0 - dot(dir.xy, dir.xy), 0.0));
+    // dir.z = sqrt(max(1.0 - dot(dir.xy, dir.xy), 0.0));
+    dir.z = sqrt(max(1.0 - rand.x, 0.0));
     
     pdf = dir.z;// / PI;
 
@@ -149,6 +150,8 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             float3 traceClipPos_prev = traceClipStart;
             float2 traceScreenPos;
 
+            float max_thickness = 0.1 + 0.02*viewDist;
+
             float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
             for (uint i = 0; i < GI_ScreenStepCount; i++) {
                 float f = (i + dither) / GI_ScreenStepCount;
@@ -162,7 +165,8 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
                 // if (abs(screenDepthL - traceDepthL) < abs(traceDepthL - traceDepthL_prev)) {
                 // if (between(screenDepthL, traceDepthL_prev, traceDepthL)) {
-                if (traceDepthL > screenDepthL && traceDepthL - screenDepthL < abs(traceDepthL - traceDepthL_prev)) {
+                if (traceDepthL > screenDepthL && traceDepthL - screenDepthL < max_thickness) {
+                // if (traceDepthL > screenDepthL) {
                     ss_hit = true;
                     break;
                 }
@@ -187,7 +191,8 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
                     // if (abs(screenDepthL - traceDepthL) < abs(traceDepthL - traceDepthL_prev)) {
                     // if (between(screenDepthL, traceDepthL_prev, traceDepthL)) {
-                    if (traceDepthL > screenDepthL && traceDepthL - screenDepthL < abs(traceDepthL - traceDepthL_prev)) {
+                    if (traceDepthL > screenDepthL && traceDepthL - screenDepthL < max_thickness) {
+                    // if (traceDepthL > screenDepthL) {
                         break;
                     }
                 }

@@ -4,6 +4,8 @@ export function setupOptions() {
             .add(asIntRange('SKY.SEA_LEVEL', 60, -20, 90, 2, false))
             .add(asIntRange('SKY.FOG_DENSITY', 100, 0, 300, 5, false))
             .add(asBool('SKY.FOG_NOISE', false, true))
+            .add(EMPTY)
+            .add(asIntRange('SKY.WEATHER_OPACITY', 80, 0, 100, 2, false))
             .build())
         .add(new Page('WATER')
             .add(asBool('WATER.WAVES_ENABLED', true, true))

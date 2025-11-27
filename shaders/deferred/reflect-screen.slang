@@ -69,7 +69,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         half lmcoord_y = pow2(mat_lit.lmcoord.y);
         half roughL = pow2(roughness);
 
-        float dither = InterleavedGradientNoiseTime(pos);
+        float dither = IGN_TAA(pos);
 
         // get reflection direction
         float3 reflectNormal = Reflect_Rough

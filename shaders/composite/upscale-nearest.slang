@@ -71,9 +71,9 @@ void upscale_nearest(ComputeInput input) {
 
             uint2 uv_full = uv * BufferScale;
 
-            if (BufferScale > 1) {
-                uv_full += (ap.timing.frameCounter % 2) * BufferScale;
-            }
+            // if (BufferScale > 1) {
+            //     uv_full += (ap.timing.frameCounter % 2) * BufferScale;
+            // }
 
             float depth = texDepth[uv_full].r * 2.0 - 1.0;
             depthL = linearizeDepth(depth, ap.camera.near, ap.camera.far);
