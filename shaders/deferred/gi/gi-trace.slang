@@ -94,7 +94,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
     
     if (depth < 1.0) {
         float2 texcoord = uv_full / float2(ap.game.screenSize);
-        // if (TAA_Enabled) texcoord += scene[0].taa_jitter;
+        if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
         float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
         // float3 viewPos = project(ap.camera.projectionInv, clipPos);
@@ -110,13 +110,15 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         ObjectData_MatLit mat_lit;
         mat_lit.unpack(texMatLightGB[uv_full]);
 
+        float dither = InterleavedGradientNoiseTime(pos);
+
         [ForceUnroll]
         for (int i = 0; i < GI_SampleCount; i++) {
         // float3 trace_localDir = randomNormal(pos, tex_normal);
         // float cos_trace = max(dot(trace_localDir, tex_normal), 0.0);
 
         float pdf;
-        float2 seed = hash23(float3(pos, ap.timing.frameCounter + i*3));
+        float2 seed = hash22(pos + float2(23.0, 47.0)*(ap.timing.frameCounter + i*3));
         float3 trace_tangentDir = sample_cosine_weighted_hemisphere(seed, pdf);
         float3 trace_localDir = transform_to_world(tex_normal, trace_tangentDir);
 
@@ -126,25 +128,22 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
         bool ss_hit = false;
         if (GI_ScreenTrace) {
-            // float dither = InterleavedGradientNoiseTime(pos);
-
             float3 trace_viewDir = mul(float3x3(ap.camera.view), trace_localDir);
             trace_viewDir = normalize(trace_viewDir);
             
-            float seed = InterleavedGradientNoise(pos);
-            float dither = GetR2_1D(seed * 13.0 + ap.timing.frameCounter * 137.0).x;
+            // float seed = InterleavedGradientNoise(pos);
+            // float dither = GetR2_1D(seed * 13.0 + ap.timing.frameCounter * 137.0).x;
 
             float3 traceViewStart = mul3(ap.camera.view, offsetLocalPos);
             float3 traceClipStart = project(ap.camera.projection, traceViewStart);
             float3 screenStart = traceClipStart * 0.5 + 0.5;
 
-            float3 screenEnd = projectScreenTrace(traceViewStart, screenStart, trace_viewDir);
-            float3 traceClipEnd = screenEnd * 2.0 - 1.0;
+            // float3 screenEnd = projectScreenTrace(traceViewStart, screenStart, trace_viewDir, 8.0);
+            // float3 traceClipEnd = screenEnd * 2.0 - 1.0;
 
-            // float viewDist = length(localPos);
-            // float traceDist = clamp(viewDist * 0.25, 0.0, 16.0);
-            // float3 traceViewEnd = traceViewStart + traceDist * trace_viewDir;
-            // float3 traceClipEnd = project(ap.camera.projection, traceViewEnd);
+            float traceDist = clamp(viewDist * 0.25, 0.0, 8.0);
+            float3 traceViewEnd = traceViewStart + traceDist * trace_viewDir;
+            float3 traceClipEnd = project(ap.camera.projection, traceViewEnd);
 
             float3 traceClipPos;
             float3 traceClipPos_prev = traceClipStart;
@@ -161,10 +160,9 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
                 float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
-                // float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
-
-                // if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
-                if (between(screenDepthL, traceDepthL_prev, traceDepthL)) {
+                // if (abs(screenDepthL - traceDepthL) < abs(traceDepthL - traceDepthL_prev)) {
+                // if (between(screenDepthL, traceDepthL_prev, traceDepthL)) {
+                if (traceDepthL > screenDepthL && traceDepthL - screenDepthL < abs(traceDepthL - traceDepthL_prev)) {
                     ss_hit = true;
                     break;
                 }
@@ -187,10 +185,9 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                     float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
                     float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
-                    // float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
-
-                    // if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
-                    if (between(screenDepthL, traceDepthL_prev, traceDepthL)) {
+                    // if (abs(screenDepthL - traceDepthL) < abs(traceDepthL - traceDepthL_prev)) {
+                    // if (between(screenDepthL, traceDepthL_prev, traceDepthL)) {
+                    if (traceDepthL > screenDepthL && traceDepthL - screenDepthL < abs(traceDepthL - traceDepthL_prev)) {
                         break;
                     }
                 }
@@ -199,12 +196,12 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             if (ss_hit) {
                 half3 trace_albedo = texAlbedoGB.Sample(traceScreenPos).rgb;
                 half3 trace_diffuse = texDiffuse.Sample(traceScreenPos);
-                sampleColor = RgbToLinear(trace_albedo) * trace_diffuse;
+                sampleColor = RgbToLinear(trace_albedo) * trace_diffuse * PI;
 
                 uint2 uv2 = uint2(traceScreenPos * ap.game.screenSize);
-                // half3 sample_normal = ObjectData_Normals.unpackTex(texNormalGB[uv2].g);
-                half3 sample_normal = ObjectData_Normals.unpackGeo(texNormalGB[uv2].r);
-                cos_sample = abs(dot(sample_normal, -trace_localDir));
+                half3 sample_normal = ObjectData_Normals.unpackTex(texNormalGB[uv2].g);
+                // half3 sample_normal = ObjectData_Normals.unpackGeo(texNormalGB[uv2].r);
+                cos_sample = step(0.0, dot(sample_normal, -trace_localDir));
             }
         }
 
