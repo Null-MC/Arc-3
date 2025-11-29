@@ -1,9 +1,13 @@
 import aperture;
+import buffers.ObjectData;
 import lib.common;
+import lib.blocks;
 
 Sampler2D<float> texDepth;
 Sampler2D<float> texDepthLast;
+Sampler2D<uint2> texMatLightGB;
 Sampler2D<half3> texPositionPrev;
+Sampler2D<half2> texVelocity;
 
 
 struct FragmentOutput {
@@ -24,8 +28,16 @@ FragmentOutput reprojectScene(float2 pos : SV_Position) {
     // if (TAA_Enabled) texcoord.xy += scene[0].taa_jitter_prev;
 
     float3 screenPos = float3(texcoord, depth);
-    float3 clipPos = screenPos * 2.0 - 1.0;
-    float3 localPos = project(scene[0].viewProjectionInv, clipPos);
+    float3 ndcPos = screenPos * 2.0 - 1.0;
+
+    ObjectData_MatLit mat_lit;
+    mat_lit.unpack(texMatLightGB[uv]);
+
+    if (mat_lit.blockMapId == BLOCK_HAND) {
+        ndcPos.z /= MC_HAND_DEPTH;
+    }
+
+    float3 localPos = project(scene[0].viewProjectionInv, ndcPos);
 
     float3 prev_localPos = localPos + (ap.camera.position - ap.temporal.position);
 
@@ -34,8 +46,12 @@ FragmentOutput reprojectScene(float2 pos : SV_Position) {
     // TODO: apply prev-frame TAA jitter?
     // if (TAA_Enabled) prev_screenPos.xy += scene[0].taa_jitter_prev;
 
-    // prev_screenPos.xy -= texVelocity[uv];
+    prev_screenPos.xy -= 0.5*texVelocity[uv];
     offset = prev_screenPos.xy - screenPos.xy;
+
+    if (mat_lit.blockMapId == BLOCK_HAND) {
+        offset = 0.0;
+    }
 
     float viewDist = length(localPos);
     float distThreshold = 0.004 * viewDist;

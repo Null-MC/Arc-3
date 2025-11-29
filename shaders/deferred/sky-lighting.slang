@@ -1,6 +1,7 @@
 import aperture;
 import buffers.ObjectData;
 import lib.common;
+import lib.blocks;
 import lib.light.fresnel;
 import lib.light.brdf;
 import lib.light.HG;
@@ -47,18 +48,23 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
     half4 colorData = texAlbedoGB[uv];
     
     if (depth < 1.0 && colorData.a > 0.0) {
-        float2 texcoord = pos / ap.game.screenSize;
-        if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
-
-        float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
-        float3 localPos = project(scene[0].viewProjectionInv, clipPos);
-        float3 viewLocalDir = -normalize(localPos);
-
         ObjectData_Normals normals;
         normals.unpack(texNormalGB[uv]);
 
         ObjectData_MatLit mat_lit;
         mat_lit.unpack(texMatLightGB[uv]);
+
+        float2 texcoord = pos / ap.game.screenSize;
+        if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
+
+        float3 ndcPos = float3(texcoord, depth) * 2.0 - 1.0;
+
+        if (mat_lit.blockMapId == BLOCK_HAND) {
+            ndcPos.z /= MC_HAND_DEPTH;
+        }
+
+        float3 localPos = project(scene[0].viewProjectionInv, ndcPos);
+        float3 viewLocalDir = -normalize(localPos);
 
         half3 albedo = RgbToLinear(colorData.rgb);
         half roughness = mat_roughness(mat_lit.specular.r);
@@ -119,25 +125,22 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         }
 
         // Subsurface Scattering
-        // float s = rcp(sss);
-        // float z = sss_depth;
-        // float3 shit = 0.25*albedo * (exp(-s*z) + 3.0*exp(-(s*z)/3.0));
-
-        // diffuse += shit * RgbToLinear(texSssFinal[uv]);
-
         float VoL = dot(-viewLocalDir, scene[0].SkyLightLocalDir);
-        float sss_phase = saturate(2.0 * HG(VoL, 0.3));
+        float sss_phase = saturate(HG(VoL, 0.3));
         half3 sss_sky = RgbToLinear(texSssFinal[uv]);
         half3 sssFinal = sss_sky * (sun_color + moon_color) * sss_phase;
-        
+         
         if (!Lighting_GI || RENDER_TRANSLUCENT) {
             // half3 sss_ambient = sampleSkyIrradiance(-normals.tex) * lmcoord_y;
-            half3 sss_ambient = sampleSkyIrradiance(viewLocalDir);
+            half3 sss_ambient = sampleSkyIrradiance(-viewLocalDir);
             sssFinal += sss_ambient * lmcoord_y;
         }
 
-        float NoLm = max(dot(normals.tex, scene[0].SkyLightLocalDir), 0.0);
-        diffuse = lerp(diffuse, sssFinal, sss * (1.0 - NoLm));
+        // float NoLm = max(dot(normals.tex, scene[0].SkyLightLocalDir), 0.0);
+        // diffuse = lerp(diffuse, sssFinal, sss * (1.0 - NoLm));
+        diffuse *= 1.0 - 0.3*sss;
+        diffuse += 3.0*sssFinal*sss;
+        // diffuse = lerp(diffuse, 3.0 * sssFinal, 0.5*sss);
 
 
         diffuse /= PI;
@@ -146,7 +149,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
             float3 reflectLocalNormal = normals.tex;
             if (Reflect_Rough) reflectLocalNormal = randomizeNormal(uint2(pos), normals.tex, surface.roughL);
 
-            float3 viewPos = project(ap.camera.projectionInv, clipPos);
+            float3 viewPos = project(ap.camera.projectionInv, ndcPos);
             float3 fragViewDir = normalize(viewPos);
 
             float3 viewNormal = mul(float3x3(ap.camera.view), reflectLocalNormal);

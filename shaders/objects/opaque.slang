@@ -1,12 +1,14 @@
 import aperture;
 import buffers.ObjectData;
 import lib.common;
+import lib.blocks;
 import lib.octohedral;
 import lib.sampling.atlas;
 import lib.sampling.lmcoord;
 import lib.sampling.linear;
 import lib.material.pbr;
 import lib.material.parallax;
+import lib.wind_waving;
 import lib.tbn;
 
 extern static const bool Material_SmoothNormals;
@@ -14,6 +16,7 @@ extern static const bool RENDER_ENTITY = false;
 extern static const bool RENDER_TERRAIN = false;
 extern static const bool RENDER_PARTICLES = false;
 extern static const bool RENDER_TEXT = false;
+extern static const bool RENDER_HAND = false;
 
 static const bool SupportsParallax = Parallax_Enabled && !(RENDER_PARTICLES || RENDER_TEXT);
 static const bool SupportsTexNormals = !RENDER_PARTICLES;
@@ -27,7 +30,9 @@ struct VertexOutput {
     float3 localPos;
     float occlusion;
     float3 tangentViewPos;
+    float2 velocity;
     
+    nointerpolation int blockId;
     nointerpolation uint color;
     nointerpolation uint normal;
     nointerpolation uint tangent;
@@ -41,10 +46,26 @@ VertexOutput vertexMain(Vertex input) {
 
     float3 modelPos = input.pos().xyz;
     float3 viewPos = mul3(input.viewMatrix(), modelPos);
-    output.position = mul(input.projectionMatrix(), float4(viewPos, 1.0));
+    output.localPos = mul3(ap.camera.viewInv, viewPos);
+    
+    float3 velocity_local = 0.0;
+    if (RENDER_TERRAIN && Sky_WindEnabled) {
+        int blockId = input.blockId().orElse(-1);
+        float3 midPos = input.midBlock().orElse(0.0);
 
-    if (SupportsParallax) {
-        output.localPos = mul3(ap.camera.viewInv, viewPos);
+        float3 originPos = output.localPos + midPos;
+        uint blockTags = blockId >= 0 ? ap.blocks[blockId].tags : 0;
+        float3 origin_worldPos = floor(originPos + ap.camera.position);
+        float3 waving_offset = GetWavingOffset(origin_worldPos, midPos, blockTags, ap.timing.timeElapsed);
+
+        output.localPos += waving_offset;
+        viewPos = mul3(ap.camera.view, output.localPos);
+
+        if (TAA_Enabled) {
+            float elapsed_last = ap.timing.timeElapsed - ap.timing.lastFrameTime;
+            float3 waving_offset_last = GetWavingOffset(origin_worldPos, midPos, blockTags, elapsed_last);
+            velocity_local = waving_offset - waving_offset_last;
+        }
     }
 
     output.uv = input.uv();
@@ -54,6 +75,8 @@ VertexOutput vertexMain(Vertex input) {
 
     output.light = LightMapNorm(input.light());
     output.light = output.light * output.light;
+
+    output.blockId = input.blockId().orElse(-1);
 
     if (let value = input.overlayColor()) {
         half4 overlay = half4(value);
@@ -99,7 +122,16 @@ VertexOutput vertexMain(Vertex input) {
         output.tangentViewPos = mul(TBN, viewPos.xyz);
     }
 
+    output.position = mul(input.projectionMatrix(), float4(viewPos, 1.0));
+
     if (TAA_Enabled) {
+        float3 lastPos = output.localPos - velocity_local;
+        float3 lastViewPos = mul3(ap.camera.view, lastPos);
+        float3 lastNdcPos = project(ap.camera.projection, lastViewPos);
+        output.velocity = output.position.xy / output.position.w - lastNdcPos.xy;
+
+        // if (RENDER_HAND) ndcPos.z /= MC_HAND_DEPTH;
+
         output.position.xy += scene[0].taa_jitter * (2.0 * output.position.w);
     }
 
@@ -149,6 +181,12 @@ FragmentOutput fragmentMain(VertexOutput input) {
     mat_lit.specular = (half4)specularTex.SampleLevel(tex_uv, LOD);
 
     iris_discardIfNeeded(color);
+
+    if (RENDER_TERRAIN) {
+        mat_lit.blockMapId = ap.blocks[input.blockId].customId;
+    }
+
+    if (RENDER_HAND) mat_lit.blockMapId = BLOCK_HAND;
 
     if (Material_SmoothNormals) {
         float2 atlasSize;
@@ -205,6 +243,6 @@ FragmentOutput fragmentMain(VertexOutput input) {
     output.albedo = color;
     output.normals = normals.pack();
     output.mat_lit = mat_lit.pack();
-    output.velocity = half2(0.0);
+    output.velocity = half2(TAA_Enabled ? input.velocity : 0.0);
     return output;
 }

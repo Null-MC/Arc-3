@@ -17,6 +17,7 @@ extern static const bool Material_SmoothNormals;
 extern static const bool Water_WaveEnabled = false;
 extern static const bool RENDER_TERRAIN = false;
 extern static const bool RENDER_PARTICLES = false;
+extern static const bool RENDER_HAND = false;
 
 static const bool SupportsParallax = Parallax_Enabled && !RENDER_PARTICLES;
 static const bool SupportsTexNormals = !RENDER_PARTICLES;
@@ -33,10 +34,10 @@ struct VertexOutput {
     float occlusion;
     float3 tangentViewPos;
     
+    nointerpolation int blockId;
     nointerpolation uint color;
     nointerpolation uint normal;
     nointerpolation uint tangent;
-    nointerpolation uint blockId;
     nointerpolation uint atlasCoordMin;
     nointerpolation uint atlasCoordSize;
 };
@@ -60,10 +61,7 @@ VertexOutput vertexMain(Vertex input) {
     output.light = LightMapNorm(input.light());
     output.light = output.light * output.light;
 
-    output.blockId = -1;
-    if (let value = input.blockId()) {
-        output.blockId = value;
-    }
+    output.blockId = input.blockId().orElse(-1);
 
     if (let value = input.overlayColor()) {
         half4 overlay = half4(value);
@@ -212,6 +210,8 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
             mat_lit.specular.g = (half)0.02;
         }
     }
+
+    if (RENDER_HAND) mat_lit.blockMapId = BLOCK_HAND;
 
     if (SupportsTexNormals) {
         if (Water_WaveEnabled && isWater) {

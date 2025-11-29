@@ -1,5 +1,7 @@
 import aperture;
+import buffers.ObjectData;
 import lib.common;
+import lib.blocks;
 import lib.sampling.depth;
 import lib.sampling.gaussian;
 
@@ -24,6 +26,7 @@ RWTexture2D<half3> imgShadowFinal;
 RWTexture2D<half3> imgSssFinal;
 
 Sampler2D<float> texDepth;
+Sampler2D<uint2> texMatLightGB;
 Sampler2D<half3> texShadowGB;
 Sampler2D<half3> texSssGB;
 
@@ -97,6 +100,14 @@ void filterShadowSss(ComputeInput input) {
                 sss = texSssGB[uv];
 
                 float depth = texDepth[uv].r * 2.0 - 1.0;
+
+                ObjectData_MatLit mat_lit;
+                mat_lit.unpack(texMatLightGB[uv]);
+
+                if (mat_lit.blockMapId == BLOCK_HAND) {
+                    depth /= MC_HAND_DEPTH;
+                }
+
                 depthL = linearizeDepth(depth, ap.camera.near, ap.camera.far);
             }
 

@@ -24,6 +24,8 @@ static const float PI = 3.14159265358;
 static const float phaseIso = rcp(4.0 * PI);
 static const float EPSILON = 1.0e-6;
 
+static const float MC_HAND_DEPTH = 0.125; // [0.0625 0.125 0.25]
+
 static const int DIM_NETHER = -1;
 static const int DIM_OVERWORLD = 0;
 static const int DIM_END = 1;

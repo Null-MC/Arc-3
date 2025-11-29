@@ -6,6 +6,8 @@ option.SKY.FOG_DENSITY=Fog Density
 
 option.SKY.FOG_NOISE=Chunky Fog
 
+option.SKY.WIND_ENABLED=Wind
+
 option.SKY.WEATHER_OPACITY=Weather Opacity
 
 

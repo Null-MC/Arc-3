@@ -97,6 +97,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .addInt('DIMENSION', dimension.Index)
         .addBool('World_HasSky', dimension.World_HasSky)
         .addBool('Sky_FogNoise', options.Sky_FogNoise)
+        .addBool('Sky_WindEnabled', options.Sky_WindEnabled)
         .addInt('MATERIAL_FORMAT', options.Material_Format)
         .addInt('Shadow_Resolution', options.Shadow_Resolution)
         .addInt('Shadow_CascadeCount', renderConfig.shadow.cascades)
@@ -173,6 +174,67 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         new NamespacedId("pink_stained_glass"),
         new NamespacedId("pink_stained_glass_pane")));
     
+    tagBuilder.map('TAG_WAVING_GROUND', pipeline.createTag(new NamespacedId('arc', 'foliage_ground'),
+        new NamespacedId('acacia_sapling'),
+        new NamespacedId('birch_sapling'),
+        new NamespacedId('cherry_sapling'),
+        new NamespacedId('jungle_sapling'),
+        new NamespacedId('oak_sapling'),
+        new NamespacedId('dark_oak_sapling'),
+        new NamespacedId('pale_oak_sapling'),
+        new NamespacedId('spruce_sapling'),
+        new NamespacedId('allium'),
+        new NamespacedId('azalea'),
+        new NamespacedId('flowering_azalea'),
+        new NamespacedId('azure_bluet'),
+        new NamespacedId('beetroots'),
+        new NamespacedId('blue_orchid'),
+        new NamespacedId('bush'),
+        new NamespacedId('cactus_flower'),
+        new NamespacedId('carrots'),
+        new NamespacedId('cornflower'),
+        new NamespacedId('crimson_roots'),
+        new NamespacedId('dead_bush'),
+        new NamespacedId('dandelion'),
+        new NamespacedId('open_eyeblossom'),
+        new NamespacedId('closed_eyeblossom'),
+        new NamespacedId('short_dry_grass'),
+        new NamespacedId('tall_dry_grass'),
+        new NamespacedId('fern'),
+        new NamespacedId('firefly_bush'),
+        new NamespacedId('grass'),
+        new NamespacedId('short_grass'),
+        new NamespacedId('lily_of_the_valley'),
+        new NamespacedId('mangrove_propagule'),
+        new NamespacedId('nether_sprouts'),
+        new NamespacedId('orange_tulip'),
+        new NamespacedId('oxeye_daisy'),
+        new NamespacedId('pink_petals'),
+        new NamespacedId('pink_tulip'),
+        new NamespacedId('poppy'),
+        new NamespacedId('potatoes'),
+        new NamespacedId('red_tulip'),
+        new NamespacedId('sweet_berry_bush'),
+        new NamespacedId('torchflower'),
+        new NamespacedId('torchflower_crop'),
+        new NamespacedId('warped_roots'),
+        new NamespacedId('wheat'),
+        new NamespacedId('white_tulip'),
+        new NamespacedId('wildflowers'),
+        new NamespacedId('wither_rose')));
+
+    tagBuilder.map('TAG_WAVING_FULL', pipeline.createTag(new NamespacedId('arc', 'waving_full'),
+        new NamespacedId('azalea_leaves'),
+        new NamespacedId('birch_leaves'),
+        new NamespacedId('cherry_leaves'),
+        new NamespacedId('flowering_azalea_leaves'),
+        new NamespacedId('jungle_leaves'),
+        new NamespacedId('mangrove_leaves'),
+        new NamespacedId('oak_leaves'),
+        new NamespacedId('dark_oak_leaves'),
+        new NamespacedId('pale_oak_leaves'),
+        new NamespacedId('spruce_leaves')));
+
     pipeline.setGlobalExport(globalExports.build());
 
     ApplyLightColors(options.Lighting_ColorCandles);
@@ -251,6 +313,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .width(screenWidth)
             .height(screenHeight)
             .format(Format.RG16F)
+            .clearColor(0, 0, 0, 0)
             .build();
     }
 
@@ -713,7 +776,9 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
     opaqueObjectShader("blockentity-cutout", Usage.BLOCK_ENTITY).compile();
 
-    opaqueObjectShader("hand", Usage.HAND).compile();
+    opaqueObjectShader("hand", Usage.HAND)
+        .exportBool('RENDER_HAND', true)
+        .compile();
 
     opaqueObjectShader("text", Usage.TEXT)
         .exportBool('RENDER_TEXT', true)
@@ -755,12 +820,20 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
     translucentObjectShader("blockentity-translucent", Usage.BLOCK_ENTITY_TRANSLUCENT).compile();
 
-    translucentObjectShader("hand-translucent", Usage.TRANSLUCENT_HAND).compile();
+    translucentObjectShader("hand-translucent", Usage.TRANSLUCENT_HAND)
+        .exportBool('RENDER_HAND', true)
+        .compile();
 
     // translucentObjectShader("text", Usage.TEXT).compile();
 
     translucentObjectShader("particles", Usage.PARTICLES)
         .exportBool('RENDER_PARTICLES', true)
+        .compile();
+
+    pipeline.createObjectShader("entity-glint", Usage.ENTITY_GLINT)
+        .location("objects/glint")
+        .target(0, texAlbedoGB_opaque).blendFunc(0, Func.ONE, Func.ONE, Func.ZERO, Func.ONE)
+        .target(1, texAlbedoGB_translucent).blendFunc(1, Func.ONE, Func.ONE, Func.ZERO, Func.ONE)
         .compile();
 
     if (dimension.World_HasSky) {
@@ -776,6 +849,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .target(0, texReprojection)
             .target(1, texPosition)
             .overrideObject('texDepth', 'solidDepthTex')
+            .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
             .compile();
         
         postRenderStage.copy(texPosition, texPositionPrev, screenWidth, screenHeight);
@@ -826,6 +900,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         Math.ceil(screenHeight / 16),
                         1)
                     .overrideObject('texDepth', 'solidDepthTex')
+                    .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                     .compile();
 
                 opaqueStage.createComposite("deferred-sky-lighting")
@@ -1057,6 +1132,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         Math.ceil(screenHeight / 16),
                         1)
                     .overrideObject('texDepth', 'mainDepthTex')
+                    .overrideObject('texMatLightGB', texMatLightGB_translucent.name())
                     .compile();
 
                 translucentStage.createComposite("deferred-sky-lighting")

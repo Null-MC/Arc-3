@@ -1,15 +1,16 @@
 import aperture;
 import lib.common;
 import lib.material.pbr;
-
+import lib.wind_waving;
 
 extern static const bool EmissionMask;
+// extern static const bool RENDER_TERRAIN = false;
 
 struct VertexOutput {
     float4 position : SV_Position;
 
     float3 modelPos;
-    nointerpolation uint blockId;
+    nointerpolation int blockId;
     float2 uv;
 };
 
@@ -20,12 +21,20 @@ VertexOutput vertexMain(Vertex input) {
     output.uv = input.uv();
     output.modelPos = input.pos().xyz;
 
-    output.blockId = -1;
-    if (!EmissionMask) {
-        if (let value = input.blockId()) output.blockId = value;
-    }
+    output.blockId = input.blockId().orElse(-1);
 
     PointLight light = ap.lights[input.currentInstance()];
+
+    if (Sky_WindEnabled && output.blockId >= 0) {
+        float3 midBlock = input.midBlock().orElse(0.0);
+        float3 originPos = output.modelPos + midBlock;
+        uint blockTags = ap.blocks[output.blockId].tags;
+
+        float3 origin_worldPos = floor(originPos + ap.camera.position);
+        output.modelPos += GetWavingOffset(origin_worldPos, midBlock, blockTags, ap.timing.timeElapsed);
+
+        // shadowViewPos = mul3(ap.celestial.view, localPos);
+    }
 
     float3 shadowViewPos = mul3(input.viewMatrix(), output.modelPos);
 

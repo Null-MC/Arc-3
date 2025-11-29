@@ -5,6 +5,8 @@ export function setupOptions() {
             .add(asIntRange('SKY.FOG_DENSITY', 100, 0, 300, 5, false))
             .add(asBool('SKY.FOG_NOISE', false, true))
             .add(EMPTY)
+            .add(asBool('SKY.WIND_ENABLED', true, true))
+            .add(EMPTY)
             .add(asIntRange('SKY.WEATHER_OPACITY', 80, 0, 100, 2, false))
             .build())
         .add(new Page('WATER')

@@ -2,6 +2,7 @@ import aperture;
 import lib.tags;
 import lib.common;
 import lib.blocks;
+import lib.wind_waving;
 import lib.sampling.atlas;
 import lib.voxel.voxel_common;
 import lib.voxel.voxel_tex;
@@ -29,17 +30,29 @@ VertexOutput vertexMain(Vertex input) {
     half4 color = half4(input.color());
     output.uv = input.uv();
 
-    output.blockId = -1;
-    if (let value = input.blockId()) output.blockId = value;
+    output.blockId = input.blockId().orElse(-1);
+    float3 midBlock = input.midBlock().orElse(0.0);
 
     float3 modelPos = input.pos().xyz;
     float3 shadowViewPos = mul3(input.viewMatrix(), modelPos);
+    float3 localPos = mul3(ap.celestial.viewInv, shadowViewPos);
+
+    float3 originPos = localPos + midBlock;
+    var block = ap.blocks[output.blockId];
+
+    if (RENDER_TERRAIN && Sky_WindEnabled) {
+        uint blockTags = output.blockId >= 0 ? block.tags : 0;
+        float3 origin_worldPos = floor(originPos + ap.camera.position);
+        localPos += GetWavingOffset(origin_worldPos, midBlock, blockTags, ap.timing.timeElapsed);
+
+        shadowViewPos = mul3(ap.celestial.view, localPos);
+    }
+
     output.position = mul(input.projectionMatrix(), float4(shadowViewPos, 1.0));
 
     bool voxelize = false;
     // bool isFluidBlock = false;
     if (output.blockId >= 0) {
-        var block = ap.blocks[output.blockId];
         voxelize = block.isFullBlock;
 
 		const uint hit_tags = TAG_SLABS | TAG_STAIRS | TAG_LEAVES;
@@ -55,9 +68,9 @@ VertexOutput vertexMain(Vertex input) {
     static const int voxel_cascade = min(1, Shadow_CascadeCount-1);
 
     if (VOXEL_TEX_ENABLED && RENDER_TERRAIN && voxelize && input.currentInstance() == voxel_cascade) {
-        float3 origin = modelPos;// mul3(ap.celestial.viewInv, shadowViewPos);
-        if (let value = input.midBlock()) origin += value;
-        int3 voxelPos = int3(floor(Voxel_GetBufferPosition(origin)));
+        // float3 origin = modelPos;// mul3(ap.celestial.viewInv, shadowViewPos);
+        // if (let value = input.midBlock()) origin += value;
+        int3 voxelPos = int3(floor(Voxel_GetBufferPosition(originPos)));
 
         if (Voxel_InBufferBounds(voxelPos)) {
             float3 normal = input.normal().value;

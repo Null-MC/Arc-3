@@ -18,3 +18,5 @@ extern static const uint BLOCK_WATER;
 // extern static const uint BLOCK_GLASS_PURPLE;
 // extern static const uint BLOCK_GLASS_MAGENTA;
 // extern static const uint BLOCK_GLASS_PINK;
+
+static const uint BLOCK_HAND = 99;

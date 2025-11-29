@@ -174,7 +174,7 @@ float SampleShadow_PCSS(const in float3 shadowPos, const in int cascade, const i
     float blockerDistance = ShadowBlockerDistance(shadowPos, cascade, maxPixelRadius, projectionScale.z, dither);
 
     const float shadowPixelSize = rcp(Shadow_Resolution);
-    const float minShadowPixelRadius = 0.5 * shadowPixelSize;
+    const float minShadowPixelRadius = shadowPixelSize;
 
     float2 pixelRadius = (blockerDistance / Shadow_PenumbraScale) * projectionScale.xy;
     pixelRadius = clamp(pixelRadius, float2(minShadowPixelRadius), maxPixelRadius);
@@ -188,7 +188,7 @@ half3 SampleShadowColor_PCSS(const in float3 shadowPos, const in int cascade, co
     float blockerDistance = ShadowBlockerDistance(shadowPos, cascade, maxPixelRadius, projectionScale.z, dither);
 
     const float shadowPixelSize = rcp(Shadow_Resolution);
-    const float minShadowPixelRadius = 0.5 * shadowPixelSize;
+    const float minShadowPixelRadius = shadowPixelSize;
 
     float2 pixelRadius = (blockerDistance / Shadow_PenumbraScale) * projectionScale.xy;
     pixelRadius = clamp(pixelRadius, float2(minShadowPixelRadius), maxPixelRadius);
@@ -196,27 +196,33 @@ half3 SampleShadowColor_PCSS(const in float3 shadowPos, const in int cascade, co
 }
 
 // [coverage, distance]
-half2 SSS_PCF(const in float3 shadowPos, const in int cascade, const in float2 pixelRadius, const in float bias_scale, const in float sss, const in float dither) {
+half3 SSS_PCF(const in float3 shadowPos, const in int cascade, const in float3 sss_absorb, const in float2 pixelRadius, const in float bias_scale, const in float sss, const in float dither) {
     float2x2 rotation = GetSampleRotation(fract(dither));
     float seed_pos = hash13(shadowPos * 999.0);
 
-    half2 final = half2(0.0);
+    float3 accumColor = 0.0;
     for (int i = 0; i < Shadow_SssPcfSamples; i++) {
         float r = sqrt((i + 0.5) / Shadow_SssPcfSamples);
         float theta = i * GoldenAngle + PHI;
 
         float sample_dither = hash13(float3(seed_pos * 999.0, i, ap.timing.frameCounter));
-        float sample_bias = bias_scale * pow5(sample_dither);
+        float sample_bias = bias_scale * pow2(sample_dither);
         
         float2 pcfDiskOffset = r * float2(cos(theta), sin(theta));
         float2 pixelOffset = mul(rotation, pcfDiskOffset) * pixelRadius;
-        float3 sampleShadowPos = shadowPos + float3(pixelOffset, sample_bias);
+        float3 sampleShadowPos = shadowPos + float3(pixelOffset, -sample_bias);
 
         float3 shadowCoord = float3(sampleShadowPos.xy, cascade);
         float sampleDepth = solidShadowMap.Sample(shadowCoord).r;
-        final.x += step(shadowPos.z, sampleDepth);
-        final.y += max(shadowPos.z - sampleDepth, 0.0);
+
+        float sampleDist = length(float3(pixelOffset, shadowPos.z - sampleDepth) / GetShadowProjectionScale(cascade));
+
+        float3 sample_color = exp(-16.0 * rcp(sss) * sampleDist * sss_absorb);
+
+        // final.x += step(sampleShadowPos.z, sampleDepth);
+        // final.y += max(shadowPos.z - sampleDepth, 0.0);
+        accumColor += sample_color * step(sampleShadowPos.z, sampleDepth);
     }
 
-    return final / half2(Shadow_SssPcfSamples);
+    return half3(accumColor / Shadow_SssPcfSamples);
 }

@@ -1,6 +1,7 @@
 import aperture;
 import buffers.ObjectData;
 import lib.common;
+import lib.blocks;
 import lib.material.pbr;
 import lib.light.brdf;
 import lib.light.fresnel;
@@ -157,15 +158,18 @@ void applyPointLights(ComputeInput input) {
         normals.unpack(texNormalGB[uv]);
 
         ObjectData_MatLit mat_lit;
-        mat_lit.unpackSpecular(texMatLightGB[uv].r);
+        mat_lit.unpack(texMatLightGB[uv]);
 
         float2 texcoord = (input.globalPos.xy + 0.5) / float2(ap.game.screenSize);
         if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
-        float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
-        // float3 viewPos = project(ap.camera.projectionInv, clipPos);
-        // float3 localPos = mul3(ap.camera.viewInv, viewPos);
-        float3 localPos = project(scene[0].viewProjectionInv, clipPos);
+        float3 ndcPos = float3(texcoord, depth) * 2.0 - 1.0;
+
+        if (mat_lit.blockMapId == BLOCK_HAND) {
+            ndcPos.z /= MC_HAND_DEPTH;
+        }
+
+        float3 localPos = project(scene[0].viewProjectionInv, ndcPos);
 
         float3 viewDir = -normalize(localPos);
 
