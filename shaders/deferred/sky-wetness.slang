@@ -53,9 +53,18 @@ half2 skyWetness(float2 pos : SV_Position) : SV_Target0 {
         if (!RENDER_TRANSLUCENT) {
             ObjectData_MatLit mat_lit;
             mat_lit.unpackLightOcclusion(texMatLightGB_translucent[uv].g);
-            if (mat_lit.blockMapId == BLOCK_WATER) {
-                wetnessF = 1.0;
-                puddleF = 0.0;
+
+            if (ap.camera.fluid == 1) {
+                if (mat_lit.blockMapId != BLOCK_WATER) {
+                    wetnessF = 1.0;
+                    puddleF = 0.0;
+                }
+            }
+            else {
+                if (mat_lit.blockMapId == BLOCK_WATER) {
+                    wetnessF = 1.0;
+                    puddleF = 0.0;
+                }
             }
         }
     }

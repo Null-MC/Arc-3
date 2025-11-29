@@ -1,14 +1,16 @@
 screen.SKY=Sky
 
+option.SKY.WIND_ENABLED=Wind
+
 option.SKY.SEA_LEVEL=Sea Level
+
+option.SKY.WEATHER_OPACITY=Weather Opacity
+
+option.SKY.FOG_ENABLED=Fog
 
 option.SKY.FOG_DENSITY=Fog Density
 
 option.SKY.FOG_NOISE=Chunky Fog
-
-option.SKY.WIND_ENABLED=Wind
-
-option.SKY.WEATHER_OPACITY=Weather Opacity
 
 
 screen.WATER=Water

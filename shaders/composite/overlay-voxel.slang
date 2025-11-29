@@ -264,7 +264,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
         final_color = fma(final_color, half3(1.0 - translucent.a), translucent.rgb);
     }
 
-    if (ap.camera.fluid == 1) {
+    if (!Sky_FogEnabled && ap.camera.fluid == 1) {
         final_color *= opaqueWaterTint;
     }
     

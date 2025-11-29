@@ -5,6 +5,7 @@ import lib.sampling.depth;
 import lib.light.brdf;
 import lib.light.floodfill;
 import lib.light.shadow;
+import lib.water.common;
 import lib.voxel.froxel;
 import lib.sky.common;
 import lib.sky.density;
@@ -158,9 +159,33 @@ void updateFroxels(ComputeInput input) {
 
         if (shadowCascade >= 0) {
             float3 shadowPos = mul3(ap.celestial.projection[shadowCascade], shadowViewPos);
-            skyLight *= SampleShadowColor(shadowPos * 0.5 + 0.5, shadowCascade);
+            // skyLight *= SampleShadowColor(shadowPos * 0.5 + 0.5, shadowCascade);
+            shadowPos = shadowPos * 0.5 + 0.5;
 
             // TODO: shadow water depth?
+            float3 shadowCoord = float3(shadowPos.xy, shadowCascade);
+            float depthOpaque = solidShadowMap.Sample(shadowCoord);
+
+            half3 shadow;
+            if (shadowPos.z > depthOpaque) shadow = half3(0.0);
+            else {
+                float depthTrans = shadowMap.Sample(shadowCoord);
+
+                if (shadowPos.z + EPSILON <= depthTrans) shadow = half3(1.0);
+                else {
+                    shadow = texShadowColor.Sample(shadowCoord);
+
+                    // TODO: don't use camera check, causes noticeable transition
+                    if (ap.camera.fluid == 1) {
+                        // float scale = GetShadowProjectionScale(shadowCascade).z;
+                        float scale = (-2.0 / ap.celestial.projection[shadowCascade][2][2]);
+                        float waterDepth = max(shadowPos.z - depthTrans, 0.0) * scale;
+                        if (waterDepth > 0.0) shadow *= exp(-waterDepth * Water_AbsorbColor);
+                    }
+                }
+            }
+
+            skyLight *= shadow;
         }
 
         float3 skyTrace_localEnd = localPos + scene[0].SkyLightLocalDir * Froxel_SkyLight_TraceDist;
@@ -179,7 +204,9 @@ void updateFroxels(ComputeInput input) {
             skyLight *= exp(-extinction);
         }
 
-        float3 ambient = sampleSkyMultiScatter(skyPos, scene[0].SunLocalDir);
+        float3 ambient = 0.0;
+        if (ap.camera.fluid != 1)
+            ambient += sampleSkyMultiScatter(skyPos, scene[0].SunLocalDir);
         // ambient = ambient * ap.camera.BrightnessSmooth; + VL_MinLight;
 
         float sky_VoL = dot(localDir, scene[0].SkyLightLocalDir);

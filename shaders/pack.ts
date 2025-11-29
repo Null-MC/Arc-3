@@ -12,7 +12,6 @@ import {ApplyLightColors} from "./scripts/Lights";
 const DEBUG = true;
 const DEBUG_FROXELS = false;
 const DEBUG_LIGHT_TILES = false;
-const FROXEL_ENABLED = true;
 
 let dimension: Dimensions;
 let BlockMappings: BlockMap;
@@ -96,6 +95,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     const globalExports = pipeline.createExportList()
         .addInt('DIMENSION', dimension.Index)
         .addBool('World_HasSky', dimension.World_HasSky)
+        .addBool('Sky_FogEnabled', options.Sky_FogEnabled)
         .addBool('Sky_FogNoise', options.Sky_FogNoise)
         .addBool('Sky_WindEnabled', options.Sky_WindEnabled)
         .addInt('MATERIAL_FORMAT', options.Material_Format)
@@ -458,7 +458,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         floodfill = new FloodFill(pipeline, options.Lighting_FloodFill_Size);
     }
 
-    if (FROXEL_ENABLED) {
+    if (options.Sky_FogEnabled) {
         froxels = new Froxels(pipeline, screenWidth, screenHeight);
     }
 
@@ -1222,7 +1222,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .compile();
             }
 
-            if (FROXEL_ENABLED) {
+            if (options.Sky_FogEnabled) {
                 froxels.create(compositeStage).compile();
 
                 finalFlipper.flip();
@@ -1400,7 +1400,7 @@ export function beginFrame(state : WorldState) : void {
         floodfill.update(alt);
     }
 
-    if (froxels && FROXEL_ENABLED) {
+    if (options.Sky_FogEnabled && froxels) {
         froxels.update(alt);
     }
 

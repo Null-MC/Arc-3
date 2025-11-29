@@ -38,7 +38,7 @@ void buildVoxelMask(ComputeInput input) {
 		else if (block.isFullBlock) maskId = MaskId_Solid;
 		else if (block.hasAnyTag(partial_tags)) {
 			maskId = MaskId_Tint;
-			tint = half3(0.5);
+			// tint = half3(0.5);
 		}
 		else if (block.hasAnyTag(TAG_TINTS_LIGHT)) {
 			maskId = MaskId_Tint;

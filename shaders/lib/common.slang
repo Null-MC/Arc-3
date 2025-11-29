@@ -12,6 +12,7 @@ RWTexture2D<float4> imgDebug;
 
 extern static const int DIMENSION;
 extern static const bool World_HasSky;
+extern static const bool Sky_FogEnabled;
 extern static const bool TAA_Enabled;
 extern static const bool Debug_WhiteWorld;
 

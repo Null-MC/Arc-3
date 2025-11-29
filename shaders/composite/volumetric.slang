@@ -4,6 +4,7 @@ import lib.noise.IGN;
 import lib.sky.common;
 import lib.sky.density;
 import lib.sky.scattering;
+import lib.water.common;
 import lib.voxel.froxel;
 
 extern static const int VL_StepCount = 32;
@@ -35,10 +36,17 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
     float dither = IGN_TAA(pos);
 
     float3 scattering = 0.0;
-    float transmittance = 1.0;
+    float3 transmittance = 1.0;
 
     float stepDist = viewDistFinal / VL_StepCount;
-    float extinction_base = 0.001 * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase);
+    float3 extinction_base = 0.001 * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase);
+
+    // TODO: replace this with a better check!
+    bool isWater = ap.camera.fluid == 1;
+
+    if (isWater) {
+        extinction_base = Water_AbsorbColor;
+    }
 
     for (uint i = 0; i < VL_StepCount; i++) {
         float stepF = (i + dither) / VL_StepCount;
@@ -49,11 +57,12 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
         half3 froxel = texFroxel_write.Sample(trace_bufferPos / Froxel_Resolution);
 
         float3 trace_localPos = localPosEnd * stepF;
-        float sample_density = SampleFogDensity(trace_localPos);
+        float sample_density = isWater ? 1.0
+            : SampleFogDensity(trace_localPos);
 
         float3 inScattering = froxel * sample_density;
-        float extinction = extinction_base * sample_density;
-        float sampleTransmittance = exp(-max(extinction * stepDist, EPSILON));
+        float3 extinction = extinction_base * sample_density;
+        float3 sampleTransmittance = exp(-max(extinction * stepDist, EPSILON));
         float3 scatteringIntegral = (inScattering - inScattering * sampleTransmittance) / max(extinction, EPSILON);
 
         scattering += scatteringIntegral * transmittance;

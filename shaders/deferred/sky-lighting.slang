@@ -133,7 +133,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         if (!Lighting_GI || RENDER_TRANSLUCENT) {
             // half3 sss_ambient = sampleSkyIrradiance(-normals.tex) * lmcoord_y;
             half3 sss_ambient = sampleSkyIrradiance(-viewLocalDir);
-            sssFinal += sss_ambient * lmcoord_y;
+            sssFinal += 0.3 * sss_ambient * lmcoord_y;
         }
 
         // float NoLm = max(dot(normals.tex, scene[0].SkyLightLocalDir), 0.0);
