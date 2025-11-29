@@ -54,7 +54,7 @@ FragmentOutput reprojectScene(float2 pos : SV_Position) {
     }
 
     float viewDist = length(localPos);
-    float distThreshold = 0.004 * viewDist;
+    float distThreshold = 0.004 * pow2(viewDist);
     float3 last_localPos = texPositionPrev.Sample(prev_screenPos.xy);
     float3 localOffset = last_localPos - prev_localPos;
     if (dot(localOffset, localOffset) > distThreshold) weight = 0.5;

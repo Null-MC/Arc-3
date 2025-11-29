@@ -49,8 +49,11 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         uint normalDataG = texNormalGB_translucent[uv_full].g;
         uint2 matLitData = texMatLightGB_translucent[uv_full];
 
-        float2 texcoord = pos / BufferSize;
+        // float2 texcoord = pos / BufferSize;
         // if (TAA_Enabled) texcoord -= scene[0].taa_jitter * BufferScale;
+
+        float2 texcoord = (uv_full + 0.5) / ap.game.screenSize;
+        if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
         float3 screenPos = float3(texcoord, depth);
         float3 clipPos = screenPos * 2.0 - 1.0;

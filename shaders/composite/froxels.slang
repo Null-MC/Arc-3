@@ -143,6 +143,8 @@ void updateFroxels(ComputeInput input) {
 
     float dither = hash13(seed);
 
+    bool isWater = ap.voxel[int3(floor(localPos + ap.camera.position))].block.isFluid;
+
     float3 scatter = 0.0;
     float transmit = 1.0;
 
@@ -174,9 +176,12 @@ void updateFroxels(ComputeInput input) {
                 if (shadowPos.z + EPSILON <= depthTrans) shadow = half3(1.0);
                 else {
                     shadow = texShadowColor.Sample(shadowCoord);
+                    shadow = RgbToLinear(shadow);
 
                     // TODO: don't use camera check, causes noticeable transition
-                    if (ap.camera.fluid == 1) {
+                    // bool isWater = true;//ap.camera.fluid == 1;
+
+                    if (isWater) {
                         // float scale = GetShadowProjectionScale(shadowCascade).z;
                         float scale = (-2.0 / ap.celestial.projection[shadowCascade][2][2]);
                         float waterDepth = max(shadowPos.z - depthTrans, 0.0) * scale;
@@ -205,8 +210,8 @@ void updateFroxels(ComputeInput input) {
         }
 
         float3 ambient = 0.0;
-        if (ap.camera.fluid != 1)
-            ambient += sampleSkyMultiScatter(skyPos, scene[0].SunLocalDir);
+        // if (ap.camera.fluid != 1)
+            // ambient += sampleSkyMultiScatter(skyPos, scene[0].SunLocalDir);
         // ambient = ambient * ap.camera.BrightnessSmooth; + VL_MinLight;
 
         float sky_VoL = dot(localDir, scene[0].SkyLightLocalDir);

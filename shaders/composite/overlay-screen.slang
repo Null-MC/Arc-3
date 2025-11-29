@@ -139,7 +139,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     half3 opaqueWaterTint = half3(exp(-(waterDepthL + EPSILON) * Water_AbsorbColor));
 
     if (hasOverlay) {
-        if (ap.camera.fluid == 0 && waterDepthL > 0.0) {
+        if (!Sky_FogEnabled && ap.camera.fluid == 0 && waterDepthL > 0.0) {
             opaque_color *= opaqueWaterTint;
         }
 

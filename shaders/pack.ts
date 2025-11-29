@@ -1050,8 +1050,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     
                     if (options.Lighting_Resolution != 0) {
                         reflectStage.createCompute("opaque-reflection-upscale")
-                            .location('composite/upscale-nearest', "upscale_nearest")
-                            // .location('composite/upscale-weighted', "upscale_weighted")
+                            // .location('composite/upscale-nearest', "upscale_nearest")
+                            .location('composite/upscale-weighted', "upscale_weighted")
                             .workGroups(
                                 Math.ceil(screenWidth / 16),
                                 Math.ceil(screenHeight / 16),
@@ -1091,6 +1091,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         .location('deferred/reflect-overlay', 'overlayReflections')
                         .target(0, finalFlipper.getWriteTexture())
                         .overrideObject('texSource', finalFlipper.getReadTexture().name())
+                        .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                         .compile();
                 });
             }
@@ -1175,6 +1176,24 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         });
 
         withSubList(postRenderStage, 'composite', compositeStage => {
+            if (options.Sky_FogEnabled) {
+                froxels.create(compositeStage).compile();
+            }
+
+            if (options.Sky_FogEnabled && options.Lighting_Refraction_Mode != RefractMode.WorldSpace) {
+                finalFlipper.flip();
+
+                compositeStage.createComposite('composite-volumetric-far')
+                    .location('composite/volumetric-far', 'overlayVolumetrics')
+                    .target(0, finalFlipper.getWriteTexture())
+                    // .overrideObject('texDepth', 'solidDepthTex')
+                    .overrideObject('texSource', finalFlipper.getReadTexture().name())
+                    .exportInt('Froxel_Width', froxels.BufferWidth)
+                    .exportInt('Froxel_Height', froxels.BufferHeight)
+                    .exportInt('Froxel_Depth', froxels.BufferDepth)
+                    .compile();
+            }
+
             finalFlipper.flip();
 
             let location = options.Lighting_Refraction_Mode == RefractMode.WorldSpace
@@ -1216,6 +1235,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .location('composite/reflect_overlay', 'overlayReflections')
                     .target(0, finalFlipper.getWriteTexture())
                     .overrideObject('texSource', finalFlipper.getReadTexture().name())
+                    .overrideObject('texMatLightGB', texMatLightGB_translucent.name())
                     .exportInt('BufferWidth', Tracing_width)
                     .exportInt('BufferHeight', Tracing_height)
                     .exportInt('BufferScale', Tracing_scale)
@@ -1223,12 +1243,10 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             }
 
             if (options.Sky_FogEnabled) {
-                froxels.create(compositeStage).compile();
-
                 finalFlipper.flip();
 
-                compositeStage.createComposite('composite-volumetric')
-                    .location('composite/volumetric', 'overlayVolumetrics')
+                compositeStage.createComposite('composite-volumetric-near')
+                    .location('composite/volumetric-near', 'overlayVolumetrics')
                     .target(0, finalFlipper.getWriteTexture())
                     .overrideObject('texDepth', 'mainDepthTex')
                     .overrideObject('texSource', finalFlipper.getReadTexture().name())

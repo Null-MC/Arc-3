@@ -35,11 +35,11 @@ half4 accumulateReflections(float2 pos : SV_Position) : SV_Target0 {
         float roughL = pow2(roughness);
 
         float _maxFrames = lerp(2.0, float(MaxFrames), roughL);
-        counter = clamp(color_prev.a * step(0.6, reproj.z), 0, _maxFrames);
+        counter = clamp(color_prev.a * step(0.6, reproj.z), 0, _maxFrames) + 1;
 
         color = texSource.Sample(texcoord);
-        color = lerp(color_prev.rgb, color, rcp(counter + 1.0));
+        color = lerp(color_prev.rgb, color, rcp(counter));
     }
 
-    return half4(float4(color, counter + 1.0));
+    return half4(float4(color, counter));
 }

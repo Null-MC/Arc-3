@@ -17,6 +17,7 @@ import lib.voxel.voxel_sample;
 import lib.voxel.dda;
 import lib.screen_trace;
 
+extern static const int Reflect_SampleCount = 2;
 extern static const bool Reflect_Rough;
 extern static const bool Reflect_SS_Fallback;
 extern static const int Reflect_VoxelSteps;
@@ -76,21 +77,23 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
         // f0_metal = (half)lerp(f0_metal, 0.02, wetness);
 
+        half3 f0 = lerp(half3(f0_metal), albedo.rgb, metalness);
         half lmcoord_y = pow2(mat_lit.lmcoord.y);
         half roughL = pow2(roughness);
-
-        float dither = IGN_TAA(pos);
-
-        float3 reflectNormal = Reflect_Rough
-            ? randomizeNormal(int2(pos), normals.tex, roughL)
-            : normals.tex;
         
         float viewDist = length(viewPos);
         float3 viewDir = viewPos / viewDist;
+
+        float dither = IGN_TAA(pos);
+
+        [ForceUnroll]
+        for (int sample_i = 0; sample_i < Reflect_SampleCount; sample_i++) {
+        float3 reflectNormal = Reflect_Rough
+            ? randomizeNormal(int2(pos + float2(13, 5)*sample_i), normals.tex, roughL)
+            : normals.tex;
+
         float3 reflect_viewNormal = mul(float3x3(ap.camera.view), reflectNormal);
         float3 reflect_viewDir = reflect(viewDir, reflect_viewNormal);
-
-
         half3 reflectColor = half3(0.65);
 
         bool ss_hit = false;
@@ -215,7 +218,6 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
                 reflectColor *= half3(exp(-traceWaterDist * Water_AbsorbColor));
         }
 
-        half3 f0 = lerp(half3(f0_metal), albedo.rgb, metalness);
         half NoVm = max(dot(reflectNormal, -localDir), (half)0.0);
         half3 F_NoV = F_Lazanyi2019(NoVm, f0);
 
@@ -223,8 +225,10 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         // imgDebug[uv] = float4(LinearToRgb(reflectColor * 0.008), 1.0);
 
-        finalColor = F_NoV * ((half)1.0 - roughL) * reflectColor * specular_tint;
+        finalColor += F_NoV * reflectColor * specular_tint;
+        // finalColor = reflectColor * specular_tint;
+        }
     }
 
-    return half4(finalColor, (half)1.0);
+    return half4(finalColor / Reflect_SampleCount, (half)1.0);
 }
