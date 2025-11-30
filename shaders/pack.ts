@@ -425,17 +425,19 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .clearColor(0, 0, 0, 0)
             .build();
 
-        texSkyTransmit = pipeline.createTexture('texSkyTransmit')
-            .format(Format.RGB16F)
+        texSkyTransmit = pipeline.createImageTexture('texSkyTransmit', 'imgSkyTransmit')
+            .format(Format.RGBA16F)
             .width(128)
             .height(64)
+            .depth(8)
             .clear(false)
             .build();
 
-        texSkyMultiScatter = pipeline.createTexture('texSkyMultiScatter')
-            .format(Format.RGB16F)
+        texSkyMultiScatter = pipeline.createImageTexture('texSkyMultiScatter', 'imgSkyMultiScatter')
+            .format(Format.RGBA16F)
             .width(32)
             .height(32)
+            .depth(8)
             .clear(false)
             .build();
 
@@ -563,7 +565,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .format(Format.RGBA8)
             .width(screenWidth)
             .height(screenHeight)
-            .clear(true)
+            .clear(false)
             .build();
     }
 
@@ -600,19 +602,26 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 .compile();
         }
 
-        // if (dimension.World_HasSky) {
-        //     setupStage.createComposite('sky-transmit')
-        //         .location('setup/sky-transmit', 'bakeSkyTransmission')
-        //         .target(0, texSkyTransmit)
-        //         .exportInt('BufferWidth', texSkyTransmit.width())
-        //         .exportInt('BufferHeight', texSkyTransmit.height())
-        //         .compile();
+        if (dimension.World_HasSky) {
+            setupStage.createCompute('sky-transmit')
+                .location('setup/sky-transmit', 'bakeSkyTransmission')
+                .workGroups(
+                    Math.ceil(texSkyTransmit.width() / 8),
+                    Math.ceil(texSkyTransmit.height() / 8),
+                    Math.ceil(texSkyTransmit.depth() / 4))
+                .exportInt('BufferWidth', texSkyTransmit.width())
+                .exportInt('BufferHeight', texSkyTransmit.height())
+                .exportInt('BufferDepth', texSkyTransmit.depth())
+                .compile();
 
-        //     setupStage.createComposite('sky-multi-scatter')
-        //         .location('setup/sky-multi-scatter', 'bakeSkyMultiScattering')
-        //         .target(0, texSkyMultiScatter)
-        //         .compile();
-        // }
+            setupStage.createCompute('sky-multi-scatter')
+                .location('setup/sky-multi-scatter', 'bakeSkyMultiScattering')
+                .workGroups(
+                    Math.ceil(texSkyMultiScatter.width() / 8),
+                    Math.ceil(texSkyMultiScatter.height() / 8),
+                    Math.ceil(texSkyMultiScatter.depth() / 4))
+                .compile();
+        }
     });
 
 
@@ -643,17 +652,17 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         //     .compile();
 
         if (dimension.World_HasSky) {
-            beginStage.createComposite('sky-transmit')
-                .location('setup/sky-transmit', 'bakeSkyTransmission')
-                .target(0, texSkyTransmit)
-                .exportInt('BufferWidth', texSkyTransmit.width())
-                .exportInt('BufferHeight', texSkyTransmit.height())
-                .compile();
+            // beginStage.createComposite('sky-transmit')
+            //     .location('setup/sky-transmit', 'bakeSkyTransmission')
+            //     .target(0, texSkyTransmit)
+            //     .exportInt('BufferWidth', texSkyTransmit.width())
+            //     .exportInt('BufferHeight', texSkyTransmit.height())
+            //     .compile();
 
-            beginStage.createComposite('sky-multi-scatter')
-                .location('setup/sky-multi-scatter', 'bakeSkyMultiScattering')
-                .target(0, texSkyMultiScatter)
-                .compile();
+            // beginStage.createComposite('sky-multi-scatter')
+            //     .location('setup/sky-multi-scatter', 'bakeSkyMultiScattering')
+            //     .target(0, texSkyMultiScatter)
+            //     .compile();
 
             beginStage.createComposite('sky-view')
                 .location('pre/sky-view', 'bakeSkyView')

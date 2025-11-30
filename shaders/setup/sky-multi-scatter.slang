@@ -1,11 +1,16 @@
 import aperture;
+import buffers.sky;
 import lib.common;
 import lib.sky.common;
 import lib.sky.scattering;
 import lib.sky.sample_transmit;
 
+static const uint3 viewportDimensions = uint3(32, 32, 8);
 static const float mulScattSteps = 20.0;
 static const int sqrtSamples = 8;
+
+[[vk::image_format("rgba16f")]]
+RWTexture3D<half3> imgSkyMultiScatter;
 
 Sampler2D<float3> texSkyTransmit;
 
@@ -18,7 +23,10 @@ float3 getSphericalDir(float theta, float phi) {
     return float3(sinPhi*sinTheta, cosPhi, sinPhi*cosTheta);
 }
 
-void getMulScattValues(float3 pos, float3 sunDir, out float3 lumTotal, out float3 fms) {
+void getMulScattValues(float3 pos, float3 sunDir, float rainF, out float3 lumTotal, out float3 fms) {
+    SkyParameters sky;
+    lerp(skyClear, skyRain, rainF, sky);
+
     lumTotal = 0.0;
     fms = 0.0;
 
@@ -56,15 +64,18 @@ void getMulScattValues(float3 pos, float3 sunDir, out float3 lumTotal, out float
 
                 float3 newPos = pos + t*rayDir;
 
-                float3 rayleighScattering, extinction;
-                float mieScattering;
-                getScatteringValues(newPos, rayleighScattering, mieScattering, extinction);
+                // float mieScattering;
+                // float3 rayleighScattering, extinction;
+                // getScatteringValues(newPos, rayleighScattering, mieScattering, extinction);
 
-                float3 sampleTransmittance = exp(-dt*extinction);
+                AtmosScatter scatter;
+                getScatteringValues(newPos, sky, scatter);
+
+                float3 sampleTransmittance = exp(-dt*scatter.extinction);
 
                 // Integrate within each segment.
-                float3 scatteringNoPhase = rayleighScattering + mieScattering;
-                float3 scatteringF = (scatteringNoPhase - scatteringNoPhase * sampleTransmittance) / extinction;
+                float3 scatteringNoPhase = scatter.rayleighScattering + scatter.mieScattering;
+                float3 scatteringF = (scatteringNoPhase - scatteringNoPhase * sampleTransmittance) / scatter.extinction;
                 lumFactor += transmittance*scatteringF;
 
                 // This is slightly different from the paper, but I think the paper has a mistake?
@@ -72,18 +83,18 @@ void getMulScattValues(float3 pos, float3 sunDir, out float3 lumTotal, out float
                 float3 sunTransmittanceLux = sampleSkyTransmit(newPos, sunDir) * scene[0].SunColor;
                 float3 moonTransmittanceLux = sampleSkyTransmit(newPos, -sunDir) * scene[0].MoonColor;
 
-                float3 rayleighInScattering_sun = rayleighScattering * rayleighPhase_sun;
-                float mieInScattering_sun = mieScattering * miePhase_sun;
+                float3 rayleighInScattering_sun = scatter.rayleighScattering * rayleighPhase_sun;
+                float mieInScattering_sun = scatter.mieScattering * miePhase_sun;
 
-                float3 rayleighInScattering_moon = rayleighScattering * rayleighPhase_moon;
-                float mieInScattering_moon = mieScattering * miePhase_moon;
+                float3 rayleighInScattering_moon = scatter.rayleighScattering * rayleighPhase_moon;
+                float mieInScattering_moon = scatter.mieScattering * miePhase_moon;
 
                 float3 inScattering = (rayleighInScattering_sun + mieInScattering_sun) * sunTransmittanceLux
                                   + (rayleighInScattering_moon + mieInScattering_moon) * moonTransmittanceLux
                                   + Sky_MinLight;
 
                 // Integrated scattering within path segment.
-                float3 scatteringIntegral = (inScattering - inScattering * sampleTransmittance) / extinction;
+                float3 scatteringIntegral = (inScattering - inScattering * sampleTransmittance) / scatter.extinction;
 
                 lum += scatteringIntegral * transmittance;
                 transmittance *= sampleTransmittance;
@@ -108,10 +119,11 @@ void getMulScattValues(float3 pos, float3 sunDir, out float3 lumTotal, out float
 }
 
 
-[[shader("fragment")]]
-float3 bakeSkyMultiScattering(float2 pos : SV_Position) : SV_Target0 {
-    const uint2 viewportDimensions = 32;
-    float2 uv = pos / viewportDimensions;
+[[shader("compute")]]
+[numthreads(8,8,4)]
+void bakeSkyMultiScattering(uint3 globalPos : SV_DispatchThreadID) {
+    float2 uv = (globalPos.xy + 0.5) / viewportDimensions.xy;
+    if (!all(globalPos < viewportDimensions)) return;
 
     float sunCosTheta = 2.0*uv.x - 1.0;
     float sunTheta = safeacos(sunCosTheta);
@@ -120,8 +132,10 @@ float3 bakeSkyMultiScattering(float2 pos : SV_Position) : SV_Target0 {
     float3 pos = float3(0.0, height, 0.0); 
     float3 sunDir = normalize(float3(0.0, sunCosTheta, -sin(sunTheta)));
     
-    float3 lum, f_ms;
-    getMulScattValues(pos, sunDir, lum, f_ms);
+    float rainF = smoothstep(0.0, 1.0, globalPos.z / float(viewportDimensions.z - 1));
 
-    return lum / (1.0 - f_ms); 
+    float3 lum, f_ms;
+    getMulScattValues(pos, sunDir, rainF, lum, f_ms);
+
+    imgSkyMultiScatter[globalPos] = half3(lum / max(1.0 - f_ms, EPSILON)); 
 }

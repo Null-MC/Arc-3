@@ -60,7 +60,7 @@ float SampleFogDensity(const in float3 localPos) {
     float3 worldPos = localPos + ap.camera.position;
 
     if (Sky_FogNoise) {
-        density *= SampleFogNoise_low(worldPos)*2.0 + 0.25;
+        density *= SampleFogNoise_low(worldPos) + 0.5;
     }
 
     float worldPosY = localPos.y + ap.camera.position.y;

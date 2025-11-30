@@ -1,8 +1,15 @@
-public module scattering;
+public module sky_scattering;
 
 import aperture;
-import lib.common;
+import buffers.sky;
 import lib.sky.common;
+
+
+struct AtmosScatter {
+    float3 rayleighScattering;
+    float mieScattering;
+    float3 extinction;
+};
 
 
 float getSkyAltitude(const in float3 skyPos) {
@@ -10,23 +17,23 @@ float getSkyAltitude(const in float3 skyPos) {
 }
 
 float getMieDensity(const in float altitudeKM) {
-    return exp(-altitudeKM / 1.2);// * lerp(1.0, 2.0, ap.world.rainStrength);
+    return exp(-altitudeKM / 1.2);
 }
 
-void getScatteringValues(float3 skyPos, out float3 rayleighScattering, out float mieScattering, out float3 extinction) {
+void getScatteringValues(const in float3 skyPos, const in SkyParameters sky, out AtmosScatter result) {
     float altitudeKM = getSkyAltitude(skyPos);
     float mieDensity = getMieDensity(altitudeKM);
     float rayleighDensity = exp(-altitudeKM/8.0);
 
-    rayleighScattering = scene[0].sky.rayleighScatteringBase*rayleighDensity;
-    float rayleighAbsorption = scene[0].sky.rayleighAbsorptionBase*rayleighDensity;
+    result.rayleighScattering = sky.rayleighScatteringBase * rayleighDensity;
+    float rayleighAbsorption = sky.rayleighAbsorptionBase * rayleighDensity;
 
-    mieScattering = scene[0].sky.mieScatteringBase*mieDensity;
-    float mieAbsorption = scene[0].sky.mieAbsorptionBase*mieDensity;
+    result.mieScattering = sky.mieScatteringBase * mieDensity;
+    float mieAbsorption = sky.mieAbsorptionBase * mieDensity;
 
-    float3 ozoneAbsorption = scene[0].sky.ozoneAbsorptionBase * max(0.0, 1.0 - abs(altitudeKM-25.0)/15.0);
+    float3 ozoneAbsorption = sky.ozoneAbsorptionBase * max(0.0, 1.0 - abs(altitudeKM-25.0)/15.0);
 
-    extinction = rayleighScattering + rayleighAbsorption + mieScattering + mieAbsorption + ozoneAbsorption;
+    result.extinction = (result.rayleighScattering + rayleighAbsorption) + (result.mieScattering + mieAbsorption) + ozoneAbsorption;
 }
 
 // float3 atmosAbsorb(const in float3 skyPos, const in float3 lightDir) {

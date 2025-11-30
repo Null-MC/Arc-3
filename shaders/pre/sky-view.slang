@@ -30,11 +30,14 @@ float3 raymarchScattering(float3 pos, float3 rayDir, float3 sunDir, float tMax, 
         
         float3 newPos = pos + t*rayDir;
 
-        float3 rayleighScattering, extinction;
-        float mieScattering;
-        getScatteringValues(newPos, rayleighScattering, mieScattering, extinction);
+        // float3 rayleighScattering, extinction;
+        // float mieScattering;
+        // getScatteringValues(newPos, rayleighScattering, mieScattering, extinction);
         
-        float3 sampleTransmittance = exp(-dt*extinction);
+        AtmosScatter scatter;
+        getScatteringValues(newPos, scene[0].sky, scatter);
+
+        float3 sampleTransmittance = exp(-dt*scatter.extinction);
 
         float3 sunTransmittanceLux = sampleSkyTransmit(newPos, sunDir) * scene[0].SunColor;
         float3 moonTransmittanceLux = sampleSkyTransmit(newPos, -sunDir) * scene[0].MoonColor;
@@ -48,11 +51,11 @@ float3 raymarchScattering(float3 pos, float3 rayDir, float3 sunDir, float tMax, 
         float3 rayleighInScattering_moon = rayleighPhaseValue_moon * moonTransmittanceLux;
         float3 mieInScattering_moon = miePhaseValue_moon * moonTransmittanceLux;
 
-        float3 inScattering = rayleighScattering * (rayleighInScattering_sun + rayleighInScattering_moon + psiMS)
-                          + mieScattering * (mieInScattering_sun + mieInScattering_moon + psiMS);
+        float3 inScattering = scatter.rayleighScattering * (rayleighInScattering_sun + rayleighInScattering_moon + psiMS)
+                          + scatter.mieScattering * (mieInScattering_sun + mieInScattering_moon + psiMS);
 
         // Integrated scattering within path segment.
-        float3 scatteringIntegral = (inScattering - inScattering * sampleTransmittance) / extinction;
+        float3 scatteringIntegral = (inScattering - inScattering * sampleTransmittance) / scatter.extinction;
 
         lum += scatteringIntegral * transmittance;
         

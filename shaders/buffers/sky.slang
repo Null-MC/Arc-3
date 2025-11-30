@@ -19,10 +19,10 @@ static const SkyParameters skyClear = {
 
 static const SkyParameters skyRain = {
     float3(0.650, 1.381, 0.576),
-    0.3*float3(80.802, 130.558, 200.1),
-    6.0,
-    3.996 * 16.0,
-    4.4 * 16.0,
+    0.2*float3(80.802, 130.558, 200.1),
+    2.0,
+    3.996 * 12.0,
+    4.4 * 12.0,
 };
 
 static const SkyParameters skyEnd = {

@@ -116,7 +116,7 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
 
     if (!RENDER_TRANSLUCENT) {
         // DEBUG
-        imgDebug[uint2(pos)] = half4(output.sss.rgb, (half)1.0);
+        // imgDebug[uint2(pos)] = half4(output.sss.rgb, (half)1.0);
     }
 
     return output;
