@@ -211,8 +211,9 @@ void updateFroxels(ComputeInput input) {
 
         float3 ambient = 0.0;
         // if (ap.camera.fluid != 1)
-            // ambient += sampleSkyMultiScatter(skyPos, scene[0].SunLocalDir);
+            ambient += sampleSkyMultiScatter(skyPos, scene[0].SunLocalDir);
         // ambient = ambient * ap.camera.BrightnessSmooth; + VL_MinLight;
+        if (isWater) ambient *= 0.2;
 
         float sky_VoL = dot(localDir, scene[0].SkyLightLocalDir);
         float miePhase_sky = max(getMiePhase(sky_VoL, 0.2), 0.0);
@@ -261,7 +262,9 @@ void updateFroxels(ComputeInput input) {
         }
     }
 
-    scatter *= 0.001 * scene[0].sky.mieScatteringBase;
+    scatter *= isWater
+        ? Water_ScatterColor
+        : 0.001 * scene[0].sky.mieScatteringBase;
 
     // project last frame position and accumulate
     float3 bufferPosLast = input.globalPos + 0.5;
