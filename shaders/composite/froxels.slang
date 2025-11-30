@@ -143,7 +143,9 @@ void updateFroxels(ComputeInput input) {
 
     float dither = hash13(seed);
 
-    bool isWater = ap.voxel[int3(floor(localPos + ap.camera.position))].block.isFluid;
+    int3 voxelPos = int3(floor(localPos + ap.camera.position));
+    bool isWater = ap.voxel[voxelPos].block.isFluid;
+    // half3 waterColor = ap.
 
     float3 scatter = 0.0;
     float transmit = 1.0;
@@ -258,7 +260,7 @@ void updateFroxels(ComputeInput input) {
         float3 lpvPos = FloodFill_GetBufferPosition(localPos);
         
         if (FloodFill_InBounds(lpvPos)) {
-            scatter += floodfill_sample(lpvPos) * BLOCK_LUX * phaseIso;
+            scatter += floodfill_sample(lpvPos) * (BLOCK_LUX * phaseIso);
         }
     }
 

@@ -126,10 +126,10 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
     half smoothness = (half)1.0 - roughL;
     diffuse *= (half)1.0 - metalness * smoothness;
 
-    diffuse += emission * BLOCK_LUM;
+    // diffuse += emission * BLOCK_LUM;
 
     if (!isGI) {
-        // diffuse += emission * BLOCK_LUM;
+        diffuse += emission * BLOCK_LUM;
 
         if (Debug_WhiteWorld) albedo = WhiteWorldColor;
     }

@@ -100,7 +100,8 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
             // float absorb_depth = 1.0 * (coverage_dist.y / cascadeScale.z) + 0.1;
             // float3 lit = coverage_dist.x * exp(-(absorb_depth * sss_color + EPSILON));
 
-            float3 lit = lerp(sss_shadow, output.shadow.rgb, 0.5*sss);
+            // float3 lit = lerp(sss_shadow, output.shadow.rgb, 0.5*sss);
+            float3 lit = max(sss_shadow, output.shadow.rgb);
             // float3 lit = sss_shadow*0.5 + 0.5*output.shadow.rgb;
 
             // float s = rcp(sss);

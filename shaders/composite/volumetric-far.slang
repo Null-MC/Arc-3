@@ -33,17 +33,17 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
         float3 ndcPos_opaque = float3(texcoord, depth_opaque) * 2.0 - 1.0;
         float3 viewPos_opaque = project(ap.camera.projectionInv, ndcPos_opaque);
         float viewDist_opaque = length(viewPos_opaque);
-        float viewDistFinal_opaque = min(viewDist_opaque, Froxel_MaxDist);
+        // float viewDistFinal_opaque = min(viewDist_opaque, Froxel_MaxDist);
 
         float depth_translucent = mainDepthTex[uv];
         float3 ndcPos_translucent = float3(texcoord, depth_translucent) * 2.0 - 1.0;
         float3 viewPos_translucent = project(ap.camera.projectionInv, ndcPos_translucent);
         float viewDist_translucent = length(viewPos_translucent);
-        float viewDistFinal_translucent = min(viewDist_translucent, Froxel_MaxDist);
+        // float viewDistFinal_translucent = min(viewDist_translucent, Froxel_MaxDist);
 
         float3 viewDir = viewPos_opaque / viewDist_opaque;
-        float3 viewPosStart = viewDir * viewDistFinal_translucent;
-        float3 viewPosEnd = viewDir * viewDistFinal_opaque;
+        float3 viewPosStart = viewDir * viewDist_translucent;
+        float3 viewPosEnd = viewDir * viewDist_opaque;
 
         float3 localPosStart = mul3(ap.camera.viewInv, viewPosStart);
         float3 localPosEnd = mul3(ap.camera.viewInv, viewPosEnd);
@@ -53,7 +53,7 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
         float3 scattering = 0.0;
         float3 transmittance = 1.0;
 
-        float traceDist = viewDistFinal_opaque - viewDistFinal_translucent;
+        float traceDist = viewDist_opaque - viewDist_translucent;
         float stepDist = traceDist / VL_StepCount;
 
         float3 extinction_base = 0.001 * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase);
@@ -71,16 +71,21 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
         for (uint i = 0; i < VL_StepCount; i++) {
             float stepF = (i + dither) / VL_StepCount;
 
-            float3 trace_viewPos = lerp(viewPosStart, viewPosEnd, stepF);
-            float3 ndcPos = project(ap.camera.projection, trace_viewPos);
-            float3 trace_bufferPos = Froxel_GetBufferPosition(ndcPos);
-            half3 froxel = texFroxel_write.Sample(trace_bufferPos / Froxel_Resolution);
-
             float3 trace_localPos = lerp(localPosStart, localPosEnd, stepF);
+
             float sample_density = isWater ? 1.0
                 : SampleFogDensity(trace_localPos);
 
-            float3 inScattering = froxel * sample_density;
+            float3 trace_viewPos = lerp(viewPosStart, viewPosEnd, stepF);
+            float3 ndcPos = project(ap.camera.projection, trace_viewPos);
+            float3 trace_bufferPos = Froxel_GetBufferPosition(ndcPos);
+
+            float3 inScattering = 0.0;
+            if (Froxel_InBufferBounds(trace_bufferPos)) {
+                half3 froxel = texFroxel_write.Sample(trace_bufferPos / Froxel_Resolution);
+                inScattering = froxel * sample_density;
+            }
+
             float3 extinction = extinction_base * sample_density;
             float3 sampleTransmittance = exp(-max(extinction * stepDist, EPSILON));
             float3 scatteringIntegral = (inScattering - inScattering * sampleTransmittance) / max(extinction, EPSILON);

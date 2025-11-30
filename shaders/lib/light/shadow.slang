@@ -200,6 +200,8 @@ half3 SSS_PCF(const in float3 shadowPos, const in int cascade, const in float3 s
     float2x2 rotation = GetSampleRotation(fract(dither));
     float seed_pos = hash13(shadowPos * 999.0);
 
+    float3 scale = GetShadowProjectionScale(cascade);
+
     float3 accumColor = 0.0;
     for (int i = 0; i < Shadow_SssPcfSamples; i++) {
         float r = sqrt((i + 0.5) / Shadow_SssPcfSamples);
@@ -215,9 +217,9 @@ half3 SSS_PCF(const in float3 shadowPos, const in int cascade, const in float3 s
         float3 shadowCoord = float3(sampleShadowPos.xy, cascade);
         float sampleDepth = solidShadowMap.Sample(shadowCoord).r;
 
-        float sampleDist = length(float3(pixelOffset, shadowPos.z - sampleDepth) / GetShadowProjectionScale(cascade));
+        float sampleDist = length(float3(pixelOffset, shadowPos.z - sampleDepth) / scale);
 
-        float3 sample_color = exp(-16.0 * rcp(sss) * sampleDist * sss_absorb);
+        float3 sample_color = exp(-3.0 * sampleDist * rcp(sss) * sss_absorb);
 
         // final.x += step(sampleShadowPos.z, sampleDepth);
         // final.y += max(shadowPos.z - sampleDepth, 0.0);
