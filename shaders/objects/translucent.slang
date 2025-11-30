@@ -10,6 +10,7 @@ import lib.sampling.dfd_normal;
 import lib.material.pbr;
 import lib.material.parallax;
 import lib.water.waves;
+import lib.light.fresnel;
 import lib.tbn;
 
 extern static const int RefractMode;
@@ -254,6 +255,13 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
         output.tint = lerp(half3(1.0), albedo, color.a);
         output.tint = LinearToRgb(output.tint);
     }
+
+    // TODO: apply fresnel to opacity?
+    float3 viewLocalDir = -normalize(input.localPos);
+    half f0_metal = mat_f0_metal(mat_lit.specular.g);
+    half NoVm = max((half)dot(normals.tex, viewLocalDir), (half)0.0);
+    half F_NoV = F_Lazanyi2019(NoVm, f0_metal);
+    color.a = 1.0 - ((1.0 - color.a) * (1.0 - F_NoV));
 
     output.albedo = color;
     output.normals = normals.pack();
