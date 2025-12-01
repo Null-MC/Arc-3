@@ -6,6 +6,7 @@ import lib.sky.density;
 import lib.sky.scattering;
 import lib.water.common;
 import lib.voxel.froxel;
+import lib.light.floodfill_sky;
 
 extern static const int VL_StepCount = 16;
 
@@ -60,6 +61,12 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
         float sample_density = isWater ? 1.0
             : SampleFogDensity(trace_localPos);
 
+        float3 trace_skyBufferPos = FloodFill_Sky_GetBufferPosition(trace_localPos);
+        if (FloodFill_Sky_InBounds(trace_skyBufferPos)) {
+            float skyLightF = floodfill_sky_sample(trace_skyBufferPos);
+            sample_density = lerp(4.0, sample_density, skyLightF);
+        }
+
         float3 inScattering = froxel * sample_density;
         float3 extinction = extinction_base * sample_density;
         float3 sampleTransmittance = exp(-max(extinction * stepDist, EPSILON));
@@ -69,7 +76,7 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
         transmittance *= sampleTransmittance;
     }
 
-    color = color * transmittance + scattering;
+    color = half3(color * transmittance + scattering);
 
     return half4(color, (half)1.0);
 }

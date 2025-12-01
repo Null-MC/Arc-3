@@ -24,6 +24,8 @@ Sampler2DArray<float> solidShadowMap;
 Sampler2DArray<half3> texShadowColor;
 Sampler2DArrayShadow solidShadowMapFiltered;
 
+Sampler2DArray<uint> texShadowBlock;
+
 
 float2 Shadow_Distort(const in float2 pos) {
     float factor = length(pos.xy) + Shadow_DistortF;
@@ -36,10 +38,17 @@ void GetShadowProjectionBounds(const in int cascade, out float2 min, out float2 
 }
 
 float3 GetShadowProjectionScale(const in int cascade) {
-    return float3(0.5, 0.5, -0.5) * float3(
+    return float3(
         ap.celestial.projection[cascade][0].x,
         ap.celestial.projection[cascade][1].y,
         ap.celestial.projection[cascade][2].z);
+}
+
+float3 GetShadowProjectionScaleInv(const in int cascade) {
+    return float3(
+        ap.celestial.projectionInv[cascade][0].x,
+        ap.celestial.projectionInv[cascade][1].y,
+        ap.celestial.projectionInv[cascade][2].z);
 }
 
 int GetShadowProjection(const in float3 shadowViewPos, const in float padding) {
@@ -141,7 +150,7 @@ float ShadowBlockerDistance(const in float3 shadowPos, const in int cascade, con
         }
 
         float texDepth = shadowMap.Sample(float3(sampleShadowPos.xy, cascade)).r;
-        float hitDist = max((sampleShadowPos.z - texDepth) / zRange, 0.0);
+        float hitDist = max((sampleShadowPos.z - texDepth) / -zRange, 0.0);
 
         avgDist += hitDist;
         blockers++;// += step(0.0, hitDist);
@@ -220,7 +229,7 @@ half3 SSS_PCF(const in float3 shadowPos, const in int cascade, const in float3 s
     float2x2 rotation = GetSampleRotation(fract(dither));
     float seed_pos = hash13(shadowPos * 999.0);
 
-    float3 scale = GetShadowProjectionScale(cascade);
+    float3 scaleInv = GetShadowProjectionScaleInv(cascade);
 
     float3 accumColor = 0.0;
     for (int i = 0; i < Shadow_SssPcfSamples; i++) {
@@ -242,7 +251,7 @@ half3 SSS_PCF(const in float3 shadowPos, const in int cascade, const in float3 s
         
         float sampleDepth = solidShadowMap.Sample(shadowCoord).r;
 
-        float sampleDist = length(float3(pixelOffset, shadowPos.z - sampleDepth) / scale);
+        float sampleDist = length(float3(pixelOffset, shadowPos.z - sampleDepth) * scaleInv);
 
         float3 sample_color = exp(-3.0 * sampleDist * rcp(sss) * sss_absorb);
 

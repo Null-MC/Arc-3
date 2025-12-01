@@ -10,7 +10,7 @@ extern static const bool Sky_FogNoise;
 Sampler3D<half> texFogNoise;
 
 
-float GetWorldFogDensity() {
+float GetWorldFogDensity(const in float rainStrength) {
     float density;
     switch (DIMENSION) {
         case DIM_END:
@@ -22,7 +22,7 @@ float GetWorldFogDensity() {
         default:
             float dayF = smoothstep(-0.08, 0.12, scene[0].SunLocalDir.y);
             density = lerp(2.4, 0.2, dayF);
-            density = lerp(density, 1.0, ap.world.rainStrength);
+            density = lerp(density, 4.0, rainStrength);
             // density = lerp(density, 1.0, ap.world.thunderStrength);
             break;
     }
@@ -56,7 +56,7 @@ float SampleFogDensity(const in float3 localPos) {
     // float density = getMieDensity(altitudeKM);// * 0.01;
 
     // float density = GetWorldFogDensity();
-    float density = scene[0].WorldFogDensity;
+    float density = 1.0;//scene[0].WorldFogDensity;
     float3 worldPos = localPos + ap.camera.position;
 
     if (Sky_FogNoise) {
@@ -68,8 +68,8 @@ float SampleFogDensity(const in float3 localPos) {
     if (World_HasSky) {
         density *= rcp(1.0 + 0.1*max(worldPosY - settings.Sky_SeaLevel, 0.0));
 
-        float groundFogDensity = smoothstep(0.002, -0.08, scene[0].SunLocalDir.y);
-        groundFogDensity = lerp(groundFogDensity, 1.0, ap.world.rainStrength);
+        // float groundFogDensity = smoothstep(0.002, -0.08, scene[0].SunLocalDir.y);
+        // groundFogDensity = lerp(groundFogDensity, 1.0, ap.world.rainStrength);
 
         // float ground_scale = smoothstep(8.0, 0.0, worldPosY - settings.Sky_SeaLevel);
         // if (Sky_FogNoise) ground_scale *= SampleFogNoise_high(worldPos);

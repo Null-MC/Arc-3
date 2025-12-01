@@ -40,7 +40,8 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
             // DEBUG
             // imgDebug[uint2(pos)] = half4(diffuse * 0.08, (half)1.0);
             
-            diffuse += texGI_final.Sample(texcoord) * mat_lit.occlusion;
+            half3 gi = texGI_final.Sample(texcoord);
+            diffuse += gi * mat_lit.occlusion;
         }
         
         half roughness = mat_roughness(mat_lit.specular.r);

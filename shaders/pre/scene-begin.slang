@@ -28,9 +28,14 @@ void beginScene() {
         GetShadowProjectionBounds(i, scene_writer[0].shadowViewMin[i], scene_writer[0].shadowViewMax[i]);
     }
 
+    scene_writer[0].WorldFogDensity = GetWorldFogDensity(ap.world.rainStrength);
+
     if (DIMENSION != DIM_END && DIMENSION != DIM_NETHER) {
         float blend = smoothstep(0.0, 1.0, ap.world.rainStrength);
         lerp(skyClear, skyRain, blend, scene_writer[0].sky);
+
+        scene_writer[0].sky.mieAbsorptionBase *= scene_writer[0].WorldFogDensity;
+        scene_writer[0].sky.mieScatteringBase *= scene_writer[0].WorldFogDensity;
         //lerp(scene_writer[0].sky, skyThunder, ap.world.thunderStrength, scene_writer[0].sky);
 
         float2 windFallSpeed = lerp(
@@ -41,8 +46,6 @@ void beginScene() {
         float fall_speed = lerp(0.04, 0.25, ap.world.rainStrength);
         scene_writer[0].WeatherOffset -= windFallSpeed * ap.timing.lastFrameTime;
     }
-
-    scene_writer[0].WorldFogDensity = GetWorldFogDensity();
 
     scene_writer[0].FloodFillCenter = GetVoxelCenter(ap.camera.position);
 

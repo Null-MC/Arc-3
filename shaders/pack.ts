@@ -3,6 +3,7 @@ import {BlockMap} from "./scripts/BlockMap";
 import {TagBuilder} from "./scripts/TagBuilder";
 import {Dimensions} from "./scripts/Dimensions";
 import {FloodFill} from "./scripts/FloodFill";
+import {FloodFill_Sky} from "./scripts/FloodFill-Sky";
 import {Froxels} from "./scripts/Froxels";
 import {BufferFlipper} from "./scripts/BufferFlipper";
 import {StreamingBufferBuilder} from "./scripts/StreamingBufferBuilder";
@@ -16,6 +17,7 @@ const DEBUG_LIGHT_TILES = false;
 let dimension: Dimensions;
 let BlockMappings: BlockMap;
 let floodfill: FloodFill | undefined;
+let floodfill_sky: FloodFill_Sky | undefined;
 let froxels: Froxels | undefined;
 
 let texFinalPrevA: BuiltTexture | undefined;
@@ -105,6 +107,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .addInt('RefractMode', options.Lighting_Refraction_Mode)
         .addBool('FloodFill_Enabled', options.Lighting_FloodFill_Enabled)
         .addInt('FloodFill_BufferSize', options.Lighting_FloodFill_Size)
+        .addInt('FloodFill_Sky_BufferSizeXZ', FloodFill_Sky.BufferSizeXZ)
+        .addInt('FloodFill_Sky_BufferSizeY', FloodFill_Sky.BufferSizeY)
         .addBool('PointLight_Enabled', options.Lighting_Point_Enabled)
         .addInt('PointLight_MaxCount', renderConfig.pointLight.maxCount)
         .addInt('Voxel_Resolution', options.Lighting_VoxelResolution)
@@ -367,6 +371,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .build();
 
     let texShadowColor: BuiltTexture | undefined;
+    let texShadowBlock: BuiltTexture | undefined;
     let texSkyTransmit: BuiltTexture | undefined;
     let texSkyMultiScatter: BuiltTexture | undefined;
     let texSkyView: BuiltTexture | undefined;
@@ -418,6 +423,13 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .clearColor(0, 0, 0, 0)
             .build();
 
+        texShadowBlock = pipeline.createArrayTexture('texShadowBlock')
+            .format(Format.R8UI)
+            .width(renderConfig.shadow.resolution)
+            .height(renderConfig.shadow.resolution)
+            .clearColor(0, 0, 0, 0)
+            .build();
+
         texWeather = pipeline.createTexture('texWeather')
             .width(screenWidth)
             .height(screenHeight)
@@ -459,6 +471,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     if (options.Lighting_FloodFill_Enabled) {
         floodfill = new FloodFill(pipeline, options.Lighting_FloodFill_Size);
     }
+
+    floodfill_sky = new FloodFill_Sky(pipeline);
 
     if (options.Sky_FogEnabled) {
         froxels = new Froxels(pipeline, screenWidth, screenHeight);
@@ -681,8 +695,10 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         }
 
         if (options.Lighting_FloodFill_Enabled) {
-            floodfill.create(beginStage, options.Lighting_FloodFill_Size).compile();
+            floodfill.build(beginStage);
         }
+
+        floodfill_sky.build(beginStage);
     });
 
 
@@ -694,27 +710,32 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     function shadowSkyShader(name: string, usage: ProgramUsage) {
         return pipeline.createObjectShader(name, usage)
             .location('objects/shadow_sky');
-            // .target(0, texShadowColor).blendOff(0);
     }
 
     if (dimension.World_HasSky) {
-        shadowSkyShader("shadow-sky", Usage.SHADOW).compile();
+        shadowSkyShader("shadow-sky", Usage.SHADOW)
+            .target(0, texShadowColor).blendOff(0)
+            .target(1, texShadowBlock).blendOff(1)
+            .compile();
 
         shadowSkyShader('shadow-sky-terrain-solid', Usage.SHADOW_TERRAIN_SOLID)
             .exportBool('RENDER_TERRAIN', true)
             .target(0, texShadowColor).blendOff(0)
+            .target(1, texShadowBlock).blendOff(1)
             .compile();
 
         shadowSkyShader('shadow-sky-terrain-cutout', Usage.SHADOW_TERRAIN_CUTOUT)
             .exportBool('RENDER_TERRAIN', true)
             .exportBool('ALPHATEST_ENABLED', true)
             .target(0, texShadowColor).blendOff(0)
+            .target(1, texShadowBlock).blendOff(1)
             .compile();
 
         shadowSkyShader('shadow-sky-terrain-translucent', Usage.SHADOW_TERRAIN_TRANSLUCENT)
             .exportBool('RENDER_TERRAIN', true)
             .exportBool('ALPHATEST_ENABLED', true)
             .target(0, texShadowColor).blendOff(0)
+            .target(1, texShadowBlock).blendOff(1)
             .compile();
 
         type ShadowPass = [string, ProgramUsage];
@@ -728,6 +749,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             shadowSkyShader(pass[0], pass[1])
                 .exportBool('ALPHATEST_ENABLED', true)
                 .target(0, texShadowColor).blendOff(0)
+                .target(1, texShadowBlock).blendOff(1)
                 .compile();
         });
     }
@@ -1426,6 +1448,8 @@ export function beginFrame(state : WorldState) : void {
     if (floodfill && options.Lighting_FloodFill_Enabled) {
         floodfill.update(alt);
     }
+
+    floodfill_sky.update(alt);
 
     if (options.Sky_FogEnabled && froxels) {
         froxels.update(alt);

@@ -105,11 +105,19 @@ VertexOutput vertexMain(Vertex input) {
 }
 
 
+struct FragmentOutput {
+    half4 color : SV_Target0;
+    uint blockId : SV_Target1;
+};
+
 [[shader("fragment")]]
-float4 fragmentMain(VertexOutput input) : SV_Target0 {
+FragmentOutput fragmentMain(VertexOutput input) {
     float4 color = float4(0.0, 0.0, 0.0, 1.0);
 
-    if (input.blockId >= 0 && ap.blocks[input.blockId].customId == BLOCK_WATER) {
+    uint customId = 0;
+    if (input.blockId >= 0) customId = ap.blocks[input.blockId].customId;
+
+    if (customId == BLOCK_WATER) {
         color = float4(1.0, 1.0, 1.0, 0.02);
     }
     else if (ALPHATEST_ENABLED) {
@@ -122,5 +130,8 @@ float4 fragmentMain(VertexOutput input) : SV_Target0 {
         color.rgb = LinearToRgb(color.rgb);
     }
 
-    return color;
+    FragmentOutput output;
+    output.color = half4(color);
+    output.blockId = customId;
+    return output;
 }

@@ -119,7 +119,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         // float cos_trace = max(dot(trace_localDir, tex_normal), 0.0);
 
         float pdf;
-        float2 seed = hash22(pos + float2(23.0, 47.0)*(ap.timing.frameCounter + i*3));
+        float2 seed = hash22(pos + float2(23.0, 47.0)*(ap.timing.frameCounter + i*9));
         float3 trace_tangentDir = sample_cosine_weighted_hemisphere(seed, pdf);
         float3 trace_localDir = transform_to_world(tex_normal, trace_tangentDir);
 
@@ -139,12 +139,12 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             float3 traceClipStart = project(ap.camera.projection, traceViewStart);
             float3 screenStart = traceClipStart * 0.5 + 0.5;
 
-            // float3 screenEnd = projectScreenTrace(traceViewStart, screenStart, trace_viewDir, 8.0);
-            // float3 traceClipEnd = screenEnd * 2.0 - 1.0;
+            float3 screenEnd = projectScreenTrace(traceViewStart, screenStart, trace_viewDir);
+            float3 traceClipEnd = screenEnd * 2.0 - 1.0;
 
-            float traceDist = clamp(viewDist * 0.25, 0.0, 8.0);
-            float3 traceViewEnd = traceViewStart + traceDist * trace_viewDir;
-            float3 traceClipEnd = project(ap.camera.projection, traceViewEnd);
+            // float traceDist = clamp(viewDist * 0.25, 0.0, 8.0);
+            // float3 traceViewEnd = traceViewStart + traceDist * trace_viewDir;
+            // float3 traceClipEnd = project(ap.camera.projection, traceViewEnd);
 
             float3 traceClipPos;
             float3 traceClipPos_prev = traceClipStart;
@@ -288,7 +288,10 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 float2 voxelTexCoord = GetVoxelTexCoord(hit_localNormal, currPos);
                 sampleColor = SampleVoxel(hit_localPos, hit_localNormal, hit_voxelMaskPos, voxelTexCoord, hit_wetness, true);
 
-                cos_sample = 1.0;// max(dot(hit_normal, -trace_localDir), 0.0);
+                float3 hit_offset = hit_localPos - localPos;
+                cos_sample = PI * max(dot(hit_localNormal, -trace_localDir), 0.0);
+                // cos_sample = rcp(dot(hit_offset, hit_offset) + EPSILON);// max(dot(hit_normal, -trace_localDir), 0.0);
+                // cos_sample = 1.0;
             }
         }
 
@@ -298,7 +301,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             float3 skyPos = getSkyPosition(localPos);
             sampleColor = sampleSkyView(skyPos, trace_localDir, scene[0].SunLocalDir);
             // sampleColor = sampleSkyIrradiance(trace_localDir);
-            cos_sample = lmcoord_y;
+            cos_sample = PI * lmcoord_y;
         }
 
         sampleColor *= RgbToLinear(trace_tint);

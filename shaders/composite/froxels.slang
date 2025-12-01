@@ -4,6 +4,7 @@ import lib.noise.hash;
 import lib.sampling.depth;
 import lib.light.brdf;
 import lib.light.floodfill;
+import lib.light.floodfill_sky;
 import lib.light.shadow;
 import lib.water.common;
 import lib.voxel.froxel;
@@ -158,6 +159,9 @@ void updateFroxels(ComputeInput input) {
         half3 moon_color = scene[0].MoonColor * sampleSkyTransmit(skyPos, scene[0].MoonLocalDir);
         float3 skyLight = shadowIsSun ? sun_color : moon_color;
 
+        float3 skyBufferPos = FloodFill_Sky_GetBufferPosition(localPos);
+        float skyLightF = floodfill_sky_sample(skyBufferPos);
+
         float3 shadowViewPos = mul3(ap.celestial.view, localPos);
         int shadowCascade = GetShadowProjection(shadowViewPos, 0.0);
 
@@ -184,8 +188,8 @@ void updateFroxels(ComputeInput input) {
                     // bool isWater = true;//ap.camera.fluid == 1;
 
                     if (isWater) {
-                        // float scale = GetShadowProjectionScale(shadowCascade).z;
-                        float scale = (-2.0 / ap.celestial.projection[shadowCascade][2][2]);
+                        float scale = GetShadowProjectionScaleInv(shadowCascade).z;
+                        // float scale = (0.5 * ap.celestial.projectionInv[shadowCascade][2][2]);
                         float waterDepth = max(shadowPos.z - depthTrans, 0.0) * scale;
                         if (waterDepth > 0.0) shadow *= exp(-waterDepth * Water_AbsorbColor);
                     }
@@ -203,7 +207,8 @@ void updateFroxels(ComputeInput input) {
             float stepF = (i + dither) / Froxel_SkyLight_StepCount;
             float3 trace_localPos = lerp(localPos, skyTrace_localEnd, stepF);
 
-            accumDensity += SampleFogDensity(trace_localPos) * skyTrace_stepDist;
+            float trace_density = SampleFogDensity(trace_localPos);
+            accumDensity += trace_density * skyTrace_stepDist;
         }
         
         if (accumDensity > EPSILON) {
@@ -217,7 +222,7 @@ void updateFroxels(ComputeInput input) {
 
         float sky_VoL = dot(localDir, scene[0].SkyLightLocalDir);
         float miePhase_sky = max(getMiePhase(sky_VoL), 0.0);
-        scatter += miePhase_sky * skyLight + 0.3 * ambient;
+        scatter += miePhase_sky * skyLight + ambient * skyLightF;
     }
 
     if (PointLight_Enabled) {

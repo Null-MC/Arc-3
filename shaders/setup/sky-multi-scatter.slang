@@ -2,6 +2,7 @@ import aperture;
 import buffers.sky;
 import lib.common;
 import lib.sky.common;
+import lib.sky.density;
 import lib.sky.scattering;
 import lib.sky.sample_transmit;
 
@@ -23,9 +24,14 @@ float3 getSphericalDir(float theta, float phi) {
     return float3(sinPhi*sinTheta, cosPhi, sinPhi*cosTheta);
 }
 
-void getMulScattValues(float3 pos, float3 sunDir, float rainF, out float3 lumTotal, out float3 fms) {
+void getMulScattValues(float3 pos, float3 sunDir, float rainStrength, out float3 lumTotal, out float3 fms) {
     SkyParameters sky;
+    float rainF = smoothstep(0.0, 1.0, rainStrength);
     lerp(skyClear, skyRain, rainF, sky);
+
+    float WorldFogDensity = GetWorldFogDensity(rainStrength);
+    sky.mieAbsorptionBase *= WorldFogDensity;
+    sky.mieScatteringBase *= WorldFogDensity;
 
     lumTotal = 0.0;
     fms = 0.0;
@@ -132,10 +138,10 @@ void bakeSkyMultiScattering(uint3 globalPos : SV_DispatchThreadID) {
     float3 pos = float3(0.0, height, 0.0); 
     float3 sunDir = normalize(float3(0.0, sunCosTheta, -sin(sunTheta)));
     
-    float rainF = smoothstep(0.0, 1.0, globalPos.z / float(viewportDimensions.z - 1));
+    float rainStrength = globalPos.z / float(viewportDimensions.z - 1);
 
     float3 lum, f_ms;
-    getMulScattValues(pos, sunDir, rainF, lum, f_ms);
+    getMulScattValues(pos, sunDir, rainStrength, lum, f_ms);
 
     imgSkyMultiScatter[globalPos] = half3(lum / max(1.0 - f_ms, EPSILON)); 
 }

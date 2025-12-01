@@ -5,6 +5,7 @@ import lib.blocks;
 import lib.noise.IGN;
 import lib.material.pbr;
 import lib.light.shadow;
+import lib.water.common;
 
 extern static const bool RENDER_TRANSLUCENT = false;
 
@@ -71,6 +72,20 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
 
             // output.shadow = SampleShadow_PCSS(shadowPos, cascade, dither);
             output.shadow.rgb = SampleShadowColor_PCSS(shadowPos, cascade, dither);
+
+            // TODO: apply water tint
+            float3 shadowCoord = float3(shadowPos.xy, cascade);
+            uint customId = texShadowBlock.Sample(shadowCoord);
+            // uint customId = texShadowBlock.Load(int4(shadowPos.xy * Shadow_Resolution, 0, cascade));
+            if (customId == BLOCK_WATER) {
+                // float3 cascadeScale = GetShadowProjectionScale(cascade);
+                float depth_scale = -0.5 * ap.celestial.projectionInv[cascade][2].z;
+
+                // float depth_opaque = solidShadowMap.Sample(shadowCoord);
+                float depth_translucent = shadowMap.Sample(shadowCoord);
+                float water_depth = max(shadowPos.z - depth_translucent, 0.0) * depth_scale;
+                output.shadow.rgb *= exp(-water_depth * Water_AbsorbColor);
+            }
         }
 
         // SSS

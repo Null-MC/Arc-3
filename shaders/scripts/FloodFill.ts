@@ -1,4 +1,5 @@
 export class FloodFill {
+    size: number;
     private texFloodFillA: BuiltTexture;
     private texFloodFillB: BuiltTexture;
     private reader: ActiveTextureReference;
@@ -6,6 +7,8 @@ export class FloodFill {
 
     
     constructor(pipeline: PipelineConfig, size: number) {
+        this.size = size;
+
         this.texFloodFillA = pipeline.createImageTexture('texFloodFillA', 'imgFloodFillA')
             .format(Format.RGBA16F)
             .width(size)
@@ -26,13 +29,14 @@ export class FloodFill {
         this.writer = pipeline.createTextureReference('texFloodFill_write', 'imgFloodFill_write', size, size, size, Format.RGBA16F);
     }
 
-    create(stage: CommandList, size: number): Compute {
-        return stage.createCompute("floodfill")
+    build(stage: CommandList) {
+        stage.createCompute("floodfill")
             .location("pre/floodfill", "floodfill")
             .workGroups(
-                Math.ceil(size / 8),
-                Math.ceil(size / 8),
-                Math.ceil(size / 8));
+                Math.ceil(this.size / 8),
+                Math.ceil(this.size / 8),
+                Math.ceil(this.size / 8))
+            .compile();
     }
 
     update(altFrame: boolean) {

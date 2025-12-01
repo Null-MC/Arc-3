@@ -2,6 +2,7 @@ import aperture;
 import buffers.sky;
 import lib.common;
 import lib.sky.common;
+import lib.sky.density;
 import lib.sky.scattering;
 
 extern static const int BufferWidth;
@@ -32,10 +33,15 @@ void bakeSkyTransmission(uint3 globalPos : SV_DispatchThreadID) {
     float3 transmittance = 0.0;
     if (rayIntersectSphere(pos, sunDir, groundRadiusMM) <= 0.0) {
         float atmoDist = rayIntersectSphere(pos, sunDir, atmosphereRadiusMM);
-        float rainF = smoothstep(0.0, 1.0, globalPos.z / float(BufferDepth - 1));
+        float rainStrength = globalPos.z / float(BufferDepth - 1);
 
         SkyParameters sky;
+        float rainF = smoothstep(0.0, 1.0, rainStrength);
         lerp(skyClear, skyRain, rainF, sky);
+
+        float WorldFogDensity = GetWorldFogDensity(rainStrength);
+        sky.mieAbsorptionBase *= WorldFogDensity;
+        sky.mieScatteringBase *= WorldFogDensity;
         
         transmittance = 1.0;
         float t = 0.0;

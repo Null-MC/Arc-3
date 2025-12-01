@@ -120,7 +120,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
 
         // Ambient from Sky Irradiance
         if (!Lighting_GI || RENDER_TRANSLUCENT) {
-            half3 sky_ambient = sampleSkyIrradiance(normals.tex);
+            half3 sky_ambient = 2.0 * sampleSkyIrradiance(normals.tex);
             diffuse += sky_ambient * lmcoord_y * mat_lit.occlusion;
         }
 
