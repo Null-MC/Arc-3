@@ -7,7 +7,7 @@ import lib.sky.scattering;
 import lib.water.common;
 import lib.voxel.froxel;
 
-extern static const int VL_StepCount = 32;
+extern static const int VL_StepCount = 16;
 
 Sampler2D<float> texDepth;
 Sampler2D<half3> texSource;

@@ -15,6 +15,7 @@ extern static const float Shadow_SssMaxDist;
 extern static const float Shadow_SssMaxRadius;
 extern static const int Shadow_SssPcfSamples;
 
+static const float Shadow_DistortF = 0.08;
 static const float GoldenAngle = PI * (3.0 - sqrt(5.0));
 static const float PHI = (1.0 + sqrt(5.0)) / 2.0;
 
@@ -23,6 +24,11 @@ Sampler2DArray<float> solidShadowMap;
 Sampler2DArray<half3> texShadowColor;
 Sampler2DArrayShadow solidShadowMapFiltered;
 
+
+float2 Shadow_Distort(const in float2 pos) {
+    float factor = length(pos.xy) + Shadow_DistortF;
+    return pos.xy / factor;
+}
 
 void GetShadowProjectionBounds(const in int cascade, out float2 min, out float2 max) {
     min = mul3(ap.celestial.projectionInv[cascade], float3(-1.0, -1.0, 0.0)).xy;
@@ -84,11 +90,21 @@ float2x2 GetSampleRotation(const in float dither) {
 
 half SampleShadow(in float3 shadowPos, const in int cascade) {
     float3 shadowCoord = float3(shadowPos.xy, cascade);
+
+    if (Shadow_CascadeCount == 1) {
+        shadowCoord.xy = Shadow_Distort(shadowCoord.xy * 2.0 - 1.0) * 0.5 + 0.5;
+    }
+    
     return (half)solidShadowMapFiltered.SampleCmp(shadowCoord, shadowPos.z).r;
 }
 
-half3 SampleShadowColor(in float3 shadowPos, const in int cascade) {
+half3 SampleShadowColor(const in float3 shadowPos, const in int cascade) {
     float3 shadowCoord = float3(shadowPos.xy, cascade);
+
+    if (Shadow_CascadeCount == 1) {
+        shadowCoord.xy = Shadow_Distort(shadowCoord.xy * 2.0 - 1.0) * 0.5 + 0.5;
+    }
+
     float depthOpaque = solidShadowMap.Sample(shadowCoord);
 
     half3 shadow;
@@ -119,6 +135,10 @@ float ShadowBlockerDistance(const in float3 shadowPos, const in int cascade, con
 
         float3 sampleShadowPos = shadowPos;
         sampleShadowPos.xy += pixelOffset;
+
+        if (Shadow_CascadeCount == 1) {
+            sampleShadowPos.xy = Shadow_Distort(sampleShadowPos.xy * 2.0 - 1.0) * 0.5 + 0.5;
+        }
 
         float texDepth = shadowMap.Sample(float3(sampleShadowPos.xy, cascade)).r;
         float hitDist = max((sampleShadowPos.z - texDepth) / zRange, 0.0);
@@ -215,6 +235,11 @@ half3 SSS_PCF(const in float3 shadowPos, const in int cascade, const in float3 s
         float3 sampleShadowPos = shadowPos + float3(pixelOffset, -sample_bias);
 
         float3 shadowCoord = float3(sampleShadowPos.xy, cascade);
+
+        if (Shadow_CascadeCount == 1) {
+            shadowCoord.xy = Shadow_Distort(shadowCoord.xy * 2.0 - 1.0) * 0.5 + 0.5;
+        }
+        
         float sampleDepth = solidShadowMap.Sample(shadowCoord).r;
 
         float sampleDist = length(float3(pixelOffset, shadowPos.z - sampleDepth) / scale);

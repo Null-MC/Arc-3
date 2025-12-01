@@ -3,6 +3,7 @@ import lib.tags;
 import lib.common;
 import lib.blocks;
 import lib.wind_waving;
+import lib.light.shadow;
 import lib.sampling.atlas;
 import lib.voxel.voxel_common;
 import lib.voxel.voxel_tex;
@@ -49,6 +50,10 @@ VertexOutput vertexMain(Vertex input) {
     }
 
     output.position = mul(input.projectionMatrix(), float4(shadowViewPos, 1.0));
+
+    if (Shadow_CascadeCount == 1) {
+        output.position.xy = Shadow_Distort(output.position.xy);
+    }
 
     bool voxelize = false;
     // bool isFluidBlock = false;

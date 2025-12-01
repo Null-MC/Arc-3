@@ -38,8 +38,8 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
     half4 colorData = texAlbedoGB_translucent[uv_full];
     
     if (colorData.a > 0.0) {
-        float2 texcoord = pos / BufferSize;
-        if (TAA_Enabled) texcoord += scene[0].taa_jitter * BufferScale;
+        float2 texcoord = (uv_full + 0.5) / ap.game.screenSize;
+        // if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
         float3 screenPos = float3(texcoord, depth);
         float3 clipPos = screenPos * 2.0 - 1.0;
@@ -49,9 +49,8 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         uint normalDataG = texNormalGB_translucent[uv_full].g;
         half3 tex_normal = ObjectData_Normals.unpackTex(normalDataG);
 
-        uint2 matLitData = texMatLightGB_translucent[uv_full];
         ObjectData_MatLit mat_lit;
-        mat_lit.unpack(matLitData);
+        mat_lit.unpack(texMatLightGB_translucent[uv_full]);
 
         half3 albedo = RgbToLinear(colorData.rgb);
         half roughness = mat_roughness(mat_lit.specular.r);
@@ -61,7 +60,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         half lmcoord_y = pow2(mat_lit.lmcoord.y);
         half roughL = pow2(roughness);
 
-        float dither = IGN_TAA(pos);
+        float dither = 0.5;//IGN_TAA(pos);
 
         float3 reflectNormal = Reflect_Rough
             ? randomizeNormal(int2(pos), tex_normal, roughL)
@@ -87,10 +86,10 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         for (uint i = 0; i < Reflect_ScreenSteps; i++) {
             float f = (i + dither) / Reflect_ScreenSteps;
             traceClipPos = lerp(traceClipStart, traceClipEnd, saturate(f));
-            traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
-            if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
+            float2 samplePos = traceClipPos.xy * 0.5 + 0.5;
+            if (!all(saturate(samplePos) == samplePos)) break;
 
-            float sampleClipDepth = mainDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
+            float sampleClipDepth = mainDepthTex.Sample(samplePos) * 2.0 - 1.0;
             float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
             float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
@@ -99,6 +98,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
                 break;
             }
 
+            traceScreenPos = samplePos;
             traceClipPos_prev = traceClipPos;
             traceDepthL_prev = traceDepthL;
         }
@@ -110,22 +110,25 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             for (uint i = 0; i < Reflect_RefineSteps; i++) {
                 float f = (i + dither) / Reflect_RefineSteps;
                 traceClipPos = lerp(traceClipStart, traceClipEnd, saturate(f));
-                traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
-                if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
+                float2 samplePos = traceClipPos.xy * 0.5 + 0.5;
+                if (!all(saturate(samplePos) == samplePos)) break;
 
-                float sampleClipDepth = mainDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
+                float sampleClipDepth = mainDepthTex.Sample(samplePos) * 2.0 - 1.0;
                 float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
                 float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
                 if (screenDepthL < traceDepthL) {
                     break;
                 }
+
+                traceScreenPos = samplePos;
             }
         }
 
         half3 reflectColor;
 
         if (hit) {
+            // traceScreenPos = saturate(traceScreenPos);
             reflectColor = texSource.Sample(traceScreenPos);
         }
         else {

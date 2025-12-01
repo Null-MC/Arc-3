@@ -256,7 +256,7 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
         output.tint = LinearToRgb(output.tint);
     }
 
-    // TODO: apply fresnel to opacity?
+    // apply fresnel to opacity
     float3 viewLocalDir = -normalize(input.localPos);
     half f0_metal = mat_f0_metal(mat_lit.specular.g);
     half NoVm = max((half)dot(normals.tex, viewLocalDir), (half)0.0);

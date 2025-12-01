@@ -21,8 +21,8 @@ float GetWorldFogDensity() {
             break;
         default:
             float dayF = smoothstep(-0.08, 0.12, scene[0].SunLocalDir.y);
-            density = lerp(0.98, 0.09, dayF);
-            density = lerp(density, 0.5, ap.world.rainStrength);
+            density = lerp(2.4, 0.2, dayF);
+            density = lerp(density, 1.0, ap.world.rainStrength);
             // density = lerp(density, 1.0, ap.world.thunderStrength);
             break;
     }

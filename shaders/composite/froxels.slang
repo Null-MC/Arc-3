@@ -211,15 +211,13 @@ void updateFroxels(ComputeInput input) {
             skyLight *= exp(-extinction);
         }
 
-        float3 ambient = 0.0;
-        // if (ap.camera.fluid != 1)
-            ambient += sampleSkyMultiScatter(skyPos, scene[0].SunLocalDir);
+        float3 ambient = sampleSkyMultiScatter(skyPos, scene[0].SunLocalDir);
         // ambient = ambient * ap.camera.BrightnessSmooth; + VL_MinLight;
-        if (isWater) ambient *= 0.2;
+        // if (isWater) ambient *= 0.2;
 
         float sky_VoL = dot(localDir, scene[0].SkyLightLocalDir);
-        float miePhase_sky = max(getMiePhase(sky_VoL, 0.2), 0.0);
-        scatter += miePhase_sky * skyLight + ambient;
+        float miePhase_sky = max(getMiePhase(sky_VoL), 0.0);
+        scatter += miePhase_sky * skyLight + 0.3 * ambient;
     }
 
     if (PointLight_Enabled) {
