@@ -5,6 +5,7 @@ import lib.common;
 import lib.sky.common;
 import lib.sky.scattering;
 
+extern static const float Fog_DensityIndoors = 4.0;
 extern static const bool Sky_FogNoise;
 
 Sampler3D<half> texFogNoise;

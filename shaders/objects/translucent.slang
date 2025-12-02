@@ -34,6 +34,7 @@ struct VertexOutput {
     float3 localPos;
     float occlusion;
     float3 tangentViewPos;
+    float waveOffset;
     
     nointerpolation int blockId;
     nointerpolation uint color;
@@ -49,7 +50,6 @@ VertexOutput vertexMain(Vertex input) {
 
     float3 modelPos = input.pos().xyz;
     float3 viewPos = mul3(input.viewMatrix(), modelPos);
-    output.position = mul(input.projectionMatrix(), float4(viewPos, 1.0));
 
     // if (SupportsParallax) {
         output.localPos = mul3(ap.camera.viewInv, viewPos);
@@ -77,6 +77,15 @@ VertexOutput vertexMain(Vertex input) {
         localNormal = normalize(localNormal);
 
         output.normal = packUnorm2x16(OctEncode(half3(localNormal)));
+    }
+
+    if (output.blockId > 0 && ap.blocks[output.blockId].customId == BLOCK_WATER) {
+        float viewDist = length(viewPos);
+        int octaves = GetWaveOctaveCount(viewDist);
+        output.waveOffset = GetWaveHeight(ap.camera.position + output.localPos, output.light.y, ap.timing.timeElapsed, octaves).y;
+        output.localPos.y += output.waveOffset;
+
+        viewPos = mul3(ap.camera.view, output.localPos);
     }
 
     float4 viewTangent;
@@ -107,6 +116,8 @@ VertexOutput vertexMain(Vertex input) {
         float3 viewPos = mul3(ap.camera.view, output.localPos);
         output.tangentViewPos = mul(TBN, viewPos.xyz);
     }
+
+    output.position = mul(input.projectionMatrix(), float4(viewPos, 1.0));
 
     if (TAA_Enabled) {
         output.position.xy += scene[0].taa_jitter * (2.0 * output.position.w);
@@ -218,12 +229,18 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
         if (Water_WaveEnabled && isWater) {
             if (abs(normals.geo.y) > EPSILON) {
                 float3 offsetLocalPos = input.localPos;
-                // offsetLocalPos.y -= input.waveOffset;
+                offsetLocalPos.y -= input.waveOffset;
 
                 int octaves = GetWaveOctaveCount(viewDist);
-                float3 waveOffset = GetWaveHeight(ap.camera.position + offsetLocalPos, input.light.y, ap.timing.timeElapsed, octaves);
+                float waveOffset = GetWaveHeight(ap.camera.position + input.localPos, input.light.y, ap.timing.timeElapsed, octaves).y;
 
-                normals.tex = half3(getSurfaceNormal((waveOffset + offsetLocalPos), float3(0,1,0)));
+                // float lmcoord_y = pow2(mat_lit.lmcoord.y);
+                // float waveOffset = GetWaveHeight2(input.localPos, lmcoord_y);
+
+                float3 wavePos = offsetLocalPos;
+                wavePos.y += waveOffset;
+                
+                normals.tex = half3(getSurfaceNormal(wavePos, float3(0,1,0)));
             }
         }
         else if (MATERIAL_FORMAT != MAT_NONE) {

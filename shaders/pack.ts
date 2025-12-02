@@ -472,10 +472,12 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         floodfill = new FloodFill(pipeline, options.Lighting_FloodFill_Size);
     }
 
-    floodfill_sky = new FloodFill_Sky(pipeline);
-
     if (options.Sky_FogEnabled) {
         froxels = new Froxels(pipeline, screenWidth, screenHeight);
+
+        if (dimension.World_HasSky) {
+            floodfill_sky = new FloodFill_Sky(pipeline);
+        }
     }
 
     const texDiffuse = pipeline.createImageTexture('texDiffuse', 'imgDiffuse')
@@ -585,6 +587,38 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
     pipeline.importPNGTexture('texBlueNoise', 'textures/blue_noise.png', true, false);
 
+    pipeline.importPNGTexture('texWaterWaves_offset', 'textures/water-waves-offset.png', true, false);
+    // pipeline.importRawTexture('texWaterWaves_offset', 'textures/water-waves-offset.dat')
+    //     .type(PixelType.HALF_FLOAT)
+    //     .format(Format.RG16F)
+    //     .width(256)
+    //     .height(256)
+    //     .clamp(false)
+    //     .blur(true)
+    //     .load();
+
+    pipeline.importPNGTexture('texWaterWaves_g1', 'textures/water-waves-g1.png', true, false);
+
+    // pipeline.importPNGTexture('texWaterWaves_low', 'textures/water-waves-low.png', true, false);
+    // pipeline.importRawTexture('texWaterWaves_low', 'textures/water-waves-low.dat')
+    //     .type(PixelType.HALF_FLOAT)
+    //     .format(Format.R16F)
+    //     .width(512)
+    //     .height(512)
+    //     .clamp(false)
+    //     .blur(true)
+    //     .load();
+
+    pipeline.importPNGTexture('texWaterWaves_high', 'textures/water-waves-high.png', true, false);
+    // pipeline.importRawTexture('texWaterWaves_high', 'textures/water-waves-high.dat')
+    //     .type(PixelType.HALF_FLOAT)
+    //     .format(Format.R16F)
+    //     .width(256)
+    //     .height(256)
+    //     .clamp(false)
+    //     .blur(true)
+    //     .load();
+
     pipeline.importPNGTexture('texStars', 'textures/stars.png', true, false);
 
     //if (_dimensions.Index == 0) {
@@ -593,7 +627,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
     pipeline.importRawTexture('texFogNoise', 'textures/fog.dat')
         .type(PixelType.UNSIGNED_BYTE)
-        .format(Format.R8_SNORM)
+        .format(Format.R8)
         .width(256)
         .height(32)
         .depth(256)
@@ -692,13 +726,15 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 .exportInt('BufferWidth', texSkyIrradiance.width())
                 .exportInt('BufferHeight', texSkyIrradiance.height())
                 .compile();
+            
+            if (options.Sky_FogEnabled) {
+                floodfill_sky.build(beginStage);
+            }
         }
 
         if (options.Lighting_FloodFill_Enabled) {
             floodfill.build(beginStage);
         }
-
-        floodfill_sky.build(beginStage);
     });
 
 
@@ -1449,10 +1485,14 @@ export function beginFrame(state : WorldState) : void {
         floodfill.update(alt);
     }
 
-    floodfill_sky.update(alt);
+    if (options.Sky_FogEnabled) {
+        if (froxels) {
+            froxels.update(alt);
+        }
 
-    if (options.Sky_FogEnabled && froxels) {
-        froxels.update(alt);
+        if (dimension.World_HasSky && floodfill_sky) {
+            floodfill_sky.update(alt);
+        }
     }
 
     settings.uploadData();

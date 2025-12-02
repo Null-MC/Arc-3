@@ -60,7 +60,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         half lmcoord_y = pow2(mat_lit.lmcoord.y);
         half roughL = pow2(roughness);
 
-        float dither = 0.5;//IGN_TAA(pos);
+        float dither = IGN_TAA(pos);
 
         float3 reflectNormal = Reflect_Rough
             ? randomizeNormal(int2(pos), tex_normal, roughL)
@@ -79,7 +79,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         float3 traceClipPos;
         float3 traceClipPos_prev = traceClipStart;
-        float2 traceScreenPos;
+        float2 traceScreenPos = 0.0;
 
         bool hit = false;
         float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
@@ -106,6 +106,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         if (hit) {
             traceClipStart = traceClipPos_prev;
             traceClipEnd = traceClipPos;
+            traceScreenPos = traceClipPos_prev.xy * 0.5 + 0.5;
 
             for (uint i = 0; i < Reflect_RefineSteps; i++) {
                 float f = (i + dither) / Reflect_RefineSteps;
@@ -127,7 +128,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         half3 reflectColor;
 
-        if (hit) {
+        if (hit && all(traceScreenPos > 0.0)) {
             // traceScreenPos = saturate(traceScreenPos);
             reflectColor = texSource.Sample(traceScreenPos);
         }

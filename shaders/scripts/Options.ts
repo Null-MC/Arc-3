@@ -9,7 +9,7 @@ export class Options {
 
     get Water_WavesEnabled(): boolean {return getBoolSetting('WATER.WAVES_ENABLED');}
     get Water_WaveSize(): number {return getIntSetting('WATER.WAVE_SIZE');}
-    get Water_WaveDetail(): number {return 18;}
+    get Water_WaveDetail(): number {return 16;}
 
     get Material_Format(): number {return getIntSetting('MATERIAL.FORMAT');}
 
