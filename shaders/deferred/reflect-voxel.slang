@@ -58,7 +58,8 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         float3 viewPos = project(ap.camera.projectionInv, clipPos);
         float3 localPos = mul3(ap.camera.viewInv, viewPos);
 
-        half4 colorData = texAlbedoGB[uv_full];
+        half4 albedo = texAlbedoGB[uv_full];
+        ApplyInputTransform(albedo.rgb);
 
         ObjectData_Normals normals;
         normals.unpack(texNormalGB[uv_full]);
@@ -66,7 +67,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         ObjectData_MatLit mat_lit;
         mat_lit.unpack(texMatLightGB[uv_full]);
 
-        half3 albedo = RgbToLinear(colorData.rgb);
+        // half3 albedo = RgbToLinear(colorData.rgb);
         half roughness = mat_roughness(mat_lit.specular.r);
         half f0_metal = mat_f0_metal(mat_lit.specular.g);
         half metalness = (half)mat_metalness(f0_metal);
@@ -221,7 +222,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         half NoVm = max(dot(reflectNormal, -localDir), (half)0.0);
         half3 F_NoV = F_Lazanyi2019(NoVm, f0);
 
-        half3 specular_tint = lerp((half)1.0, albedo, metalness);
+        half3 specular_tint = lerp((half)1.0, albedo.rgb, metalness);
 
         // imgDebug[uv] = float4(LinearToRgb(reflectColor * 0.008), 1.0);
 

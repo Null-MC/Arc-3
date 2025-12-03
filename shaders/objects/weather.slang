@@ -54,7 +54,7 @@ FragmentOutput fragmentMain(VertexOutput input) {
     float4 albedo = albedoTex.SampleLevel(input.uv, LOD) * input.color;
     iris_discardIfNeeded(albedo);
 
-    albedo.rgb = RgbToLinear(albedo.rgb);
+    ApplyInputTransform(albedo.rgb);
     if (Debug_WhiteWorld) albedo.rgb = WhiteWorldColor;
 
     float4 normalData = normalTex.SampleLevel(input.uv, LOD);

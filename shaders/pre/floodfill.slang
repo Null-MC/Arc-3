@@ -132,7 +132,7 @@ void floodfill(ComputeInput input) {
 		//if (blockData.hasTag(TAG_STAIRS)) isFullBlock = true;
 
 		lightColor = half3(blockData.lightColor.rgb);
-		lightColor = RgbToLinear(lightColor);
+		ApplyInputTransform(lightColor);
 
 		lightRange = blockData.emission;
 

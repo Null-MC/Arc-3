@@ -200,8 +200,10 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
 
             if (ss_hit) {
                 half3 trace_albedo = texAlbedoGB.Sample(traceScreenPos).rgb;
+                ApplyInputTransform(trace_albedo);
+                
                 half3 trace_diffuse = texDiffuse.Sample(traceScreenPos);
-                sampleColor = RgbToLinear(trace_albedo) * trace_diffuse * PI;
+                sampleColor = trace_albedo * trace_diffuse * PI;
 
                 uint2 uv2 = uint2(traceScreenPos * ap.game.screenSize);
                 half3 sample_normal = ObjectData_Normals.unpackTex(texNormalGB[uv2].g);

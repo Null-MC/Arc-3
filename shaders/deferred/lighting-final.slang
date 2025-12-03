@@ -23,12 +23,12 @@ Sampler2D<half3> texGI_final;
 half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
     uint2 uv = uint2(pos);
     float depth = texDepth[uv];
-    half4 color = texAlbedoGB[uv];
+    half4 albedo = texAlbedoGB[uv];
 
     float2 texcoord = pos / ap.game.screenSize;
 
     half4 final = half4(0.0);
-    if (depth < 1.0 && color.a > 0.0) {
+    if (depth < 1.0 && albedo.a > 0.0) {
         ObjectData_MatLit mat_lit;
         mat_lit.unpack(texMatLightGB[uv]);
 
@@ -50,8 +50,9 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         half metalness = mat_metalness(f0_metal);
         half porosity = mat_porosity(mat_lit.specular.b, roughness, f0_metal);
 
-        half3 albedo = RgbToLinear(color.rgb);
-        half3 tint = lerp(half3(1.0), albedo, metalness);
+		ApplyInputTransform(albedo.rgb);
+        
+        half3 tint = lerp(half3(1.0), albedo.rgb, metalness);
 
         // TODO: wetness
         Wetness_ApplyRoughness(roughness, wetness);
@@ -64,14 +65,14 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         diffuse *= (half)1.0 - metalness * smoothness;
 
         // diffuse += emission * BLOCK_LUX;
-        final.rgb += albedo * emission * BLOCK_LUM;
+        final.rgb += albedo.rgb * emission * BLOCK_LUM;
 
-        if (Debug_WhiteWorld) albedo = WhiteWorldColor;
+        if (Debug_WhiteWorld) albedo.rgb = WhiteWorldColor;
 
-        float3 diffColor = Wetness_GetAlbedo(albedo, porosity, wetness);
+        float3 diffColor = Wetness_GetAlbedo(albedo.rgb, porosity, wetness);
 
         final.rgb += diffColor * diffuse + specular * tint;
-        final.a = color.a;
+        final.a = albedo.a;
     }
     else if (!RENDER_TRANSLUCENT && World_HasSky) {
         // float2 texcoord = pos / ap.game.screenSize;
@@ -85,6 +86,7 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         float3 viewLocalDir = normalize(localPos);
 
         final.rgb = sampleSkyFinal(localPos, viewLocalDir, false);
+        // final.rgb = ACES_linear_to_cg(final.rgb); // TODO: this should probably be earlier in lut chain
         final.a = (half)1.0;
     }
 

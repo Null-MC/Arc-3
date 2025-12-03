@@ -82,14 +82,14 @@ void applyPointLights(ComputeInput input) {
 
     uint2 uv = input.globalPos.xy;
     bool on_screen = all(uv < ap.game.screenSize);
-    half4 colorData;
+    half4 albedo;
     float depth;
 
     if (on_screen) {
         depth = texDepth[uv];
-        colorData = texAlbedoGB[uv];
+        albedo = texAlbedoGB[uv];
 
-        if (depth < 1.0 && colorData.a > 0.0) {
+        if (depth < 1.0 && albedo.a > 0.0) {
             float depthL = linearizeDepth(depth * 2.0 - 1.0, ap.camera.near, ap.camera.far);
             float depthInt = depthL / ap.camera.far * uint.maxValue;
             depthMinInt.min(uint(floor(depthInt)));
@@ -153,7 +153,7 @@ void applyPointLights(ComputeInput input) {
     float3 diffuse = 0.0;
     float3 specular = 0.0;
 
-    if (depth < 1.0 && colorData.a > 0.0 && total > 0) {
+    if (depth < 1.0 && albedo.a > 0.0 && total > 0) {
         ObjectData_Normals normals;
         normals.unpack(texNormalGB[uv]);
 
@@ -181,13 +181,14 @@ void applyPointLights(ComputeInput input) {
         Wetness_ApplyRoughness(roughness, wetness_puddle.x);
         Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
 
-        half3 albedo = RgbToLinear(colorData.rgb);
+		ApplyInputTransform(albedo.rgb);
+
         half roughL = roughness * roughness;
 
         float NoVm = max(dot(normals.tex, viewDir), 0.0);
         // float3 f0 = f0_metal < 0.9 ? f0_metal : albedo;
         half metalness = mat_metalness(f0_metal);
-        half3 f0 = lerp(f0_metal, albedo, metalness);
+        half3 f0 = lerp(f0_metal, albedo.rgb, metalness);
 
         for (uint i = 0; i < total; i++) {
             uint lightIndex = sharedLightList[i];
@@ -212,7 +213,7 @@ void applyPointLights(ComputeInput input) {
             half lightAtt = GetLightAttenuation(lightDist, lightRange, lightRadius);
             if (lightAtt < EPSILON) continue;
 
-            lightColor.rgb = RgbToLinear(lightColor.rgb);
+    		ApplyInputTransform(lightColor.rgb);
             lightColor.rgb *= saturate(lightRange / (half)15.0) * BLOCK_LUX;
 
             float NoL = dot(normals.tex, lightDir);

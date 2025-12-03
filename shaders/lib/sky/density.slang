@@ -23,7 +23,7 @@ float GetWorldFogDensity(const in float rainStrength) {
         default:
             float dayF = smoothstep(-0.08, 0.12, scene[0].SunLocalDir.y);
             density = lerp(2.4, 0.2, dayF);
-            density = lerp(density, 4.0, rainStrength);
+            density = lerp(density, 6.0, rainStrength);
             // density = lerp(density, 1.0, ap.world.thunderStrength);
             break;
     }
@@ -57,7 +57,7 @@ float SampleFogDensity(const in float3 localPos) {
     // float density = getMieDensity(altitudeKM);// * 0.01;
 
     // float density = GetWorldFogDensity();
-    float density = 1.0;//scene[0].WorldFogDensity;
+    float density = scene[0].WorldFogDensity;
     float3 worldPos = localPos + ap.camera.position;
 
     if (Sky_FogNoise) {

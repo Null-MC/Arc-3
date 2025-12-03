@@ -34,8 +34,8 @@ void beginScene() {
         float blend = smoothstep(0.0, 1.0, ap.world.rainStrength);
         lerp(skyClear, skyRain, blend, scene_writer[0].sky);
 
-        scene_writer[0].sky.mieAbsorptionBase *= scene_writer[0].WorldFogDensity;
-        scene_writer[0].sky.mieScatteringBase *= scene_writer[0].WorldFogDensity;
+        // scene_writer[0].sky.mieAbsorptionBase *= scene_writer[0].WorldFogDensity;
+        // scene_writer[0].sky.mieScatteringBase *= scene_writer[0].WorldFogDensity;
         //lerp(scene_writer[0].sky, skyThunder, ap.world.thunderStrength, scene_writer[0].sky);
 
         float2 windFallSpeed = lerp(

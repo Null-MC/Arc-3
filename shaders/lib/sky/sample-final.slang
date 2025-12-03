@@ -19,7 +19,8 @@ half3 sampleSkyFinal(const in float3 localPos, const in float3 viewLocalDir, boo
     if (World_HasSky) {
         float2 skyCoord = DirectionToUV(viewLocalDir);
         half3 starLight = texStars.Sample(skyCoord);
-        skyLight += STAR_LUMINANCE * RgbToLinear(starLight);
+        ApplyInputTransform(starLight);
+        skyLight += STAR_LUMINANCE * starLight;
     }
 
     float3 skyPos;

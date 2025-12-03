@@ -19,6 +19,10 @@ float3 raymarchScattering(float3 pos, float3 rayDir, float3 sunDir, float tMax, 
     float miePhaseValue_moon = getMiePhase(-cosTheta);
     float rayleighPhaseValue_moon = getRayleighPhase(cosTheta);
 
+    var sky = scene[0].sky;
+    sky.mieAbsorptionBase *= scene[0].WorldFogDensity;
+    sky.mieScatteringBase *= scene[0].WorldFogDensity;
+
     float3 lum = 0.0;
     float3 transmittance = 1.0;
     float t = 0.0;// 0.00001*(0.25 * farPlane);
@@ -35,7 +39,7 @@ float3 raymarchScattering(float3 pos, float3 rayDir, float3 sunDir, float tMax, 
         // getScatteringValues(newPos, rayleighScattering, mieScattering, extinction);
         
         AtmosScatter scatter;
-        getScatteringValues(newPos, scene[0].sky, scatter);
+        getScatteringValues(newPos, sky, scatter);
 
         float3 sampleTransmittance = exp(-dt*scatter.extinction);
 

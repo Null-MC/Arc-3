@@ -53,7 +53,7 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
         float2 uv = atlas.GetAtlasCoord(voxelTexCoord);
 
         albedo = blockAtlas.Sample(uv).rgb * voxel.tint;
-        albedo = half3(RgbToLinear(albedo));
+		ApplyInputTransform(albedo);
 
         half4 specularData = blockAtlasS.Sample(uv);
         half roughness = mat_roughness(specularData.r);

@@ -34,7 +34,8 @@ float3 renderMoon(const in float3 viewLocalDir, const in float3 moonLocalPos, co
     erp_uv.x += moon_rotationSpeed * ap.timing.timeElapsed;
 
     float4 albedo_height = texMoon.SampleLevel(erp_uv, 0);
-    float3 albedo = RgbToLinear(albedo_height.rgb);
+    // float3 albedo = RgbToLinear(albedo_height.rgb);
+    ApplyInputTransform(albedo_height.rgb);
 
     hitPos += moon_surfaceDepthKm * albedo_height.a * hitNormal;
 
@@ -55,5 +56,5 @@ float3 renderMoon(const in float3 viewLocalDir, const in float3 moonLocalPos, co
     // float D = SampleLightDiffuse(NoVm, NoLm, LoHm, moon_roughL) * (1.0 - F);
     // float S = SampleLightSpecular(NoLm, NoHm, NoVm, F, moon_roughL);
     // return MOON_LUMINANCE * NoLm * (D * albedo + S) * scene.sunColor;
-    return NoLm * scene[0].MoonColor * (1.0 - F_NoV) * albedo;
+    return NoLm * scene[0].MoonColor * (1.0 - F_NoV) * albedo_height.rgb;
 }

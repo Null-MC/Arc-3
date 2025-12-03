@@ -91,7 +91,7 @@ float3 SamplePointLight(const in uint lightIndex, const in float3 localPos, cons
     half lightAtt = GetLightAttenuation(lightDist, lightRange, lightRadius);
     if (lightAtt < EPSILON) return 0.0;
 
-    lightColor.rgb = RgbToLinear(lightColor.rgb);
+    ApplyInputTransform(lightColor.rgb);
     lightColor.rgb *= saturate(lightRange / (half)15.0) * BLOCK_LUX;
 
     float light_VoL = dot(localDir, lightDir);
@@ -182,7 +182,7 @@ void updateFroxels(ComputeInput input) {
                 if (shadowPos.z + EPSILON <= depthTrans) shadow = half3(1.0);
                 else {
                     shadow = texShadowColor.Sample(shadowCoord);
-                    shadow = RgbToLinear(shadow);
+                    ApplyInputTransform(shadow);
 
                     // TODO: don't use camera check, causes noticeable transition
                     // bool isWater = true;//ap.camera.fluid == 1;

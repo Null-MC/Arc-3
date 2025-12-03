@@ -35,9 +35,9 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
     float depth = mainDepthTex[uv_full];
     half3 finalColor = half3(0.0);
 
-    half4 colorData = texAlbedoGB_translucent[uv_full];
+    half4 albedo = texAlbedoGB_translucent[uv_full];
     
-    if (colorData.a > 0.0) {
+    if (albedo.a > 0.0) {
         float2 texcoord = (uv_full + 0.5) / ap.game.screenSize;
         // if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
@@ -52,7 +52,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         ObjectData_MatLit mat_lit;
         mat_lit.unpack(texMatLightGB_translucent[uv_full]);
 
-        half3 albedo = RgbToLinear(colorData.rgb);
+        ApplyInputTransform(albedo.rgb);
         half roughness = mat_roughness(mat_lit.specular.r);
         half f0_metal = mat_f0_metal(mat_lit.specular.g);
         half metalness = (half)mat_metalness(f0_metal);
@@ -142,7 +142,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         half3 localDir = half3(normalize(localPos));
         half NoVm = max(dot(reflectNormal, -localDir), (half)0.0);
         half3 F_NoV = F_Lazanyi2019(NoVm, f0);
-        half3 specular_tint = lerp((half)1.0, albedo, metalness);
+        half3 specular_tint = lerp((half)1.0, albedo.rgb, metalness);
 
         // imgDebug[uv] = float4(LinearToRgb(reflectColor * 0.008), 1.0);
 

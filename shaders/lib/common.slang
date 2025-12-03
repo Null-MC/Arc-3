@@ -3,6 +3,7 @@ public module common;
 import aperture;
 import buffers.scene;
 import buffers.settings;
+import lib.ACES;
 
 ConstantBuffer<SettingsBuffer> settings;
 StructuredBuffer<SceneBuffer> scene;
@@ -171,13 +172,27 @@ float3 RgbToLinear(const in float3 color) {
     return lerp(lower, higher, is_high);
 }
 
-// half3 RgbToLinear(const in half3 color) {
-//     half3 is_high = step(half3(0.0404482362771082), color);
-//     half3 higher = pow((color + half3(0.055)) / half3(1.055), half3(2.4));
-//     half3 lower = color / half3(12.92);
+half3 RgbToLinear(const in half3 color) {
+    half3 is_high = step(half3(0.0404482362771082), color);
+    half3 higher = pow((color + half3(0.055)) / half3(1.055), half3(2.4));
+    half3 lower = color / half3(12.92);
 
-//     return lerp(lower, higher, is_high);
-// }
+    return lerp(lower, higher, is_high);
+}
+
+float3 InputTransform(const in float3 color) {
+    return ACES_linear_to_cg(RgbToLinear(color));
+}
+
+void ApplyInputTransform(inout float3 color) {
+    color = RgbToLinear(color);
+    color = ACES_linear_to_cg(color);
+}
+
+void ApplyInputTransform(inout half3 color) {
+    color = RgbToLinear(color);
+    color = ACES_linear_to_cg(color);
+}
 
 extension BlockData {
     bool hasAnyTag(const in uint _tags) {

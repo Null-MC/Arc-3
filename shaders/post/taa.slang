@@ -101,8 +101,10 @@ void applyTaa(ComputeInput input) {
         half3 in7 = sharedBuffer[getSharedIndex(uv + int2(+1, -1))];
         half3 in8 = sharedBuffer[getSharedIndex(uv + int2(-1, -1))];
 
-        float3 antialiased = lerp(lastColor.rgb * lastColor.rgb, in0 * in0, rcp(1.0 + mixRate));
-        antialiased = sqrt(antialiased);
+        // float3 antialiased = lerp(lastColor.rgb * lastColor.rgb, in0 * in0, rcp(1.0 + mixRate));
+        // antialiased = sqrt(antialiased);
+
+        float3 antialiased = lerp(lastColor.rgb, in0, rcp(1.0 + mixRate));
 
         // antialiased = mul(RGB_TO_YUV, antialiased);        
         // in0 = mul(RGB_TO_YUV, in0);

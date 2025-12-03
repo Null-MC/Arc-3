@@ -45,9 +45,9 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
     
     uint2 uv = uint2(pos);
     float depth = texDepth[uv];
-    half4 colorData = texAlbedoGB[uv];
+    half4 albedo = texAlbedoGB[uv];
     
-    if (depth < 1.0 && colorData.a > 0.0) {
+    if (depth < 1.0 && albedo.a > 0.0) {
         ObjectData_Normals normals;
         normals.unpack(texNormalGB[uv]);
 
@@ -66,7 +66,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         float3 localPos = project(scene[0].viewProjectionInv, ndcPos);
         float3 viewLocalDir = -normalize(localPos);
 
-        half3 albedo = RgbToLinear(colorData.rgb);
+        ApplyInputTransform(albedo.rgb);
         half roughness = mat_roughness(mat_lit.specular.r);
         half f0_metal = mat_f0_metal(mat_lit.specular.g);
         half sss = mat_sss(mat_lit.specular.b);
@@ -93,7 +93,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         surface.skyPos = getSkyPosition(localPos);
         surface.normal = normals.tex;
         surface.roughL = roughness*roughness;
-        surface.f0 = lerp(f0_metal, albedo, metalness);
+        surface.f0 = lerp(f0_metal, albedo.rgb, metalness);
 
         half NoVm = max((half)dot(normals.tex, viewLocalDir), (half)0.0);
         
