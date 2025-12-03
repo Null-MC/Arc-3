@@ -494,17 +494,20 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .clearColor(0, 0, 0, 0)
         .build();
 
-    const Tracing_scale = Math.pow(2, options.Lighting_Resolution);
-    const Tracing_width = Math.ceil(screenWidth / Tracing_scale);
-    const Tracing_height = Math.ceil(screenHeight / Tracing_scale);
+    // const Tracing_scale = Math.pow(2, options.Lighting_Resolution);
+    // const Tracing_width = Math.ceil(screenWidth / Tracing_scale);
+    // const Tracing_height = Math.ceil(screenHeight / Tracing_scale);
+    const Reflect_scale = Math.pow(2, options.Lighting_Reflection_Resolution);
+    const Reflect_width = Math.ceil(screenWidth / Reflect_scale);
+    const Reflect_height = Math.ceil(screenHeight / Reflect_scale);
 
     let texReflect: BuiltTexture | undefined;
     let texReflect_final: BuiltTexture | undefined;
     let texReflect_prev: BuiltTexture | undefined;
     if (options.Lighting_Reflection_Mode > ReflectMode.SkyOnly) {
         texReflect = pipeline.createTexture('texReflect')
-            .width(Tracing_width)
-            .height(Tracing_height)
+            .width(Reflect_width)
+            .height(Reflect_height)
             .format(Format.RGB16F)
             .clearColor(0, 0, 0, 0)
             .build();
@@ -524,6 +527,10 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .build();
     }
 
+    const GI_scale = Math.pow(2, options.Lighting_GI_Resolution);
+    const GI_width = Math.ceil(screenWidth / GI_scale);
+    const GI_height = Math.ceil(screenHeight / GI_scale);
+
     let texGI_trace: BuiltTexture | undefined;
     let texGI_filter1: BuiltTexture | undefined;
     let texGI_filter2: BuiltTexture | undefined;
@@ -532,8 +539,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     let texGI_final: BuiltTexture | undefined;
     if (options.Lighting_GI_Enabled) {
         texGI_trace = pipeline.createTexture('texGI_trace')
-            .width(Tracing_width)
-            .height(Tracing_height)
+            .width(GI_width)
+            .height(GI_height)
             .format(Format.RGBA16F)
             .clearColor(0, 0, 0, 0)
             .build();
@@ -586,28 +593,6 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     }
 
     pipeline.importPNGTexture('texBlueNoise', 'textures/blue_noise.png', true, false);
-
-    pipeline.importPNGTexture('texWaterWaves_offset', 'textures/water-waves-offset.png', true, false);
-    // pipeline.importRawTexture('texWaterWaves_offset', 'textures/water-waves-offset.dat')
-    //     .type(PixelType.HALF_FLOAT)
-    //     .format(Format.RG16F)
-    //     .width(256)
-    //     .height(256)
-    //     .clamp(false)
-    //     .blur(true)
-    //     .load();
-
-    pipeline.importPNGTexture('texWaterWaves_g1', 'textures/water-waves-g1.png', true, false);
-
-    // pipeline.importPNGTexture('texWaterWaves_low', 'textures/water-waves-low.png', true, false);
-    // pipeline.importRawTexture('texWaterWaves_low', 'textures/water-waves-low.dat')
-    //     .type(PixelType.HALF_FLOAT)
-    //     .format(Format.R16F)
-    //     .width(512)
-    //     .height(512)
-    //     .clamp(false)
-    //     .blur(true)
-    //     .load();
 
     pipeline.importPNGTexture('texWaterWaves_high', 'textures/water-waves-high.png', true, false);
     // pipeline.importRawTexture('texWaterWaves_high', 'textures/water-waves-high.dat')
@@ -1014,12 +999,12 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         .exportInt('GI_RefineStepCount', options.Lighting_GI_RefineSteps)
                         .exportBool('GI_ScreenTrace', options.Lighting_GI_ScreenTrace)
                         .exportInt('GI_SampleCount', options.Lighting_GI_Samples)
-                        .exportInt('BufferWidth', Tracing_width)
-                        .exportInt('BufferHeight', Tracing_height)
-                        .exportInt('BufferScale', Tracing_scale)
+                        .exportInt('BufferWidth', GI_width)
+                        .exportInt('BufferHeight', GI_height)
+                        .exportInt('BufferScale', GI_scale)
                         .compile();
 
-                    if (options.Lighting_Resolution != 0) {
+                    if (options.Lighting_GI_Resolution != 0) {
                         stage_opaque_gi.createCompute("deferred-gi-upscale")
                             .location('composite/upscale-nearest', "upscale_nearest")
                             .workGroups(
@@ -1029,16 +1014,16 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                             .overrideObject('imgDest', texGI_filter1.imageName())
                             .overrideObject('texSource', texGI_trace.name())
                             .overrideObject('texDepth', 'solidDepthTex')
-                            .exportInt('BufferWidth', Tracing_width)
-                            .exportInt('BufferHeight', Tracing_height)
-                            .exportInt('BufferScale', Tracing_scale)
+                            .exportInt('BufferWidth', GI_width)
+                            .exportInt('BufferHeight', GI_height)
+                            .exportInt('BufferScale', GI_scale)
                             .compile();
                     }
 
                     for (let i = 0; i < options.Lighting_GI_FilterPasses; i++) {
                         let filter_src: string;
                         if (i == 0) {
-                            if (options.Lighting_Resolution != 0) {
+                            if (options.Lighting_GI_Resolution != 0) {
                                 filter_src = texGI_filter1.name();
                             }
                             else {
@@ -1061,7 +1046,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     }
 
                     let final_src: string = texGI_trace.name();
-                    if (options.Lighting_GI_FilterPasses > 0 || options.Lighting_Resolution != 0) {
+                    if (options.Lighting_GI_FilterPasses > 0 || options.Lighting_GI_Resolution != 0) {
                         texGI_flipper.flip();
                         final_src = texGI_flipper.getReadTexture().name();
                     }
@@ -1110,12 +1095,12 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                         .exportInt('Reflect_VoxelSteps', options.Lighting_Reflection_VoxelSteps)
                         .exportInt('Reflect_ScreenSteps', options.Lighting_Reflection_ScreenSteps)
                         .exportInt('Reflect_RefineSteps', options.Lighting_Reflection_RefineSteps)
-                        .exportInt('BufferWidth', Tracing_width)
-                        .exportInt('BufferHeight', Tracing_height)
-                        .exportInt('BufferScale', Tracing_scale)
+                        .exportInt('BufferWidth', Reflect_width)
+                        .exportInt('BufferHeight', Reflect_height)
+                        .exportInt('BufferScale', Reflect_scale)
                         .compile();
                     
-                    if (options.Lighting_Resolution != 0) {
+                    if (options.Lighting_Reflection_Resolution != 0) {
                         reflectStage.createCompute("opaque-reflection-upscale")
                             // .location('composite/upscale-nearest', "upscale_nearest")
                             .location('composite/upscale-weighted', "upscale_weighted")
@@ -1126,14 +1111,14 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                             .overrideObject('imgDest', texReflect_final.imageName())
                             .overrideObject('texSource', texReflect.name())
                             .overrideObject('texDepth', 'solidDepthTex')
-                            .exportInt('BufferWidth', Tracing_width)
-                            .exportInt('BufferHeight', Tracing_height)
-                            .exportInt('BufferScale', Tracing_scale)
+                            .exportInt('BufferWidth', Reflect_width)
+                            .exportInt('BufferHeight', Reflect_height)
+                            .exportInt('BufferScale', Reflect_scale)
                             .compile();
                     }
 
                     // if (options.Lighting_Reflection_Rough) {
-                        const final_src = options.Lighting_Resolution != 0
+                        const final_src = options.Lighting_Reflection_Resolution != 0
                             ? texReflect_final.name()
                             : texReflect.name();
 
@@ -1292,9 +1277,9 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .exportInt('Reflect_VoxelSteps', options.Lighting_Reflection_VoxelSteps)
                     .exportInt('Reflect_ScreenSteps', options.Lighting_Reflection_ScreenSteps)
                     .exportInt('Reflect_RefineSteps', options.Lighting_Reflection_RefineSteps)
-                    .exportInt('BufferWidth', Tracing_width)
-                    .exportInt('BufferHeight', Tracing_height)
-                    .exportInt('BufferScale', Tracing_scale)
+                    .exportInt('BufferWidth', Reflect_width)
+                    .exportInt('BufferHeight', Reflect_height)
+                    .exportInt('BufferScale', Reflect_scale)
                     .compile();
                 
                 // TODO: accumulate and upscale
@@ -1303,9 +1288,9 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .target(0, finalFlipper.getWriteTexture())
                     .overrideObject('texSource', finalFlipper.getReadTexture().name())
                     .overrideObject('texMatLightGB', texMatLightGB_translucent.name())
-                    .exportInt('BufferWidth', Tracing_width)
-                    .exportInt('BufferHeight', Tracing_height)
-                    .exportInt('BufferScale', Tracing_scale)
+                    .exportInt('BufferWidth', Reflect_width)
+                    .exportInt('BufferHeight', Reflect_height)
+                    .exportInt('BufferScale', Reflect_scale)
                     .compile();
             }
 

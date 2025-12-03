@@ -22,7 +22,7 @@ export class Options {
     get Material_Parallax_SampleCount(): number {return getIntSetting('MATERIAL.PARALLAX.SAMPLES');}
     get Material_Parallax_Optimize(): boolean {return getBoolSetting('MATERIAL.PARALLAX.OPTIMIZE');}
     
-    get Lighting_Resolution(): number {return getIntSetting('LIGHTING.RESOLUTION');}
+    // get Lighting_Resolution(): number {return getIntSetting('LIGHTING.RESOLUTION');}
     get Lighting_VoxelResolution(): number {return getIntSetting('LIGHTING.VOXEL_RESOLUTION');}
     get Lighting_ColorCandles(): boolean {return getBoolSetting('LIGHTING.COLOR_CANDLES');}
 
@@ -33,6 +33,7 @@ export class Options {
     get Lighting_Refraction_ScreenSteps(): number {return getIntSetting('LIGHTING.REFRACT.SCREEN_STEPS');}
     get Lighting_Refraction_RefineSteps(): number {return getIntSetting('LIGHTING.REFRACT.REFINE_STEPS');}
 
+    get Lighting_Reflection_Resolution(): number {return getIntSetting('LIGHTING.REFLECT.RESOLUTION');}
     get Lighting_Reflection_Mode(): number {return getIntSetting('LIGHTING.REFLECT.MODE');}
     get Lighting_Reflection_ScreenSpaceFallback(): boolean {return getBoolSetting('LIGHTING.REFLECT.SS_FALLBACK');}
     get Lighting_Reflection_Rough(): boolean {return getBoolSetting('LIGHTING.REFLECT.ROUGH');}
@@ -42,7 +43,7 @@ export class Options {
 
     get Lighting_GI_Enabled(): boolean {return getBoolSetting('LIGHTING.GI.ENABLED');}
     get Lighting_GI_ScreenTrace(): boolean {return getBoolSetting('LIGHTING.GI.SS_TRACE');}
-    // get Lighting_GI_Resolution(): number {return getIntSetting('LIGHTING.GI.RESOLUTION');}
+    get Lighting_GI_Resolution(): number {return getIntSetting('LIGHTING.GI.RESOLUTION');}
     get Lighting_GI_MaxFrames(): number {return getIntSetting('LIGHTING.GI.MAXFRAMES');}
     get Lighting_GI_FilterPasses(): number {return getIntSetting('LIGHTING.GI.FILTERING');}
     get Lighting_GI_Samples(): number {return getIntSetting('LIGHTING.GI.SAMPLES');}
