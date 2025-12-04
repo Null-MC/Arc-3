@@ -2,6 +2,8 @@ public module PBR;
 
 import lib.common;
 import lib.light.fresnel;
+import lib.material.hcm;
+import lib.ACES;
 
 extern static const int MATERIAL_FORMAT;
 extern static const int MATERIAL_NORMAL_FORMAT = MATERIAL_FORMAT;
@@ -128,52 +130,32 @@ half mat_metalness(const in half f0_metal) {
     }
 }
 
-// bool mat_isMetal(const in half f0_metal) {
-//     if (MATERIAL_METALS_FORMAT == MAT_LABPBR) {
-//         return f0_metal > (half)(229.5/255.0);
-//     }
-//     else if (MATERIAL_METALS_FORMAT == MAT_OLDPBR) {
-//         return f0_metal > (half)0.5;
-//     }
-//     else {
-//         return false;
-//     }
-// }
-
-static const half3 lazanyi_f0[8] = half3[](
-    half3(0.78, 0.77, 0.74),
-    half3(1.00, 0.90, 0.61),
-    half3(1.00, 0.98, 1.00),
-    half3(0.77, 0.80, 0.79),
-    half3(1.00, 0.89, 0.73),
-    half3(0.79, 0.87, 0.85),
-    half3(0.92, 0.90, 0.83),
-    half3(1.00, 1.00, 0.91));
-
-static const half3 lazanyi_f82[8] = half3[](
-    half3(0.74, 0.76, 0.76),
-    half3(1.00, 0.93, 0.73),
-    half3(0.96, 0.97, 0.98),
-    half3(0.74, 0.79, 0.78),
-    half3(1.00, 0.90, 0.80),
-    half3(0.83, 0.80, 0.83),
-    half3(0.89, 0.87, 0.81),
-    half3(1.00, 1.00, 0.95));
-
-void mat_f0(const in half3 albedo, const in half f0_metal, const in half metalness, out half3 f0, out half3 f82) {
+LazanyiF mat_f0(const in half3 albedo, const in half f0_metal, const in half metalness) {
     if (MATERIAL_FORMAT == MAT_LABPBR) {
         int hcm = int(f0_metal * 255.0 - 229.5);
 
         if (hcm >= 0 && hcm < 8) {
-            f0 = InputTransform(lazanyi_f0[hcm]);
-            f82 = InputTransform(lazanyi_f82[hcm]);
-            return;
+            var hcm = lazanyi_hcm[hcm];
+            return LazanyiF(
+                InputTransform(hcm.f0),
+                InputTransform(hcm.f82));
         }
     }
     
-    f0 = min(f0_metal, (half)0.9);
-    f0 = lerp(f0, albedo.rgb, metalness);
-    f82 = get_f82(f0);
+    LazanyiF F;
+    F.f0 = min(f0_metal, (half)0.9);
+    F.f0 = lerp(F.f0, albedo.rgb, metalness);
+    F.f82 = LazanyiF.f82_from_f0(F.f0);
+    return F;
+}
+
+half3 mat_specularTint(const in half3 albedo, const in half f0_metal, const in half metalness) {
+    if (MATERIAL_METALS_FORMAT == MAT_LABPBR) {
+        int hcm = int(f0_metal * 255.0 - 229.5);
+        if (hcm > (254.5/255.0)) return half3(1.0);
+    }
+    
+    return lerp(half3(1.0), albedo, metalness);
 }
 
 half mat_occlusion(const in half data) {

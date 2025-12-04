@@ -93,7 +93,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         surface.skyPos = getSkyPosition(localPos);
         surface.normal = normals.tex;
         surface.roughL = roughness*roughness;
-        mat_f0(albedo.rgb, f0_metal, metalness, surface.f0, surface.f82);
+        surface.lazanyi = mat_f0(albedo.rgb, f0_metal, metalness);
 
         half NoVm = max((half)dot(normals.tex, viewLocalDir), (half)0.0);
         
@@ -159,7 +159,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
             reflectLocalDir = normalize(reflectLocalDir);
 
             half3 skyColor = sampleSkyView(surface.skyPos, reflectLocalDir, scene[0].SunLocalDir);
-            half3 F_NoV = F_Lazanyi2019(NoVm, surface.f0, surface.f82);
+            half3 F_NoV = surface.lazanyi.F(NoVm);
             specular += F_NoV * skyColor * lmcoord_y;
             diffuse *= 1.0 - F_NoV;
         }

@@ -525,6 +525,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .width(screenWidth)
             .height(screenHeight)
             .format(Format.RGBA16F)
+            .clearColor(0, 0, 0, 0)
             .clear(false)
             .build();
     }

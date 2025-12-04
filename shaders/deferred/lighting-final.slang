@@ -52,8 +52,6 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
 
 		ApplyInputTransform(albedo.rgb);
         
-        half3 tint = lerp(half3(1.0), albedo.rgb, metalness);
-
         // TODO: wetness
         Wetness_ApplyRoughness(roughness, wetness);
 
@@ -70,8 +68,9 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         if (Debug_WhiteWorld) albedo.rgb = WhiteWorldColor;
 
         float3 diffColor = Wetness_GetAlbedo(albedo.rgb, porosity, wetness);
+        half3 specularTint = mat_specularTint(albedo.rgb, f0_metal, metalness);
 
-        final.rgb += diffColor * diffuse + specular * tint;
+        final.rgb += diffColor * diffuse + specular * specularTint;
         final.a = albedo.a;
     }
     else if (!RENDER_TRANSLUCENT && World_HasSky) {

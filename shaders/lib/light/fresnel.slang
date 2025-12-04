@@ -42,24 +42,81 @@ half F_schlick(const in float cos_theta, const in half f0, const in half f90) {
     return f0 + (f90 - f0) * (half)pow5(invCosTheta);
 }
 
-half get_f82(const in half f0) {
-    return (half)((2371179624770769.0 * f0 + 2041666790000000.0) / 4412846414770769.0);
-}
 
-half3 get_f82(const in half3 f0) {
-    return (half3)((2371179624770769.0 * f0 + 2041666790000000.0) / 4412846414770769.0);
-}
+// LAZANYI 2019
 
-float F_Lazanyi2019(const in float cosTheta, const in float f0, const in float f82) {
-    // This is unpolarized ONLY
-    // float f82 = (2371179624770769.0 * f0 + 2041666790000000.0) / 4412846414770769.0;
-    float a = 17.6513846 * (f0 - f82) + 8.16666667 * (1.0 - f0);
-    return saturate(f0 + (1.0 - f0) * pow5(1.0 - cosTheta) - a * cosTheta * pow6(1.0 - cosTheta));
-}
+struct LazanyiF {
+    half3 f0;
+    half3 f82;
 
-float3 F_Lazanyi2019(const in float3 cosTheta, const in float3 f0, const in float3 f82) {
-    // This is unpolarized ONLY
-    // float3 f82 = (2371179624770769.0 * f0 + 2041666790000000.0) / 4412846414770769.0;
-    float3 a = 17.6513846 * (f0 - f82) + 8.16666667 * (1.0 - f0);
-    return saturate(f0 + (1.0 - f0) * pow5(1.0 - cosTheta) - a * cosTheta * pow6(1.0 - cosTheta));
-}
+    __init(half3 f0, half3 f82) {
+        this.f0 = f0;
+        this.f82 = f82;
+    }
+
+    __init(half3 f0) {
+        this.f0 = f0;
+        this.f82 = LazanyiF.f82_from_f0(f0);
+    }
+
+    float A() {
+        const float cosThetaMax = acos(1.0 / 7.0);
+        const float max5 = pow5(cosThetaMax);
+
+        const float denom = cosThetaMax * pow6(cosThetaMax);
+        return saturate((f0.x + (1.0 - f0.x) * max5 - f82.x) / denom);
+    }
+
+    float3 F(const in float cosTheta) {
+        float cosTheta_inv = saturate(1.0 - cosTheta);
+        return saturate(f0 + (1.0 - f0) * pow5(cosTheta_inv) - A() * cosTheta * pow6(cosTheta_inv));
+    }
+
+    static half f82_from_f0(const in half f0) {
+        return (half)((2371179624770769.0 * f0 + 2041666790000000.0) / 4412846414770769.0);
+    }
+
+    static half3 f82_from_f0(const in half3 f0) {
+        return (half3)((2371179624770769.0 * f0 + 2041666790000000.0) / 4412846414770769.0);
+    }
+};
+
+// float3 a = 17.6513846 * (f0 - f82) + 8.16666667 * (1.0 - f0);
+// float3 f82 = (2371179624770769.0 * f0 + 2041666790000000.0) / 4412846414770769.0;
+
+// half get_f82(const in half f0) {
+//     return (half)((2371179624770769.0 * f0 + 2041666790000000.0) / 4412846414770769.0);
+// }
+
+// half3 get_f82(const in half3 f0) {
+//     return (half3)((2371179624770769.0 * f0 + 2041666790000000.0) / 4412846414770769.0);
+// }
+
+// float lazanyi_a(const in float f0, const in float f82) {
+//     const float cosThetaMax = acos(1.0 / 7.0);
+//     const float max5 = pow5(cosThetaMax);
+
+//     const float denom = cosThetaMax * pow6(cosThetaMax);
+//     return saturate((f0 + (1.0 - f0) * max5 - f82) / denom);
+// }
+
+// float3 lazanyi_a(const in LazanyiF F) {
+//     const float cosThetaMax = acos(1.0 / 7.0);
+//     const float max5 = pow5(cosThetaMax);
+
+//     const float denom = cosThetaMax * pow6(cosThetaMax);
+//     return saturate((F.f0 + (1.0 - F.f0) * max5 - F.f82) / denom);
+// }
+
+// float F_Lazanyi2019(const in float cosTheta, const in LazanyiF F) {
+//     float cosTheta_inv = saturate(1.0 - cosTheta);
+
+//     float a = lazanyi_a(F);
+//     return saturate(F.f0 + (1.0 - F.f0) * pow5(cosTheta_inv) - a * cosTheta * pow6(cosTheta_inv));
+// }
+
+// float3 F_Lazanyi2019(const in float cosTheta, const in LazanyiF F) {
+//     float cosTheta_inv = saturate(1.0 - cosTheta);
+
+//     return saturate(F.f0 + (1.0 - F.f0) * pow5(cosTheta_inv) - F.A() * cosTheta * pow6(cosTheta_inv));
+// }

@@ -63,11 +63,11 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
         if (!isWater) {
             sample_density = SampleFogDensity(trace_localPos);
 
-            float3 trace_skyBufferPos = FloodFill_Sky_GetBufferPosition(trace_localPos);
-            if (FloodFill_Sky_InBounds(trace_skyBufferPos)) {
-                float skyLightF = floodfill_sky_sample(trace_skyBufferPos);
-                sample_density = lerp(Fog_DensityIndoors, sample_density, skyLightF);
-            }
+            // float3 trace_skyBufferPos = FloodFill_Sky_GetBufferPosition(trace_localPos);
+            // if (FloodFill_Sky_InBounds(trace_skyBufferPos)) {
+            //     float skyLightF = floodfill_sky_sample(trace_skyBufferPos);
+            //     sample_density = lerp(Fog_DensityIndoors, sample_density, skyLightF);
+            // }
         }
 
         float3 inScattering = froxel * sample_density;

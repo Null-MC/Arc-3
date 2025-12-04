@@ -88,18 +88,17 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
             Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
         }
 
-        half3 f0, f82;
-        mat_f0(albedo, f0_metal, metalness, f0, f82);
+        var lazanyi = mat_f0(albedo, f0_metal, metalness);
         half roughL = roughness*roughness;
 
         if (ap.game.mainHand != 0u) {
             float3 lightLocalPos = GetHandLightPos(HandLightOffset_main);
-            GetHandLight(diffuse, specular, ap.game.mainHand, lightLocalPos, handSampleLocalPos, viewDir, normals.tex, normals.geo, f0, roughL);
+            GetHandLight(diffuse, specular, ap.game.mainHand, lightLocalPos, handSampleLocalPos, viewDir, normals.tex, normals.geo, lazanyi, roughL);
         }
 
         if (ap.game.offHand != 0u) {
             float3 lightLocalPos = GetHandLightPos(HandLightOffset_alt);
-            GetHandLight(diffuse, specular, ap.game.offHand, lightLocalPos, handSampleLocalPos, viewDir, normals.tex, normals.geo, f0, roughL);
+            GetHandLight(diffuse, specular, ap.game.offHand, lightLocalPos, handSampleLocalPos, viewDir, normals.tex, normals.geo, lazanyi, roughL);
         }
 
         diffuse /= half3(PI);

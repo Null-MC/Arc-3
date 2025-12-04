@@ -58,9 +58,9 @@ float3 GetWaveHeight(const in float3 position, const in float skyLight, const in
     wavePos.y += Scene_WaterWaveHeight * (heightDelta - WaterWaveSurfaceOffset);
     //wavePos.y -= WaterWaveSurfaceOffset;
 
-    float high_1 = 1.0 - texWaterWaves_high.Sample((wavePos.xz) * 0.17 - 0.04*time);
-    float high_2 = 1.0 - texWaterWaves_high.Sample((wavePos.xz) * 0.13 + 0.04*time);
-    float high = 1.0 - high_1 * high_2;
+    float high_1 = texWaterWaves_high.Sample((wavePos.xz) * 0.27 - 0.14*time);
+    float high_2 = texWaterWaves_high.Sample((wavePos.xz) * 0.23 + 0.14*time);
+    float high = high_1 * high_2;
 
     wavePos.y += 0.1 * high;
 
