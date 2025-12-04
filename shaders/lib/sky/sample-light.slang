@@ -7,7 +7,7 @@ import lib.light.brdf;
 struct SurfaceData {
     float3 skyPos;
     float3 normal;
-    half3 f0;
+    half3 f0, f82;
     half roughL;
 };
 
@@ -25,10 +25,10 @@ void SampleCelestial(inout float3 diffuse, inout float3 specular, CelestialLight
     float VoHm = max(dot(viewDir, H), 0.0);
 
     //float3 F_VoH = material_fresnel(albedo, f0_metal, roughL, VoHm);
-    half3 F_VoH = F_Lazanyi2019(VoHm, surface.f0);
+    half3 F_VoH = F_Lazanyi2019(VoHm, surface.f0, surface.f82);
 
     half D = SampleLightDiffuse(NoVm, NoLm, LoHm, surface.roughL);
-    diffuse += NoLm * D * light.color * saturate((half)1.0 - F_VoH);
+    diffuse += NoLm * D * light.color;// * saturate((half)1.0 - F_VoH);
 
     float3 S = SampleLightSpecular(NoLm, NoHm, NoVm, F_VoH, surface.roughL);
     specular += NoLm * S * light.color;

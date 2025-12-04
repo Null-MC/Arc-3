@@ -4,6 +4,9 @@ export function ApplyLightColors(coloredCandles: boolean) {
     setLightColorEx('#f39849', 12/16, 'campfire');
     setLightColorEx('#935b2c', 1, 'cave_vines', "cave_vines_plant");
     setLightColorEx('#d39f6d', 1, 'copper_bulb', 'waxed_copper_bulb');
+    setLightColorEx('#5ec52e', 2/16, 'copper_torch', 'copper_wall_torch');
+    setLightColorEx('#5ec52e', 4/16, 'copper_lantern', 'exposed_copper_lantern', 'weathered_copper_lantern', 'oxidized_copper_lantern',
+        'waxed_copper_lantern', 'waxed_exposed_copper_lantern', 'waxed_weathered_copper_lantern', 'waxed_oxidized_copper_lantern');
     setLightColorEx('#d39255', 1, 'exposed_copper_bulb', 'waxed_exposed_copper_bulb');
     setLightColorEx('#cf833a', 1, 'weathered_copper_bulb', 'waxed_weathered_copper_bulb');
     setLightColorEx('#87480b', 1, 'oxidized_copper_bulb', 'waxed_oxidized_copper_bulb');

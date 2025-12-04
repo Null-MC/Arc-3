@@ -87,13 +87,13 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         half2 wetness_puddle = texWetnessGB[uv];
         Wetness_ApplyRoughness(roughness, wetness_puddle.x);
         Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
-        // f0_metal = (half)lerp(f0_metal, 0.02, wetness);
+        // f0_metal = mat_f0(0.02, f0_metal, wetness);
 
         SurfaceData surface;
         surface.skyPos = getSkyPosition(localPos);
         surface.normal = normals.tex;
         surface.roughL = roughness*roughness;
-        surface.f0 = lerp(f0_metal, albedo.rgb, metalness);
+        mat_f0(albedo.rgb, f0_metal, metalness, surface.f0, surface.f82);
 
         half NoVm = max((half)dot(normals.tex, viewLocalDir), (half)0.0);
         
@@ -159,8 +159,8 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
             reflectLocalDir = normalize(reflectLocalDir);
 
             half3 skyColor = sampleSkyView(surface.skyPos, reflectLocalDir, scene[0].SunLocalDir);
-            half3 F_NoV = F_Lazanyi2019(NoVm, surface.f0);
-            specular += F_NoV * skyColor * (((half)1.0 - surface.roughL) * lmcoord_y);
+            half3 F_NoV = F_Lazanyi2019(NoVm, surface.f0, surface.f82);
+            specular += F_NoV * skyColor * lmcoord_y;
             diffuse *= 1.0 - F_NoV;
         }
     }

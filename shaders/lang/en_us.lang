@@ -52,6 +52,15 @@ option.MATERIAL.PARALLAX.OPTIMIZE=Optimize Samples
 option.MATERIAL.PARALLAX.OPTIMIZE.comment=Attempts to increase quality by focusing sample distribution. May not always work well.
 
 
+screen.MATERIAL.EMISSION=Emission
+
+option.MATERIAL.EMISSION.SCALE=Scale
+suffix.MATERIAL.EMISSION.SCALE=%
+
+option.MATERIAL.EMISSION.CURVE=Curve
+suffix.MATERIAL.EMISSION.CURVE=%
+
+
 screen.LIGHTING=Lighting
 
 option.LIGHTING.VOXEL_RESOLUTION=Voxel Resolution
@@ -192,7 +201,17 @@ screen.POST=Post-Processing
 
 screen.POST.TONEMAP=ToneMap
 
-option.POST.TONEMAP.CONTRAST=Contrast
+option.POST.TONEMAP.RED_OFFSET=Red Offset
+option.POST.TONEMAP.RED_SCALE=Red Scale
+option.POST.TONEMAP.RED_POWER=Red Power
+
+option.POST.TONEMAP.GREEN_OFFSET=Green Offset
+option.POST.TONEMAP.GREEN_SCALE=Green Scale
+option.POST.TONEMAP.GREEN_POWER=Green Power
+
+option.POST.TONEMAP.BLUE_OFFSET=Blue Offset
+option.POST.TONEMAP.BLUE_SCALE=Blue Scale
+option.POST.TONEMAP.BLUE_POWER=Blue Power
 
 
 screen.POST.EXPOSURE=Exposure

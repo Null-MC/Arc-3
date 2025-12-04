@@ -21,6 +21,9 @@ export class Options {
     get Material_Parallax_Depth(): number {return getIntSetting('MATERIAL.PARALLAX.DEPTH');}
     get Material_Parallax_SampleCount(): number {return getIntSetting('MATERIAL.PARALLAX.SAMPLES');}
     get Material_Parallax_Optimize(): boolean {return getBoolSetting('MATERIAL.PARALLAX.OPTIMIZE');}
+
+    get Material_Emission_Scale(): number {return getIntSetting('MATERIAL.EMISSION.SCALE');}
+    get Material_Emission_Curve(): number {return getIntSetting('MATERIAL.EMISSION.CURVE');}
     
     // get Lighting_Resolution(): number {return getIntSetting('LIGHTING.RESOLUTION');}
     get Lighting_VoxelResolution(): number {return getIntSetting('LIGHTING.VOXEL_RESOLUTION');}
@@ -71,7 +74,16 @@ export class Options {
     get Shadow_SssMaxDist(): number {return getFloatSetting('SHADOW.SSS_MAX_DIST');}
     get Shadow_SssPcfSamples(): number {return getIntSetting('SHADOW.SSS_PCF_SAMPLES');}
 
-    get Post_ToneMap_Contrast(): number {return getIntSetting('POST.TONEMAP.CONTRAST');}
+    // get Post_ToneMap_Contrast(): number {return getIntSetting('POST.TONEMAP.CONTRAST');}
+    get Post_ToneMap_RedOffset(): number {return getIntSetting('POST.TONEMAP.RED_OFFSET');}
+    get Post_ToneMap_RedScale(): number {return getIntSetting('POST.TONEMAP.RED_SCALE');}
+    get Post_ToneMap_RedPower(): number {return getIntSetting('POST.TONEMAP.RED_POWER');}
+    get Post_ToneMap_GreenOffset(): number {return getIntSetting('POST.TONEMAP.GREEN_OFFSET');}
+    get Post_ToneMap_GreenScale(): number {return getIntSetting('POST.TONEMAP.GREEN_SCALE');}
+    get Post_ToneMap_GreenPower(): number {return getIntSetting('POST.TONEMAP.GREEN_POWER');}
+    get Post_ToneMap_BlueOffset(): number {return getIntSetting('POST.TONEMAP.BLUE_OFFSET');}
+    get Post_ToneMap_BlueScale(): number {return getIntSetting('POST.TONEMAP.BLUE_SCALE');}
+    get Post_ToneMap_BluePower(): number {return getIntSetting('POST.TONEMAP.BLUE_POWER');}
 
     get Post_Exposure_Min(): number {return getFloatSetting('POST.EXPOSURE.MIN');}
     get Post_Exposure_Max(): number {return getFloatSetting('POST.EXPOSURE.MAX');}

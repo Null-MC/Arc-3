@@ -101,6 +101,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .addBool('Sky_FogNoise', options.Sky_FogNoise)
         .addBool('Sky_WindEnabled', options.Sky_WindEnabled)
         .addInt('MATERIAL_FORMAT', options.Material_Format)
+        // .addFloat('Mat_EmissionScale', options.Material_Emission_Scale * 0.01)
+        // .addFloat('Mat_EmissionCurve', options.Material_Emission_Curve * 0.01)
         .addInt('Shadow_Resolution', options.Shadow_Resolution)
         .addInt('Shadow_CascadeCount', renderConfig.shadow.cascades)
         .addInt('ReflectMode', options.Lighting_Reflection_Mode)
@@ -244,7 +246,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     ApplyLightColors(options.Lighting_ColorCandles);
 
     pipeline.createBuffer("scene", 1024, false);
-    settings = pipeline.createStreamingBuffer("settings", 64);
+    settings = pipeline.createStreamingBuffer("settings", 128);
 
     if (options.VoxelEnabled) {
         const voxelSize = cubed(options.Lighting_VoxelResolution);
@@ -816,7 +818,12 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         .exportBool('RENDER_ENTITY', true)
         .compile();
 
-    discardShader('shit', Usage.EMISSIVE);
+    // discardShader('shit', Usage.EMISSIVE);
+    // opaqueObjectShader("emissive", Usage.EMISSIVE)
+    //     .target(0, texAlbedoGB_opaque).blendFunc(0, Func.ONE, Func.ONE, Func.ONE, Func.ONE)
+    //     .exportBool('RENDER_ENTITY', true)
+    //     .exportBool('RENDER_EMISSIVE', true)
+    //     .compile();
     
     opaqueObjectShader("entity-cutout", Usage.ENTITY_CUTOUT)
         .exportBool('RENDER_ENTITY', true)
@@ -880,6 +887,12 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
     translucentObjectShader("particles", Usage.PARTICLES)
         .exportBool('RENDER_PARTICLES', true)
+        .compile();
+
+    pipeline.createObjectShader("emissive", Usage.EMISSIVE)
+        .location("objects/emissive")
+        .target(0, texAlbedoGB_opaque).blendFunc(0, Func.SRC_ALPHA, Func.ONE_MINUS_SRC_ALPHA, Func.ONE, Func.ZERO)
+        .target(1, texMatLightGB_opaque).blendOff(1)
         .compile();
 
     pipeline.createObjectShader("entity-glint", Usage.ENTITY_GLINT)
@@ -1495,8 +1508,19 @@ export function onSettingsChanged(pipeline: PipelineConfig) {
         .appendInt(options.Water_WaveDetail)
         .appendFloat(options.Water_WaveSize * 0.01)
         .appendFloat(options.Material_Parallax_Depth * 0.01)
+        .appendFloat(options.Material_Emission_Scale * 0.01)
+        .appendFloat(options.Material_Emission_Curve * 0.01)
         .appendFloat(options.Post_Bloom_Strength * 0.01)
-        .appendFloat(options.Post_ToneMap_Contrast * 0.01)
+        // .appendFloat(options.Post_ToneMap_Contrast * 0.01)
+        .appendFloat(options.Post_ToneMap_RedOffset * 0.01)
+        .appendFloat(options.Post_ToneMap_RedScale * 0.01)
+        .appendFloat(options.Post_ToneMap_RedPower * 0.01)
+        .appendFloat(options.Post_ToneMap_GreenOffset * 0.01)
+        .appendFloat(options.Post_ToneMap_GreenScale * 0.01)
+        .appendFloat(options.Post_ToneMap_GreenPower * 0.01)
+        .appendFloat(options.Post_ToneMap_BlueOffset * 0.01)
+        .appendFloat(options.Post_ToneMap_BlueScale * 0.01)
+        .appendFloat(options.Post_ToneMap_BluePower * 0.01)
         .appendFloat(options.Post_Exposure_Min)
         .appendFloat(options.Post_Exposure_Max)
         .appendFloat(options.Post_Exposure_Range)

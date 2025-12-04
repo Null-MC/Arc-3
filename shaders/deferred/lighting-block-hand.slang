@@ -88,7 +88,8 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
             Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
         }
 
-        half3 f0 = lerp(f0_metal, albedo, metalness);
+        half3 f0, f82;
+        mat_f0(albedo, f0_metal, metalness, f0, f82);
         half roughL = roughness*roughness;
 
         if (ap.game.mainHand != 0u) {

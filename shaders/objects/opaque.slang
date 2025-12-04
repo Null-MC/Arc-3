@@ -15,6 +15,7 @@ extern static const bool Material_SmoothNormals;
 extern static const bool RENDER_ENTITY = false;
 extern static const bool RENDER_TERRAIN = false;
 extern static const bool RENDER_PARTICLES = false;
+extern static const bool RENDER_EMISSIVE = false;
 extern static const bool RENDER_TEXT = false;
 extern static const bool RENDER_HAND = false;
 
@@ -181,6 +182,10 @@ FragmentOutput fragmentMain(VertexOutput input) {
     mat_lit.specular = (half4)specularTex.SampleLevel(tex_uv, LOD);
 
     iris_discardIfNeeded(color);
+
+    if (RENDER_EMISSIVE) {
+        // if (color.a < (0.5/255.0)) discard;
+    }
 
     if (RENDER_TERRAIN) {
         mat_lit.blockMapId = ap.blocks[input.blockId].customId;

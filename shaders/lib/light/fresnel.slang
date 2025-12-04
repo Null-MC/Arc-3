@@ -42,16 +42,24 @@ half F_schlick(const in float cos_theta, const in half f0, const in half f90) {
     return f0 + (f90 - f0) * (half)pow5(invCosTheta);
 }
 
-float F_Lazanyi2019(float cosTheta, in float f0) {
+half get_f82(const in half f0) {
+    return (half)((2371179624770769.0 * f0 + 2041666790000000.0) / 4412846414770769.0);
+}
+
+half3 get_f82(const in half3 f0) {
+    return (half3)((2371179624770769.0 * f0 + 2041666790000000.0) / 4412846414770769.0);
+}
+
+float F_Lazanyi2019(const in float cosTheta, const in float f0, const in float f82) {
     // This is unpolarized ONLY
-    float f82 = (2371179624770769.0 * f0 + 2041666790000000.0) / 4412846414770769.0;
+    // float f82 = (2371179624770769.0 * f0 + 2041666790000000.0) / 4412846414770769.0;
     float a = 17.6513846 * (f0 - f82) + 8.16666667 * (1.0 - f0);
     return saturate(f0 + (1.0 - f0) * pow5(1.0 - cosTheta) - a * cosTheta * pow6(1.0 - cosTheta));
 }
 
-float3 F_Lazanyi2019(float3 cosTheta, in float3 f0) {
+float3 F_Lazanyi2019(const in float3 cosTheta, const in float3 f0, const in float3 f82) {
     // This is unpolarized ONLY
-    float3 f82 = (2371179624770769.0 * f0 + 2041666790000000.0) / 4412846414770769.0;
+    // float3 f82 = (2371179624770769.0 * f0 + 2041666790000000.0) / 4412846414770769.0;
     float3 a = 17.6513846 * (f0 - f82) + 8.16666667 * (1.0 - f0);
     return saturate(f0 + (1.0 - f0) * pow5(1.0 - cosTheta) - a * cosTheta * pow6(1.0 - cosTheta));
 }

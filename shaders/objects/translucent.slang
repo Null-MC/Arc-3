@@ -273,11 +273,12 @@ FragmentOutput fragmentMain(VertexOutput input, float2 fragPos : SV_Position) {
         output.tint = LinearToRgb(output.tint);
     }
 
+    half f0_metal = mat_f0_metal(mat_lit.specular.g);
+
     // apply fresnel to opacity
     float3 viewLocalDir = -normalize(input.localPos);
-    half f0_metal = mat_f0_metal(mat_lit.specular.g);
     half NoVm = max((half)dot(normals.tex, viewLocalDir), (half)0.0);
-    half F_NoV = F_Lazanyi2019(NoVm, f0_metal);
+    float F_NoV = F_schlick(NoVm, f0_metal, 1.0);
     color.a = 1.0 - ((1.0 - color.a) * (1.0 - F_NoV));
 
     output.albedo = color;

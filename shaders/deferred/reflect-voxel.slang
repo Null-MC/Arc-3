@@ -78,7 +78,10 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
         // f0_metal = (half)lerp(f0_metal, 0.02, wetness);
 
-        half3 f0 = lerp(half3(f0_metal), albedo.rgb, metalness);
+        half3 f0, f82;
+        mat_f0(albedo.rgb, f0_metal, metalness, f0, f82);
+
+        // half3 f0 = lerp(half3(f0_metal), albedo.rgb, metalness);
         half lmcoord_y = pow2(mat_lit.lmcoord.y);
         half roughL = pow2(roughness);
         
@@ -220,13 +223,13 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         }
 
         half NoVm = max(dot(reflectNormal, -localDir), (half)0.0);
-        half3 F_NoV = F_Lazanyi2019(NoVm, f0);
+        half3 F_NoV = F_Lazanyi2019(NoVm, f0, f82);
 
-        half3 specular_tint = lerp((half)1.0, albedo.rgb, metalness);
+        // half3 specular_tint = lerp((half)1.0, albedo.rgb, metalness);
 
         // imgDebug[uv] = float4(LinearToRgb(reflectColor * 0.008), 1.0);
 
-        finalColor += F_NoV * reflectColor * specular_tint;
+        finalColor += F_NoV * reflectColor;// * specular_tint;
         // finalColor = reflectColor * specular_tint;
         }
     }

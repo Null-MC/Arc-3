@@ -183,12 +183,12 @@ void applyPointLights(ComputeInput input) {
 
 		ApplyInputTransform(albedo.rgb);
 
+        half metalness = mat_metalness(f0_metal);
         half roughL = roughness * roughness;
 
+        half3 f0, f82;
         float NoVm = max(dot(normals.tex, viewDir), 0.0);
-        // float3 f0 = f0_metal < 0.9 ? f0_metal : albedo;
-        half metalness = mat_metalness(f0_metal);
-        half3 f0 = lerp(f0_metal, albedo.rgb, metalness);
+        mat_f0(albedo.rgb, f0_metal, metalness, f0, f82);
 
         for (uint i = 0; i < total; i++) {
             uint lightIndex = sharedLightList[i];
@@ -232,7 +232,7 @@ void applyPointLights(ComputeInput input) {
             lightColor.rgb *= shadow * NoLm * lightAtt;
 
             //float3 F_VoH = material_fresnel(albedo, f0_metal, roughL, VoHm);
-            half3 F_VoH = F_Lazanyi2019(VoHm, f0);
+            half3 F_VoH = F_Lazanyi2019(VoHm, f0, f82);
             
             diffuse += lightColor.rgb * SampleLightDiffuse(NoVm, NoLm, LoHm, roughL) * saturate((half)1.0 - F_VoH);
             specular += lightColor.rgb * SampleLightSpecular(NoLm, NoHm, NoVm, F_VoH, roughL);

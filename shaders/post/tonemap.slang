@@ -14,9 +14,9 @@ half4 applyTonemap(float2 pos : SV_Position) : SV_Target0 {
 
     // Color Grading
     // TODO: add settings
-    float3 s = float3(1.0, 1.0, 1.0);
-    float3 o = float3(0.0, 0.0, 0.0);
-    float3 p = float3(1.0, 1.0, 1.0);
+    float3 s = float3(settings.ToneMap_RedScale, settings.ToneMap_GreenScale, settings.ToneMap_BlueScale);
+    float3 o = float3(settings.ToneMap_RedOffset, settings.ToneMap_GreenOffset, settings.ToneMap_BlueOffset);
+    float3 p = float3(settings.ToneMap_RedPower, settings.ToneMap_GreenPower, settings.ToneMap_BluePower);
     aces_cct = pow(aces_cct * s + o, p);
 
     aces_cg = Linear_from_ACEScct(aces_cct);

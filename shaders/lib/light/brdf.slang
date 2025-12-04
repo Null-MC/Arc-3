@@ -70,6 +70,7 @@ float3 SampleLightSpecular(float NoL, float NoH, float NoV, half3 F_VoH, half ro
     float G = V_SmithGGXCorrelated(NoL, NoV, roughL);
 
     float3 numerator = saturate(D * G * F_VoH);
+    // float3 numerator = max(D * G * F_VoH, 0.0);
     float denominator = 4.0 * NoL * NoV + 0.0001;
     return numerator / denominator;
 }

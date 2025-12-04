@@ -144,16 +144,18 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             reflectColor *= lmcoord_y;
         }
 
-        half3 f0 = lerp(half3(f0_metal), albedo.rgb, metalness);
+        // half3 f0 = lerp(half3(f0_metal), albedo.rgb, metalness);
+        half3 f0, f82;
+        mat_f0(albedo.rgb, f0_metal, metalness, f0, f82);
 
         float3 localDir = localPos / viewDist;
         float NoVm = max(dot(reflectNormal, -localDir), 0.0);
-        half3 F_NoV = F_Lazanyi2019(NoVm, f0);
-        half3 specular_tint = lerp((half)1.0, albedo.rgb, metalness);
+        half3 F_NoV = F_Lazanyi2019(NoVm, f0, f82);
+        // half3 specular_tint = lerp((half)1.0, albedo.rgb, metalness);
 
         // imgDebug[uv] = float4(LinearToRgb(reflectColor * 0.008), 1.0);
 
-        finalColor = F_NoV * ((half)1.0 - roughL) * reflectColor * specular_tint;
+        finalColor = F_NoV * reflectColor;
     }
 
     return half4(finalColor, (half)1.0);

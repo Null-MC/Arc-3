@@ -18,6 +18,7 @@ static const float moon_rotationSpeed = 0.0064;
 static const float moon_axisTilt = -0.6;
 static const float moon_roughL = 0.92;
 static const float moon_f0 = 0.136;
+static const float moon_f82 = get_f82(moon_f0);
 
 Sampler2D texMoon;
 
@@ -52,7 +53,7 @@ float3 renderMoon(const in float3 viewLocalDir, const in float3 moonLocalPos, co
     float LoHm = max(dot(fakeSunDir, H), 0.0);
     float VoHm = max(dot(-viewLocalDir, H), 0.0);
 
-    float F_NoV = F_Lazanyi2019(NoVm, moon_f0);
+    float F_NoV = F_Lazanyi2019(NoVm, moon_f0, moon_f82);
     // float D = SampleLightDiffuse(NoVm, NoLm, LoHm, moon_roughL) * (1.0 - F);
     // float S = SampleLightSpecular(NoLm, NoHm, NoVm, F, moon_roughL);
     // return MOON_LUMINANCE * NoLm * (D * albedo + S) * scene.sunColor;
