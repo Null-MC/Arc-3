@@ -15,7 +15,6 @@ extern static const bool Material_SmoothNormals;
 extern static const bool RENDER_ENTITY = false;
 extern static const bool RENDER_TERRAIN = false;
 extern static const bool RENDER_PARTICLES = false;
-extern static const bool RENDER_EMISSIVE = false;
 extern static const bool RENDER_TEXT = false;
 extern static const bool RENDER_HAND = false;
 
@@ -35,6 +34,7 @@ struct VertexOutput {
     
     nointerpolation int blockId;
     nointerpolation uint color;
+    nointerpolation uint color_overlay;
     nointerpolation uint normal;
     nointerpolation uint tangent;
     nointerpolation uint atlasCoordMin;
@@ -70,7 +70,6 @@ VertexOutput vertexMain(Vertex input) {
     }
 
     output.uv = input.uv();
-    half4 color = half4(input.color());
     output.occlusion = input.ao();
     output.occlusion = pow2(output.occlusion);
 
@@ -79,10 +78,16 @@ VertexOutput vertexMain(Vertex input) {
 
     output.blockId = input.blockId().orElse(-1);
 
-    if (let value = input.overlayColor()) {
-        half4 overlay = half4(value);
-        color.rgb = lerp(color.rgb, overlay.rgb, overlay.a);
-    }
+    half4 color = half4(input.color());
+    output.color = packUnorm4x8(color);
+
+    // if (let value = input.overlayColor()) {
+    //     half4 overlay = half4(value);
+    //     color.rgb = lerp(color.rgb, overlay.rgb, overlay.a);
+    // }
+
+    half4 overlayColor = half4(input.overlayColor().orElse(half4(1, 1, 1, 0)));
+    output.color_overlay = packUnorm4x8(overlayColor);
 
     float3 viewNormal;
     output.normal = 0u;
@@ -136,8 +141,6 @@ VertexOutput vertexMain(Vertex input) {
         output.position.xy += scene[0].taa_jitter * (2.0 * output.position.w);
     }
 
-    output.color = packUnorm4x8(color);
-
     return output;
 }
 
@@ -153,6 +156,7 @@ struct FragmentOutput {
 FragmentOutput fragmentMain(VertexOutput input) {
     float2 tex_uv = input.uv;
     float LOD = albedoTex.CalculateLevelOfDetail(tex_uv);
+    LOD = max(LOD - 1.0, 0.0);
 
     AtlasBounds atlas;
     float3 tanViewDir;
@@ -177,14 +181,15 @@ FragmentOutput fragmentMain(VertexOutput input) {
     ObjectData_MatLit mat_lit;
 
     half4 tint = unpackUnorm4x8ToHalf(input.color);
-    half4 color = (half4)albedoTex.SampleLevel(tex_uv, LOD) * tint;
+    half4 albedo = (half4)albedoTex.SampleLevel(tex_uv, LOD) * tint;
     half4 normalData = (half4)normalTex.SampleLevel(tex_uv, LOD);
     mat_lit.specular = (half4)specularTex.SampleLevel(tex_uv, LOD);
 
-    iris_discardIfNeeded(color);
+    iris_discardIfNeeded(albedo);
 
-    if (RENDER_EMISSIVE) {
-        // if (color.a < (0.5/255.0)) discard;
+    if (RENDER_ENTITY) {
+        half4 overlayColor = unpackUnorm4x8ToHalf(input.color_overlay);
+        albedo.rgb = lerp(overlayColor.rgb, albedo.rgb, overlayColor.a);
     }
 
     if (RENDER_TERRAIN) {
@@ -245,7 +250,7 @@ FragmentOutput fragmentMain(VertexOutput input) {
     mat_lit.occlusion = (half)input.occlusion * tex_occlusion;
 
     FragmentOutput output;
-    output.albedo = color;
+    output.albedo = albedo;
     output.normals = normals.pack();
     output.mat_lit = mat_lit.pack();
     output.velocity = half2(TAA_Enabled ? input.velocity : 0.0);

@@ -88,7 +88,7 @@ float3 SamplePointLight(const in uint lightIndex, const in float3 localPos, cons
     float3 lightDir = lightOffset / lightDist;
 
     half lightRadius = clamp(lightColor.a, EPSILON, 1.0) * 0.5;
-    half lightAtt = GetLightAttenuation(lightDist, lightRange, lightRadius);
+    half lightAtt = GetLightAttenuation_Diffuse(lightDist, lightRange, lightRadius);
     if (lightAtt < EPSILON) return 0.0;
 
     ApplyInputTransform(lightColor.rgb);

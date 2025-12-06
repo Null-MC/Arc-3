@@ -7,6 +7,7 @@ import lib.material.pbr;
 extern static const bool RENDER_TRANSLUCENT = false;
 
 Sampler2D<float> texDepth;
+Sampler2D<half2> texPuddles;
 
 Sampler2D<half4> texAlbedoGB;
 Sampler2D<uint2> texNormalGB;
@@ -25,11 +26,11 @@ half2 skyWetness(float2 pos : SV_Position) : SV_Target0 {
     half4 colorData = texAlbedoGB[uv];
     
     if (depth < 1.0 && colorData.a > 0.0) {
-        // float2 texcoord = pos / ap.game.screenSize;
-        // if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
+        float2 texcoord = pos / ap.game.screenSize;
+        if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
-        // float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
-        // float3 localPos = project(scene[0].viewProjectionInv, clipPos);
+        float3 clipPos = float3(texcoord, depth) * 2.0 - 1.0;
+        float3 localPos = project(scene[0].viewProjectionInv, clipPos);
 
         ObjectData_Normals normals;
         normals.unpack(texNormalGB[uv]);
@@ -48,8 +49,26 @@ half2 skyWetness(float2 pos : SV_Position) : SV_Target0 {
         float skyF = smoothstep(0.70, 0.92, mat_lit.lmcoord.y) * NoLm_wrap;
         
         // TODO: expand on this basic idea
-        wetnessF = (half)(skyF * ap.world.rainStrength);
+        float sky_wetness = (half)(skyF * scene[0].WetnessGround);
 
+        float3 worldPos = localPos + ap.camera.position;
+        half2 puddles = texPuddles.Sample(worldPos.xz * 0.13);
+
+        puddleF = lerp(puddles.y, puddles.x, porosity) * sky_wetness;
+        wetnessF = saturate(unmix(0.0, 0.65, puddleF)*0.6 + 0.4*scene[0].WetnessGround);
+        puddleF = smoothstep(0.65, 0.75, puddleF);
+
+        // float absorbed_puddle = max(puddles.x - 0.5*(1.0 - scene[0].WetnessGround), 0.0);
+        // puddleF -= 0.5*(1.0 - scene[0].WetnessGround);
+        // puddleF = saturate(puddleF * 20.0);
+
+
+        // wetnessF *= (puddles.x * 0.5 + 0.5) * porosity;
+
+        // puddleF = saturate((wetnessF - 1.0) * 20.0);
+        // wetnessF = saturate(wetnessF);
+
+        // Make opaque surfaces under water fully wet
         if (!RENDER_TRANSLUCENT) {
             ObjectData_MatLit mat_lit;
             mat_lit.unpackLightOcclusion(texMatLightGB_translucent[uv].g);

@@ -108,14 +108,14 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         
         CelestialLight sun;
         sun.localDir = GetAreaLightDir(normals.tex, viewLocalDir, scene[0].SunLocalDir, sun_distanceMm, sun_radiusMm);
-        // sun.localDir = scene[0].SunLocalDir;
-        sun.color = sun_color * (shadowIsSun ? shadow : (half)0.0);
+        float sun_shadow = rayIntersectSphere(surface.skyPos, scene[0].SunLocalDir, groundRadiusMM) < 0.0;
+        sun.color = sun_color * (shadowIsSun ? shadow : (half)1.0) * sun_shadow;
         SampleCelestial(diffuse, specular, sun, surface, viewLocalDir, NoVm);
 
         CelestialLight moon;
         moon.localDir = GetAreaLightDir(normals.tex, viewLocalDir, scene[0].MoonLocalDir, moon_distanceKm, moon_radiusKm);
-        // moon.localDir = scene[0].MoonLocalDir;
-        moon.color = moon_color * (shadowIsSun ? (half)0.0 : shadow);
+        float moon_shadow = rayIntersectSphere(surface.skyPos, scene[0].MoonLocalDir, groundRadiusMM) < 0.0;
+        moon.color = moon_color * (shadowIsSun ? (half)0.0 : shadow) * moon_shadow;
         SampleCelestial(diffuse, specular, moon, surface, viewLocalDir, NoVm);
 
         // Ambient from Sky Irradiance

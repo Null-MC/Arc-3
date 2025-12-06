@@ -10,6 +10,7 @@ struct SettingsBuffer {
     float Emission_Scale;
     float Emission_Curve;
     float Bloom_Strength;
+    float ToneMap_Saturation;
     // float ToneMap_Contrast;
     float ToneMap_RedOffset;
     float ToneMap_RedScale;

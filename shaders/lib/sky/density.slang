@@ -89,12 +89,14 @@ float SampleFogDensity(const in float3 localPos) {
     //     density += SampleFogNoise_high(worldPos) * ground_scale;
     // }
 
-    float3 skyBufferPos = FloodFill_Sky_GetBufferPosition(localPos);
-    if (FloodFill_Sky_InBounds(skyBufferPos)) {
-        float skyLightF = floodfill_sky_sample(skyBufferPos);
-        float indoorF = smoothstep(0.0, 0.5, skyLightF);
+    if (World_HasSky) {
+        float3 skyBufferPos = FloodFill_Sky_GetBufferPosition(localPos);
+        if (FloodFill_Sky_InBounds(skyBufferPos)) {
+            float skyLightF = floodfill_sky_sample(skyBufferPos);
+            float indoorF = smoothstep(0.0, 0.5, skyLightF);
 
-        density = lerp(Fog_DensityIndoors, density, indoorF);
+            density = lerp(Fog_DensityIndoors, density, indoorF);
+        }
     }
 
     return density;

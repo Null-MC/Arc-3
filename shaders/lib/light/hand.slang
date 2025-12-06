@@ -21,6 +21,8 @@ void GetHandLight(inout float3 diffuse, inout float3 specular, const in int bloc
                   const in float3 localPos, const in float3 localViewDir, const in float3 localTexNormal, const in float3 localGeoNormal,
                   const in LazanyiF lazanyi, const in half roughL) {
     half lightRange = (half)ap.blocks[blockId].emission;
+    if (lightRange < EPSILON) return;
+
     half3 lightColor = half3(ap.blocks[blockId].lightColor.rgb);
     half lightSize = (half)0.5;//getLightSize(blockId);
 
@@ -30,7 +32,7 @@ void GetHandLight(inout float3 diffuse, inout float3 specular, const in int bloc
     half lightDist = (half)length(lightVec);
     float3 lightDir = lightVec / lightDist;
 
-    half lightAtt = GetLightAttenuation(lightDist, lightRange, lightSize);
+    half lightAtt_D = GetLightAttenuation_Diffuse(lightDist, lightRange, lightSize);
 
     half NoLm = max((half)dot(localTexNormal, lightDir), (half)0.0);
 
@@ -51,12 +53,13 @@ void GetHandLight(inout float3 diffuse, inout float3 specular, const in int bloc
         float VoHm = max(dot(localViewDir, H), 0.0);
 
         half3 F_VoH = lazanyi.F(VoHm);
+        half lightAtt_S = GetLightAttenuation_Specular(lightDist, lightRange, lightSize);
 
         float3 D = SampleLightDiffuse(NoVm, NoLm, LoHm, roughL) * (1.0 - F_VoH);
         float3 S = SampleLightSpecular(NoLm, NoHm, NoVm, F_VoH, roughL);
 
-        float3 lightFinal = NoLm * BLOCK_LUX * lightAtt * lightColor;
-        diffuse += D * lightFinal;
-        specular += S * lightFinal;
+        float3 lightFinal = NoLm * BLOCK_LUX * lightColor;
+        diffuse += D * lightFinal * lightAtt_D;
+        specular += S * lightFinal * lightAtt_S;
     }
 }

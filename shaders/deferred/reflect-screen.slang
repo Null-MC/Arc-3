@@ -60,7 +60,6 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         half metalness = (half)mat_metalness(f0_metal);
 
         if (World_HasSky) {
-            // TODO: wetness
             half2 wetness_puddle = texWetnessGB[uv_full];
             Wetness_ApplyRoughness(roughness, wetness_puddle.x);
             Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
@@ -144,17 +143,14 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             reflectColor *= lmcoord_y;
         }
 
-        // half3 f0 = lerp(half3(f0_metal), albedo.rgb, metalness);
-        var lazanyi = mat_f0(albedo.rgb, f0_metal, metalness);
-
         float3 localDir = localPos / viewDist;
         float NoVm = max(dot(reflectNormal, -localDir), 0.0);
+        var lazanyi = mat_f0(albedo.rgb, f0_metal, metalness);
         half3 F_NoV = lazanyi.F(NoVm);
-        half3 specularTint = mat_specularTint(albedo.rgb, f0_metal, metalness);
 
         // imgDebug[uv] = float4(LinearToRgb(reflectColor * 0.008), 1.0);
 
-        finalColor = F_NoV * reflectColor * specularTint;
+        finalColor = F_NoV * reflectColor;
     }
 
     return half4(finalColor, (half)1.0);

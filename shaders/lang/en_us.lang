@@ -201,6 +201,9 @@ screen.POST=Post-Processing
 
 screen.POST.TONEMAP=ToneMap
 
+option.POST.TONEMAP.SATURATION=Saturation
+suffix.POST.TONEMAP.SATURATION=%
+
 option.POST.TONEMAP.RED_OFFSET=Red Offset
 option.POST.TONEMAP.RED_SCALE=Red Scale
 option.POST.TONEMAP.RED_POWER=Red Power

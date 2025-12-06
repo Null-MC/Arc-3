@@ -116,7 +116,7 @@ float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in in
         diffuse += NoLm_moon * (shadowIsSun ? (half)0.0 : shadow) * moon_color;
     }
 
-    if (World_HasSky && !isGI) {
+    if (World_HasSky) {
         diffuse += sampleSkyIrradiance(normal) * lmcoord.y;
     }
 

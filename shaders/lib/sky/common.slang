@@ -30,7 +30,7 @@ float3 getSkyPosition(const in float3 localPos) {
 
     //skyPos *= (atmosphereRadiusMM - groundRadiusMM);
     skyPos *= 0.000001;
-    skyPos.y = max(skyPos.y, 0.0002) + groundRadiusMM;
+    skyPos.y = max(skyPos.y, 0.000001) + groundRadiusMM;
 
     return skyPos;
 }

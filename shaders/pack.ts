@@ -505,7 +505,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
     let texReflect: BuiltTexture | undefined;
     let texReflect_final: BuiltTexture | undefined;
-    let texReflect_prev: BuiltTexture | undefined;
+    let texReflect_OpaquePrev: BuiltTexture | undefined;
     if (options.Lighting_Reflection_Mode > ReflectMode.SkyOnly) {
         texReflect = pipeline.createTexture('texReflect')
             .width(Reflect_width)
@@ -521,7 +521,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .clear(false)
             .build();
 
-        texReflect_prev = pipeline.createTexture('texReflect_prev')
+        texReflect_OpaquePrev = pipeline.createTexture('texReflect_OpaquePrev')
             .width(screenWidth)
             .height(screenHeight)
             .format(Format.RGBA16F)
@@ -612,6 +612,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
     //if (_dimensions.Index == 0) {
         pipeline.importPNGTexture('texMoon', 'textures/moon.png', true, false);
     //}
+
+    pipeline.importPNGTexture('texPuddles', 'textures/puddles.png', true, false);
 
     pipeline.importRawTexture('texFogNoise', 'textures/fog.dat')
         .type(PixelType.UNSIGNED_BYTE)
@@ -977,6 +979,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
                     .overrideObject('texNormalGB', texNormalGB_opaque.name())
                     .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
+                    // .overrideObject('texWetnessGB', texWetnessGB.name())
                     .exportBool('Reflect_Rough', options.Lighting_Reflection_Rough)
                     .exportBool('Lighting_GI', options.Lighting_GI_Enabled)
                     .compile();
@@ -1145,18 +1148,19 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                             .target(0, texReflect_final)
                             .overrideObject('texSource', final_src)
                             .overrideObject('texDepth', 'solidDepthTex')
-                            .overrideObject('texSource_prev', texReflect_prev.name())
+                            .overrideObject('texSource_prev', texReflect_OpaquePrev.name())
                             .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                             .exportInt('MaxFrames', maxFrames)
                             .compile();
 
-                        reflectStage.copy(texReflect_final, texReflect_prev, screenWidth, screenHeight);
+                        reflectStage.copy(texReflect_final, texReflect_OpaquePrev, screenWidth, screenHeight);
                     // }
 
                     reflectStage.createComposite('opaque-reflection-overlay')
                         .location('deferred/reflect-overlay', 'overlayReflections')
                         .target(0, finalFlipper.getWriteTexture())
                         .overrideObject('texSource', finalFlipper.getReadTexture().name())
+                        .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
                         .overrideObject('texMatLightGB', texMatLightGB_opaque.name())
                         .compile();
                 });
@@ -1301,6 +1305,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .location('composite/reflect_overlay', 'overlayReflections')
                     .target(0, finalFlipper.getWriteTexture())
                     .overrideObject('texSource', finalFlipper.getReadTexture().name())
+                    .overrideObject('texAlbedoGB', texAlbedoGB_translucent.name())
                     .overrideObject('texMatLightGB', texMatLightGB_translucent.name())
                     .exportInt('BufferWidth', Reflect_width)
                     .exportInt('BufferHeight', Reflect_height)
@@ -1512,6 +1517,7 @@ export function onSettingsChanged(pipeline: PipelineConfig) {
         .appendFloat(options.Material_Emission_Scale * 0.01)
         .appendFloat(options.Material_Emission_Curve * 0.01)
         .appendFloat(options.Post_Bloom_Strength * 0.01)
+        .appendFloat(options.Post_ToneMap_Saturation * 0.01)
         // .appendFloat(options.Post_ToneMap_Contrast * 0.01)
         .appendFloat(options.Post_ToneMap_RedOffset * 0.01)
         .appendFloat(options.Post_ToneMap_RedScale * 0.01)

@@ -10,7 +10,7 @@ void Wetness_ApplyRoughness(inout half roughness, const in half wetness) {
     roughness = (half)lerp(roughness, 0.12, saturate(wetness));
 }
 
-void Wetness_ApplyNormal(inout half3 tex_normal, const in half3 geo_normal, const in half wetness) {
-    float f = smoothstep(0.8, 1.2, wetness);
-    tex_normal = (half3)lerp(tex_normal, geo_normal, f);
+void Wetness_ApplyNormal(inout half3 tex_normal, const in half3 geo_normal, const in half puddleF) {
+    // float f = smoothstep(0.8, 1.2, wetness);
+    tex_normal = (half3)lerp(tex_normal, geo_normal, puddleF);
 }

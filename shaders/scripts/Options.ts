@@ -74,6 +74,7 @@ export class Options {
     get Shadow_SssMaxDist(): number {return getFloatSetting('SHADOW.SSS_MAX_DIST');}
     get Shadow_SssPcfSamples(): number {return getIntSetting('SHADOW.SSS_PCF_SAMPLES');}
 
+    get Post_ToneMap_Saturation(): number {return getIntSetting('POST.TONEMAP.SATURATION');}
     // get Post_ToneMap_Contrast(): number {return getIntSetting('POST.TONEMAP.CONTRAST');}
     get Post_ToneMap_RedOffset(): number {return getIntSetting('POST.TONEMAP.RED_OFFSET');}
     get Post_ToneMap_RedScale(): number {return getIntSetting('POST.TONEMAP.RED_SCALE');}

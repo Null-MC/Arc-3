@@ -12,22 +12,28 @@ float3 GetAreaLightDir(const in float3 viewNormal, const in float3 viewDir, cons
     return normalize(closestPoint);
 }
 
-half GetLightAttenuation_Linear(const in half lightDist, const in half lightRange) {
-    half lightDistF = lightDist / lightRange;
-    lightDistF = (half)1.0 - saturate(lightDistF);
-    return pow5(lightDistF);
-}
-
 half GetLightAttenuation_invSq(const in half lightDist, const in half lightRadius) {
     return rcp((lightDist*lightDist) + lightRadius);
 }
 
-half GetLightAttenuation(const in half lightDist, const in half lightRange, const in half lightRadius) {
-    half linear = GetLightAttenuation_Linear(lightDist, lightRange);
-    half invSq = GetLightAttenuation_invSq(max(lightDist-lightRadius, (half)0.0), lightRadius);
+// weird thing I came up with aims for an inverse-square falloff near the light source
+// and a smooth linear falloff near the edge of the light's range
+half GetLightAttenuation_Diffuse(half lightDist, const in half lightRange, const in half lightRadius) {
+    lightDist = max(lightDist - lightRadius, (half)0.0);
+    half lightDistF = (half)1.0 - saturate(lightDist / lightRange);
 
-    half f = saturate(lightDist / lightRange);
-    return lerp(invSq, linear, f);
+    half linear = pow5(lightDistF);
+
+    half invSq = GetLightAttenuation_invSq(lightDist, lightRadius);
+
+    return lerp(linear, invSq, lightDistF);
+}
+
+half GetLightAttenuation_Specular(half lightDist, const in half lightRange, const in half lightRadius) {
+    lightDist = max(lightDist - lightRadius, (half)0.0);
+    half lightDistF = 1.0 - saturate(lightDist / lightRange);
+
+    return pow2(lightDistF);
 }
 
 half SampleLightDiffuse(const in float NoV, const in float NoL, const in float LoH, const in half roughL) {

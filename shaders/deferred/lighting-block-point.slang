@@ -209,8 +209,8 @@ void applyPointLights(ComputeInput input) {
             lightDir = lightOffset / lightDist;
 
             half lightRadius = clamp(lightColor.a, EPSILON, 1.0) * 0.5;
-            half lightAtt = GetLightAttenuation(lightDist, lightRange, lightRadius);
-            if (lightAtt < EPSILON) continue;
+            half lightAtt_D = GetLightAttenuation_Diffuse(lightDist, lightRange, lightRadius);
+            if (lightAtt_D < EPSILON) continue;
 
     		ApplyInputTransform(lightColor.rgb);
             lightColor.rgb *= saturate(lightRange / (half)15.0) * BLOCK_LUX;
@@ -228,13 +228,14 @@ void applyPointLights(ComputeInput input) {
 
             float shadowDepth = saturate(unmix(ap.lights.nearPlane, ap.lights.farPlane, lightDist - offsetBias));
             half shadow = (half)pointLightFiltered.SampleCmp(float4(-lightDir, lightIndex), shadowDepth).r;
-            lightColor.rgb *= shadow * NoLm * lightAtt;
+            lightColor.rgb *= shadow * NoLm;
 
             //float3 F_VoH = material_fresnel(albedo, f0_metal, roughL, VoHm);
             half3 F_VoH = lazanyi.F(VoHm);
+            half lightAtt_S = GetLightAttenuation_Specular(lightDist, lightRange, lightRadius);
             
-            diffuse += lightColor.rgb * SampleLightDiffuse(NoVm, NoLm, LoHm, roughL) * saturate((half)1.0 - F_VoH);
-            specular += lightColor.rgb * SampleLightSpecular(NoLm, NoHm, NoVm, F_VoH, roughL);
+            diffuse += lightColor.rgb * lightAtt_D * SampleLightDiffuse(NoVm, NoLm, LoHm, roughL) * saturate((half)1.0 - F_VoH);
+            specular += lightColor.rgb * lightAtt_S * SampleLightSpecular(NoLm, NoHm, NoVm, F_VoH, roughL);
         }
 
         diffuse /= half3(PI);

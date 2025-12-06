@@ -1,5 +1,6 @@
 export function ApplyLightColors(coloredCandles: boolean) {
     setLightColorEx('#8053d1', 12/16, 'amethyst_cluster');
+    setLightColorEx('#db6731',  4/16, 'blast_furnace');
     setLightColorEx('#3e2d1f',  4/16, 'brown_mushroom');
     setLightColorEx('#f39849', 12/16, 'campfire');
     setLightColorEx('#935b2c', 1, 'cave_vines', "cave_vines_plant");

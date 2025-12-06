@@ -22,6 +22,7 @@ struct SceneBuffer {
     float2 shadowViewMax[Shadow_CascadeCount]; // 2*4 =8
 
     float2 WeatherOffset;
+    float WetnessGround;
     SkyParameters sky;              // 9
 
     float4x4 viewProjectionInv;     // 16

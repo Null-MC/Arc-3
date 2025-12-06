@@ -91,12 +91,12 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
         var lazanyi = mat_f0(albedo, f0_metal, metalness);
         half roughL = roughness*roughness;
 
-        if (ap.game.mainHand != 0u) {
+        if (ap.game.mainHand > 0) {
             float3 lightLocalPos = GetHandLightPos(HandLightOffset_main);
             GetHandLight(diffuse, specular, ap.game.mainHand, lightLocalPos, handSampleLocalPos, viewDir, normals.tex, normals.geo, lazanyi, roughL);
         }
 
-        if (ap.game.offHand != 0u) {
+        if (ap.game.offHand > 0) {
             float3 lightLocalPos = GetHandLightPos(HandLightOffset_alt);
             GetHandLight(diffuse, specular, ap.game.offHand, lightLocalPos, handSampleLocalPos, viewDir, normals.tex, normals.geo, lazanyi, roughL);
         }
