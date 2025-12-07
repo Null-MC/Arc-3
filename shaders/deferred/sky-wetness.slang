@@ -48,21 +48,19 @@ half2 skyWetness(float2 pos : SV_Position) : SV_Target0 {
         float NoL = dot(normals.tex, float3(0.0, 1.0, 0.0));
         float NoLm_wrap = max((NoL + porosity) / (1.0 + porosity), 0.0);
 
-        float skyF = NoLm_wrap;
+        float skyF = smoothstep(0.70, 0.92, mat_lit.lmcoord.y);
         if (FloodFill_Sky_Enabled) {
             float3 bufferPos = FloodFill_Sky_GetBufferPosition(localPos + 0.5*normals.tex);
-            float skyLightF = floodfill_sky_sample(bufferPos);
-            skyF *= skyLightF;//smoothstep(0.50, 0.92, skyLightF);
+            if (FloodFill_Sky_InBounds(bufferPos)) skyF = floodfill_sky_sample(bufferPos);
         }
-        else {
-            skyF *= smoothstep(0.70, 0.92, mat_lit.lmcoord.y);
-        }
+
+        skyF *= NoLm_wrap;
         
         // TODO: expand on this basic idea
         float sky_wetness = (half)(skyF * scene[0].WetnessGround);
 
         float3 worldPos = localPos + ap.camera.position;
-        half2 puddles = texPuddles.Sample(worldPos.xz * 0.13);
+        half2 puddles = texPuddles.Sample(worldPos.xz * 0.06);
 
         puddleF = lerp(puddles.y, puddles.x, porosity) * sky_wetness;
         wetnessF = saturate(unmix(0.0, 0.65, puddleF)*0.6 + 0.4*scene[0].WetnessGround);
