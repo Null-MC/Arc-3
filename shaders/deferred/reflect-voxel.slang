@@ -100,27 +100,29 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         bool ss_hit = false;
         if (Reflect_SS_Fallback) {
             float3 screenEnd = projectScreenTrace(viewPos, screenPos, reflect_viewDir);
+            // screenEnd.z = clamp(screenEnd.z, EPSILON, 1.0);
             float3 traceClipEnd = screenEnd * 2.0 - 1.0;
             float3 traceClipStart = clipPos;
 
             float3 traceClipPos;
             float3 traceClipPos_prev = traceClipStart;
-            float2 traceScreenPos;
+            float3 traceScreenPos;
 
             float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
-            for (uint i = 1; i < Reflect_ScreenSteps; i++) {
+            for (uint i = 0; i < Reflect_ScreenSteps; i++) {
                 float f = (i + dither) / Reflect_ScreenSteps;
-                traceClipPos = lerp(traceClipStart, traceClipEnd, f);
-                traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
+                traceClipPos = lerp(traceClipStart, traceClipEnd, saturate(f));
+                traceScreenPos = traceClipPos * 0.5 + 0.5;
                 if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
 
-                float sampleClipDepth = solidDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
+                float sampleClipDepth = solidDepthTex.Sample(traceScreenPos.xy) * 2.0 - 1.0;
                 float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
                 float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
                 float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
 
-                if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
+                // if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
+                if (screenDepthL < traceDepthL && traceDepthL - screenDepthL < stepMaxZ) {
                     ss_hit = true;
                     break;
                 }
@@ -136,22 +138,23 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
                 for (uint i = 0; i < Reflect_RefineSteps; i++) {
                     float f = (i + dither) / Reflect_RefineSteps;
                     traceClipPos = lerp(traceClipStart, traceClipEnd, f);
-                    traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
-                    if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
+                    traceScreenPos = traceClipPos * 0.5 + 0.5;
+                    // if (!all(saturate(traceScreenPos) == traceScreenPos)) break;
 
-                    float sampleClipDepth = solidDepthTex.Sample(traceScreenPos) * 2.0 - 1.0;
+                    float sampleClipDepth = solidDepthTex.Sample(traceScreenPos.xy) * 2.0 - 1.0;
                     float screenDepthL = linearizeDepth(sampleClipDepth, ap.camera.near, ap.camera.far);
                     float traceDepthL = linearizeDepth(traceClipPos.z, ap.camera.near, ap.camera.far);
 
                     float stepMaxZ = abs(traceDepthL - traceDepthL_prev);
 
-                    if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
+                    // if (abs(screenDepthL - traceDepthL) < stepMaxZ) {
+                    if (screenDepthL < traceDepthL && traceDepthL - screenDepthL < stepMaxZ) {
                         break;
                     }
                 }
-            }
 
-            if (ss_hit) reflectColor = texSource.Sample(traceScreenPos);
+                reflectColor = texSource.Sample(traceScreenPos.xy);
+            }
         }
 
         float3 localDir = normalize(localPos);

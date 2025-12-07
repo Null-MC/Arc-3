@@ -152,11 +152,9 @@ float luminance(const in float3 color) {
 }
 
 float3 LinearToRgb(const in float3 color) {
-    float3 is_high = step(0.00313066844250063, color);
-    float3 higher = 1.055 * pow(color, float3(1.0/2.4)) - 0.055;
-    float3 lower = color * 12.92;
-
-    return lerp(lower, higher, is_high);
+    return select(color > 0.00313066844250063,
+        1.055 * pow(color, (1.0/2.4)) - 0.055,
+        color * 12.92);
 }
 
 // half3 LinearToRgb(const in half3 color) {
@@ -168,19 +166,15 @@ float3 LinearToRgb(const in float3 color) {
 // }
 
 float3 RgbToLinear(const in float3 color) {
-    float3 is_high = step(0.0404482362771082, color);
-    float3 higher = pow((color + 0.055) / 1.055, float3(2.4));
-    float3 lower = color / 12.92;
-
-    return lerp(lower, higher, is_high);
+    return select(color > 0.0404482362771082,
+        pow((color + 0.055) / 1.055, 2.4),
+        color / 12.92);
 }
 
 half3 RgbToLinear(const in half3 color) {
-    half3 is_high = step(half3(0.0404482362771082), color);
-    half3 higher = pow((color + half3(0.055)) / half3(1.055), half3(2.4));
-    half3 lower = color / half3(12.92);
-
-    return lerp(lower, higher, is_high);
+    return select(color > (half)0.0404482362771082,
+        pow((color + half3(0.055)) / half3(1.055), (half)2.4),
+        color / (half)12.92);
 }
 
 float3 InputTransform(const in float3 color) {

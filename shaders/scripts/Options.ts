@@ -22,6 +22,9 @@ export class Options {
     get Material_Parallax_SampleCount(): number {return getIntSetting('MATERIAL.PARALLAX.SAMPLES');}
     get Material_Parallax_Optimize(): boolean {return getBoolSetting('MATERIAL.PARALLAX.OPTIMIZE');}
 
+    get Material_Porosity_Format(): number {return this.getFormatFallback('MATERIAL.POROSITY.FORMAT');}
+    
+    get Material_Emission_Format(): number {return this.getFormatFallback('MATERIAL.EMISSION.FORMAT');}
     get Material_Emission_Scale(): number {return getIntSetting('MATERIAL.EMISSION.SCALE');}
     get Material_Emission_Curve(): number {return getIntSetting('MATERIAL.EMISSION.CURVE');}
     
@@ -102,11 +105,41 @@ export class Options {
     get Debug_Histogram(): boolean {return getBoolSetting('DEBUG_HISTOGRAM');}
 
 
+    // get Material_PorosityFormatFinal(): number {return this.FormatFallback(this.Material_Porosity_Format);}
+
     get VoxelEnabled(): boolean {
         if (this.Lighting_Refraction_Mode == RefractMode.WorldSpace) return true;
         if (this.Lighting_Reflection_Mode == ReflectMode.WorldSpace) return true;
         if (this.Lighting_GI_Enabled) return true;
         return false;
+    }
+
+    private getFormatFallback(settingKey: string): number {
+        const format = getIntSetting(settingKey);
+        return format == 0 ? this.Material_Format : format;
+    }
+
+    appendExports(exports: ExportList): void {
+        exports
+            .addBool('Sky_FogEnabled', this.Sky_FogEnabled)
+            .addBool('Sky_FogNoise', this.Sky_FogNoise)
+            .addBool('Sky_WindEnabled', this.Sky_WindEnabled)
+            .addInt('Material_Format', this.Material_Format)
+            .addInt('Material_PorosityFormat', this.Material_Porosity_Format)
+            .addInt('Material_EmissionFormat', this.Material_Emission_Format)
+            .addInt('Shadow_Resolution', this.Shadow_Resolution)
+            .addInt('ReflectMode', this.Lighting_Reflection_Mode)
+            .addInt('RefractMode', this.Lighting_Refraction_Mode)
+            .addBool('FloodFill_Enabled', this.Lighting_FloodFill_Enabled)
+            .addInt('FloodFill_BufferSize', this.Lighting_FloodFill_Size)
+            // .addBool('FloodFill_Sky_Enabled', this.Sky_FogEnabled && dimension.World_HasSky)
+            // .addInt('FloodFill_Sky_BufferSizeXZ', FloodFill_Sky.BufferSizeXZ)
+            // .addInt('FloodFill_Sky_BufferSizeY', FloodFill_Sky.BufferSizeY)
+            .addBool('PointLight_Enabled', this.Lighting_Point_Enabled)
+            .addInt('PointLight_MaxCount', this.Lighting_Point_MaxCount)
+            .addInt('Voxel_Resolution', this.Lighting_VoxelResolution)
+            .addBool('TAA_Enabled', this.Post_TAA_Enabled)
+            .addBool('Debug_WhiteWorld', this.Debug_WhiteWorld);
     }
 }
 

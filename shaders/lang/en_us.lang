@@ -52,7 +52,22 @@ option.MATERIAL.PARALLAX.OPTIMIZE=Optimize Samples
 option.MATERIAL.PARALLAX.OPTIMIZE.comment=Attempts to increase quality by focusing sample distribution. May not always work well.
 
 
+screen.MATERIAL.POROSITY=Porosity
+
+option.MATERIAL.POROSITY.FORMAT=Format
+value.MATERIAL.POROSITY.FORMAT.-1=Disabled
+value.MATERIAL.POROSITY.FORMAT.0=Default
+value.MATERIAL.POROSITY.FORMAT.1=Generated
+value.MATERIAL.POROSITY.FORMAT.2=Lab-PBR
+
+
 screen.MATERIAL.EMISSION=Emission
+
+option.MATERIAL.EMISSION.FORMAT=Format
+value.MATERIAL.EMISSION.FORMAT.-1=Disabled
+value.MATERIAL.EMISSION.FORMAT.0=Default
+value.MATERIAL.EMISSION.FORMAT.1=Old-PBR
+value.MATERIAL.EMISSION.FORMAT.2=Lab-PBR
 
 option.MATERIAL.EMISSION.SCALE=Scale
 suffix.MATERIAL.EMISSION.SCALE=%

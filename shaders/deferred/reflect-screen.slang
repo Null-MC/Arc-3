@@ -91,8 +91,8 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         float2 traceScreenPos;
 
         bool hit = false;
-        float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
-        for (uint i = 0; i <= Reflect_ScreenSteps; i++) {
+        // float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
+        for (uint i = 0; i < Reflect_ScreenSteps; i++) {
             float f = (i + dither) / Reflect_ScreenSteps;
             traceClipPos = lerp(traceClipStart, traceClipEnd, saturate(f));
             traceScreenPos = traceClipPos.xy * 0.5 + 0.5;
@@ -108,7 +108,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             }
 
             traceClipPos_prev = traceClipPos;
-            traceDepthL_prev = traceDepthL;
+            // traceDepthL_prev = traceDepthL;
         }
 
         if (hit) {

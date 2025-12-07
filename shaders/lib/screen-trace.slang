@@ -8,7 +8,7 @@ float3 projectToScreenBounds(const in float3 screenPos, const in float3 screenDi
     float3 nextDist = stepDir * 0.5 + 0.5;
     nextDist = (nextDist - fract(screenPos)) / screenDir;
 
-    float closestDist = minOf(nextDist);
+    float closestDist = max(minOf(nextDist) - 0.00001, 0.0);
     return fma(screenDir, closestDist, screenPos);
 }
 
@@ -17,7 +17,9 @@ float3 projectScreenTrace(const in float3 viewPos, const in float3 screenPos, co
 
     float3 dest_viewPos = 0.1 * viewDist * viewDir + viewPos;
     float3 dest_clipPos = project(ap.camera.projection, dest_viewPos);
-    float3 dest_screenPos = dest_clipPos * 0.5 + 0.5;
+    // float4 dest_clipPos = mul(ap.camera.projection, float4(dest_viewPos, 1.0));
+    // dest_clipPos.xyz = clamp(dest_clipPos.xyz, float3(-1.0, -1.0, 0.00001), 1.0) / dest_clipPos.w;
+    float3 dest_screenPos = dest_clipPos.xyz * 0.5 + 0.5;
 
     float3 screenDir = normalize(dest_screenPos - screenPos);
 

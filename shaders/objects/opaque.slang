@@ -101,7 +101,7 @@ VertexOutput vertexMain(Vertex input) {
 
     float4 viewTangent;
     output.tangent = 0u;
-    if (SupportsTexNormals && MATERIAL_FORMAT != MAT_NONE) {
+    if (SupportsTexNormals && Material_Format != MAT_DEFAULT) {
         if (let value = input.tangent()) {
             viewTangent.xyz = mul(input.normalMatrix(), value.xyz);
             float3 localTangent = mul(float3x3(ap.camera.viewInv), viewTangent.xyz);
@@ -229,7 +229,7 @@ FragmentOutput fragmentMain(VertexOutput input) {
 
     mat_lit.lmcoord = half2(input.light);
 
-    if (SupportsTexNormals && MATERIAL_FORMAT != MAT_NONE) {
+    if (SupportsTexNormals && Material_Format != MAT_DEFAULT) {
         normals.tex = mat_normal(normalData.rgb);
 
         if (SupportsParallax && !skipParallax && Parallax_Type == POM_TYPE_SHARP) {

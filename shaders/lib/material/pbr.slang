@@ -5,16 +5,17 @@ import lib.light.fresnel;
 import lib.material.hcm;
 import lib.ACES;
 
-extern static const int MATERIAL_FORMAT;
-extern static const int MATERIAL_NORMAL_FORMAT = MATERIAL_FORMAT;
-extern static const int MATERIAL_METALS_FORMAT = MATERIAL_FORMAT;
-extern static const int MATERIAL_EMISSION_FORMAT = MATERIAL_FORMAT;
-extern static const int MATERIAL_POROSITY_FORMAT = MAT_OLDPBR;
-extern static const int MATERIAL_SSS_FORMAT = MATERIAL_FORMAT;
+extern static const int Material_Format;
+extern static const int Material_NormalFormat = Material_Format;
+extern static const int Material_MetalsFormat = Material_Format;
+extern static const int Material_PorosityFormat;
+extern static const int Material_EmissionFormat;
+extern static const int Material_SssFormat = Material_Format;
 
-static const int MAT_LABPBR = 2;
+static const int MAT_DISABLED = -1;
+static const int MAT_DEFAULT = 0;
 static const int MAT_OLDPBR = 1;
-static const int MAT_NONE = 0;
+static const int MAT_LABPBR = 2;
 
 
 half3 mat_normal_lab(const in half2 normalData) {
@@ -28,10 +29,10 @@ half3 mat_normal_old(const in half3 normalData) {
 }
 
 half3 mat_normal(const in half3 normalData) {
-    if (MATERIAL_NORMAL_FORMAT == MAT_LABPBR) {
+    if (Material_NormalFormat == MAT_LABPBR) {
         return mat_normal_lab(normalData.xy);
     }
-    else if (MATERIAL_NORMAL_FORMAT == MAT_OLDPBR) {
+    else if (Material_NormalFormat == MAT_OLDPBR) {
         return mat_normal_old(normalData);
     }
     else {
@@ -53,10 +54,10 @@ half mat_emission_old(const in half specular_b) {
 
 half mat_emission(const in half4 specularData) {
     half emission;
-    if (MATERIAL_EMISSION_FORMAT == MAT_LABPBR) {
+    if (Material_EmissionFormat == MAT_LABPBR) {
         emission = mat_emission_lab(specularData.a);
     }
-    else if (MATERIAL_EMISSION_FORMAT == MAT_OLDPBR) {
+    else if (Material_EmissionFormat == MAT_OLDPBR) {
         emission = mat_emission_old(specularData.b);
     }
     else {
@@ -78,7 +79,7 @@ half mat_porosity_old(const in half roughness, const in half f0_metal) {
 }
 
 half mat_porosity(const in half specular_b, const in half roughness, const in half f0_metal) {
-    if (MATERIAL_POROSITY_FORMAT == MAT_LABPBR) {
+    if (Material_PorosityFormat == MAT_LABPBR) {
         return mat_porosity_lab(specular_b);
     }
     else {
@@ -91,7 +92,7 @@ half mat_sss_lab(const in half specular_b) {
 }
 
 half mat_sss(const in half specular_b) {
-    if (MATERIAL_SSS_FORMAT == MAT_LABPBR) {
+    if (Material_SssFormat == MAT_LABPBR) {
         return mat_sss_lab(specular_b);
     }
     else {
@@ -100,7 +101,7 @@ half mat_sss(const in half specular_b) {
 }
 
 half mat_f0_metal(const in half specular_g) {
-    if (MATERIAL_METALS_FORMAT != MAT_NONE) {
+    if (Material_MetalsFormat != MAT_DISABLED) {
         if (specular_g == 0.0) return (half)0.04;
         // return min(specular_g, (half)0.9);
         return specular_g;
@@ -119,10 +120,10 @@ half mat_metalness_old(const in half f0_metal) {
 }
 
 half mat_metalness(const in half f0_metal) {
-    if (MATERIAL_METALS_FORMAT == MAT_LABPBR) {
+    if (Material_MetalsFormat == MAT_LABPBR) {
         return mat_metalness_lab(f0_metal);
     }
-    else if (MATERIAL_METALS_FORMAT == MAT_OLDPBR) {
+    else if (Material_MetalsFormat == MAT_OLDPBR) {
         return mat_metalness_old(f0_metal);
     }
     else {
@@ -131,14 +132,14 @@ half mat_metalness(const in half f0_metal) {
 }
 
 LazanyiF mat_f0(const in half3 albedo, const in half f0_metal, const in half metalness) {
-    if (MATERIAL_FORMAT == MAT_LABPBR) {
+    if (Material_MetalsFormat == MAT_LABPBR) {
         int hcm = int(f0_metal * 255.0 - 229.5);
 
         if (hcm >= 0 && hcm < 8) {
             var hcm = lazanyi_hcm[hcm];
             return LazanyiF(
-                InputTransform(hcm.f0),
-                InputTransform(hcm.f82));
+                (half3)InputTransform(hcm.f0),
+                (half3)InputTransform(hcm.f82));
         }
     }
     
@@ -150,7 +151,7 @@ LazanyiF mat_f0(const in half3 albedo, const in half f0_metal, const in half met
 }
 
 half3 mat_specularTint(const in half3 albedo, const in half f0_metal, const in half metalness) {
-    if (MATERIAL_METALS_FORMAT == MAT_LABPBR) {
+    if (Material_MetalsFormat == MAT_LABPBR) {
         int hcm = int(f0_metal * 255.0 - 229.5);
         if (hcm > (254.5/255.0)) return half3(1.0);
     }
@@ -159,7 +160,7 @@ half3 mat_specularTint(const in half3 albedo, const in half f0_metal, const in h
 }
 
 half mat_occlusion(const in half data) {
-    if (MATERIAL_NORMAL_FORMAT == MAT_LABPBR) {
+    if (Material_NormalFormat == MAT_LABPBR) {
         return data;
     }
     else {

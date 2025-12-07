@@ -2,6 +2,7 @@ public module floodfill_sky;
 
 import aperture;
 
+extern static const bool FloodFill_Sky_Enabled;
 extern static const int FloodFill_Sky_BufferSizeXZ;
 extern static const int FloodFill_Sky_BufferSizeY;
 // extern static const float FloodFill_FrustumOffsetF = 0.0;//VOXEL_FRUSTUM_OFFSET * 0.01;

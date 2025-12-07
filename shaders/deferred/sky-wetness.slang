@@ -3,6 +3,7 @@ import buffers.ObjectData;
 import lib.common;
 import lib.blocks;
 import lib.material.pbr;
+import lib.light.floodfill_sky;
 
 extern static const bool RENDER_TRANSLUCENT = false;
 
@@ -46,7 +47,16 @@ half2 skyWetness(float2 pos : SV_Position) : SV_Target0 {
 
         float NoL = dot(normals.tex, float3(0.0, 1.0, 0.0));
         float NoLm_wrap = max((NoL + porosity) / (1.0 + porosity), 0.0);
-        float skyF = smoothstep(0.70, 0.92, mat_lit.lmcoord.y) * NoLm_wrap;
+
+        float skyF = NoLm_wrap;
+        if (FloodFill_Sky_Enabled) {
+            float3 bufferPos = FloodFill_Sky_GetBufferPosition(localPos + 0.5*normals.tex);
+            float skyLightF = floodfill_sky_sample(bufferPos);
+            skyF *= skyLightF;//smoothstep(0.50, 0.92, skyLightF);
+        }
+        else {
+            skyF *= smoothstep(0.70, 0.92, mat_lit.lmcoord.y);
+        }
         
         // TODO: expand on this basic idea
         float sky_wetness = (half)(skyF * scene[0].WetnessGround);
