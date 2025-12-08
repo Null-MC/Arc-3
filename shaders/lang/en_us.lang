@@ -6,6 +6,8 @@ option.SKY.SEA_LEVEL=Sea Level
 
 option.SKY.WEATHER_OPACITY=Weather Opacity
 
+option.SKY.PUDDLE_THRESHOLD=Puddle Amount
+
 option.SKY.FOG_ENABLED=Fog
 
 option.SKY.FOG_DENSITY=Fog Density

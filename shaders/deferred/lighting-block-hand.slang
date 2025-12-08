@@ -85,7 +85,7 @@ FragmentOutput lightingBlockHand(float2 pos : SV_Position) {
         if (World_HasSky) {
             half2 wetness_puddle = texWetnessGB[uv];
             Wetness_ApplyRoughness(roughness, wetness_puddle.x);
-            Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
+            // Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
         }
 
         var lazanyi = mat_f0(albedo, f0_metal, metalness);

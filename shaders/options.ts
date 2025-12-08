@@ -4,6 +4,7 @@ export function setupOptions() {
             .add(asBool('SKY.WIND_ENABLED', true, true))
             .add(asIntRange('SKY.SEA_LEVEL', 60, -20, 90, 2, false))
             .add(asIntRange('SKY.WEATHER_OPACITY', 80, 0, 100, 2, false))
+            .add(asIntRange('SKY.PUDDLE_THRESHOLD', 70, 0, 100, 2, false))
             .add(EMPTY)
             .add(asBool('SKY.FOG_ENABLED', true, true))
             .add(asIntRange('SKY.FOG_DENSITY', 100, 0, 300, 5, false))

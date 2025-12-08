@@ -30,11 +30,19 @@ Sampler2D<uint2> texNormalGB;
 Sampler2D<uint2> texMatLightGB;
 
 
+struct FragmentOutput {
+    half3 color : SV_Target0;
+    half distance : SV_Target1;
+};
+
 [[shader("fragment")]]
-half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
+FragmentOutput applyReflections(float2 pos : SV_Position) {
     uint2 uv_full = uint2(pos) * BufferScale;
     float depth = solidDepthTex[uv_full];
-    half3 finalColor = half3(0.0);
+
+    FragmentOutput output;
+    output.color = half3(0.0);
+    output.distance = ap.camera.far;
     
     if (depth < 1.0) {
         float2 texcoord = (uv_full + 0.5) / ap.game.screenSize;
@@ -62,7 +70,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         if (World_HasSky) {
             half2 wetness_puddle = texWetnessGB[uv_full];
             Wetness_ApplyRoughness(roughness, wetness_puddle.x);
-            Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
+            // Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
             // f0_metal = (half)lerp(f0_metal, 0.02, wetness);
         }
 
@@ -78,6 +86,9 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         
         float viewDist = length(viewPos);
         float3 viewDir = viewPos / viewDist;
+
+        output.distance = viewDist;
+
         float3 viewNormal = mul(float3x3(ap.camera.view), reflectNormal);
         float3 reflect_viewDir = reflect(viewDir, viewNormal);
         float3 reflect_localDir = mul(float3x3(ap.camera.viewInv), reflect_viewDir);
@@ -150,8 +161,8 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         // imgDebug[uv] = float4(LinearToRgb(reflectColor * 0.008), 1.0);
 
-        finalColor = F_NoV * reflectColor;
+        output.color = F_NoV * reflectColor;
     }
 
-    return half4(finalColor, (half)1.0);
+    return output;
 }

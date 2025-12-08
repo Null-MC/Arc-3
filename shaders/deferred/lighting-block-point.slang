@@ -179,7 +179,7 @@ void applyPointLights(ComputeInput input) {
 
         half2 wetness_puddle = texWetnessGB[uv];
         Wetness_ApplyRoughness(roughness, wetness_puddle.x);
-        Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
+        // Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
 
 		ApplyInputTransform(albedo.rgb);
 

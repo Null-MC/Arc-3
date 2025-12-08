@@ -86,7 +86,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         // TODO: wetness
         half2 wetness_puddle = texWetnessGB[uv];
         Wetness_ApplyRoughness(roughness, wetness_puddle.x);
-        Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
+        // Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
         // f0_metal = mat_f0(0.02, f0_metal, wetness);
 
         SurfaceData surface;

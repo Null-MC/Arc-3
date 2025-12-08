@@ -74,8 +74,10 @@ half mat_porosity_lab(const in half specular_b) {
 }
 
 half mat_porosity_old(const in half roughness, const in half f0_metal) {
-    half metalInv = (half)1.0 - saturate(unmix((half)0.04, (half)(229.0/255.0), f0_metal));
-    return sqrt(roughness) * metalInv;
+    // half metalInv = (half)1.0 - saturate(unmix((half)0.04, (half)(229.0/255.0), f0_metal));
+    // return sqrt(roughness) * metalInv;
+    float metalness = mat_metalness_old(f0_metal);
+    return pow(roughness, 1.0 + metalness);
 }
 
 half mat_porosity(const in half specular_b, const in half roughness, const in half f0_metal) {

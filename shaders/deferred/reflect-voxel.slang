@@ -44,7 +44,9 @@ Sampler2D<uint2> texMatLightGB;
 half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
     uint2 uv_full = uint2(pos) * BufferScale;
     float depth = solidDepthTex[uv_full];
-    half3 finalColor = half3(0.0);
+
+    float3 finalColor = 0.0;
+    float reflectDistance = 0.0;
     
     if (depth < 1.0) {
         float2 texcoord = (uv_full + 0.5) / ap.game.screenSize;
@@ -75,7 +77,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
         // TODO: wetness
         half2 wetness_puddle = texWetnessGB[uv_full];
         Wetness_ApplyRoughness(roughness, wetness_puddle.x);
-        Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
+        // Wetness_ApplyNormal(normals.tex, normals.geo, wetness_puddle.y);
         // f0_metal = (half)lerp(f0_metal, 0.02, wetness);
 
         // half3 f0 = lerp(half3(f0_metal), albedo.rgb, metalness);
@@ -153,6 +155,9 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
                     }
                 }
 
+                float3 hit_viewPos = project(ap.camera.projectionInv, traceClipPos);
+                reflectDistance = length(hit_viewPos - viewPos);
+
                 reflectColor = texSource.Sample(traceScreenPos.xy);
             }
         }
@@ -212,10 +217,14 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
                 float2 voxelTexCoord = GetVoxelTexCoord(hit_normal, currPos);
                 reflectColor = SampleVoxel(hit_localPos, hit_normal, hit_voxelTexPos, voxelTexCoord, wetness);
+
+                reflectDistance += length(hit_localPos - localPos);
             }
             else {
                 reflectColor = sampleSkyFinal(hit_localPos, reflect_localDir, false);
                 reflectColor *= lmcoord_y;
+
+                reflectDistance += ap.camera.far;
             }
 
             if (traceWaterDist > 0.0)
@@ -230,7 +239,10 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         finalColor += F_NoV * reflectColor;
         }
+
+        finalColor /= Reflect_SampleCount;
+        reflectDistance /= Reflect_SampleCount;
     }
 
-    return half4(finalColor / (half)Reflect_SampleCount, (half)1.0);
+    return half4(finalColor, reflectDistance);
 }

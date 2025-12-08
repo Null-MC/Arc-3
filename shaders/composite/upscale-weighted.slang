@@ -9,22 +9,22 @@ extern static const int BufferScale;
 
 static const float2 BufferSize = float2(BufferWidth, BufferHeight);
 static const int sharedBufferRes = 16 / BufferScale + 2;
-static const float g_sigmaXY = 3.0;
+static const float g_sigmaXY = 0.3;
 
 groupshared half sharedGaussian[3];
-groupshared half3 sharedColor[sharedBufferRes*sharedBufferRes];
+groupshared half4 sharedColor[sharedBufferRes*sharedBufferRes];
 groupshared float sharedDepth[sharedBufferRes*sharedBufferRes];
 
 [[vk::image_format("rgba16f")]]
 RWTexture2D<half4> imgDest;
 
 Sampler2D<float> texDepth;
-Sampler2D<half3> texSource;
+Sampler2D<half4> texSource;
 
 
-float3 sampleSharedBuffer(const in uint2 uv_base, const in float depthL, const in float depthWeight) {
+float4 sampleSharedBuffer(const in uint2 uv_base, const in float depthL, const in float depthWeight) {
     float total = 0.0;
-    float3 sum = 0.0;
+    float4 sum = 0.0;
 
     for (int iy = 0; iy < 3; iy++) {
         half fy = sharedGaussian[iy];
@@ -83,7 +83,7 @@ void upscale_weighted(ComputeInput input) {
         int2 uv = uv_group + uv_local - 1;
         float depthL = ap.camera.far;
 
-        half3 color = half3(0.0);
+        half4 color = half4(0.0);
         if (all(uv >= 0 && uv < BufferSize)) {
             color = texSource[uv];
 
@@ -117,8 +117,8 @@ void upscale_weighted(ComputeInput input) {
 
         int2 uv_shared = input.localPos.xy/BufferScale + 1;
 
-    	float3 color = sampleSharedBuffer(uv_shared, depthL, depthWeight);
+    	float4 color = sampleSharedBuffer(uv_shared, depthL, depthWeight);
 
-    	imgDest[uv] = half4(float4(color, 1.0));
+    	imgDest[uv] = half4(color);
     }
 }

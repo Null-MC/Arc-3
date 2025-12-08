@@ -13,7 +13,7 @@ Sampler2D<float> texDepth;
 Sampler2D<half4> texAlbedoGB;
 Sampler2D<uint2> texMatLightGB;
 
-Sampler2D<half> texWetnessGB;
+Sampler2D<half2> texWetnessGB;
 Sampler2D<half3> texDiffuse;
 Sampler2D<half3> texSpecular;
 Sampler2D<half3> texGI_final;
@@ -32,7 +32,7 @@ half4 lightingFinal(float2 pos : SV_Position) : SV_Target0 {
         ObjectData_MatLit mat_lit;
         mat_lit.unpack(texMatLightGB[uv]);
 
-        half wetness = texWetnessGB[uv];
+        half wetness = texWetnessGB[uv].r;
         half3 diffuse = texDiffuse.Sample(texcoord);
         half3 specular = texSpecular.Sample(texcoord);
 

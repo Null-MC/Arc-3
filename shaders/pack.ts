@@ -378,7 +378,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
         texReflect = pipeline.createTexture('texReflect')
             .width(Reflect_width)
             .height(Reflect_height)
-            .format(Format.RGB16F)
+            .format(Format.RGBA16F)
             .clearColor(0, 0, 0, 0)
             .build();
 
@@ -389,7 +389,7 @@ export function configurePipeline(pipeline: PipelineConfig): void {
             .clear(false)
             .build();
 
-        texReflect_OpaquePrev = pipeline.createTexture('texReflect_OpaquePrev')
+        texReflect_OpaquePrev = pipeline.createImageTexture('texReflect_OpaquePrev', 'imgReflect_OpaquePrev')
             .width(screenWidth)
             .height(screenHeight)
             .format(Format.RGBA16F)
@@ -507,6 +507,14 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 .workGroups(1, 1, 1)
                 .compile();
         }
+
+        setupStage.createCompute("clear-screen")
+            .location("setup/clear-screen", "clearScreen")
+            .workGroups(
+                Math.ceil(screenWidth / 16),
+                Math.ceil(screenHeight / 16),
+                1)
+            .compile();
 
         if (dimension.World_HasSky) {
             setupStage.createCompute('sky-transmit')
@@ -783,6 +791,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                 opaqueStage.createComposite("deferred-sky-wetness")
                     .location("deferred/sky-wetness", "skyWetness")
                     .target(0, texWetnessGB)
+                    .target(1, texNormalGB_opaque)
+                    // .target(2, texMatLightGB_opaque)
                     .overrideObject('texDepth', 'solidDepthTex')
                     .overrideObject('texAlbedoGB', texAlbedoGB_opaque.name())
                     .overrideObject('texNormalGB', texNormalGB_opaque.name())
@@ -1367,6 +1377,7 @@ export function onSettingsChanged(pipeline: PipelineConfig) {
         .appendFloat(options.Sky_SeaLevel)
         .appendFloat(options.Sky_FogDensity * 0.01)
         .appendFloat(options.Sky_WeatherOpacity * 0.01)
+        .appendFloat(options.Sky_PuddleThreshold * 0.01)
         .appendInt(options.Water_WaveDetail)
         .appendFloat(options.Water_WaveSize * 0.01)
         .appendFloat(options.Material_Parallax_Depth * 0.01)

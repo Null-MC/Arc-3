@@ -2,6 +2,7 @@ export class Options {
     get Sky_SeaLevel(): number {return getIntSetting('SKY.SEA_LEVEL');}
     get Sky_WindEnabled(): boolean {return getBoolSetting('SKY.WIND_ENABLED');}
     get Sky_WeatherOpacity(): number {return getIntSetting('SKY.WEATHER_OPACITY');}
+    get Sky_PuddleThreshold(): number {return getIntSetting('SKY.PUDDLE_THRESHOLD');}
 
     get Sky_FogEnabled(): boolean {return getBoolSetting('SKY.FOG_ENABLED');}
     get Sky_FogDensity(): number {return getIntSetting('SKY.FOG_DENSITY');}
