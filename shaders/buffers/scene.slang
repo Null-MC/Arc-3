@@ -9,11 +9,13 @@ struct SceneBuffer {
     float2 taa_jitter_prev;
     float exposure;
 
-    half3 SunColor;
+    float3 SunColor;
     float3 SunLocalDir;
-    half3 MoonColor;
+    float3 MoonColor;
     float3 MoonLocalDir;
     float3 SkyLightLocalDir;
+
+    float3 WaterAbsorbColor;
     float WorldFogDensity;
 
     float3 FloodFillCenter;

@@ -46,7 +46,7 @@ half4 overlayVolumetrics(float2 pos : SV_Position) : SV_Target0 {
     bool isWater = ap.camera.fluid == 1;
 
     if (isWater) {
-        extinction_base = Water_AbsorbColor;
+        extinction_base = scene[0].WaterAbsorbColor;
     }
 
     for (uint i = 0; i < VL_StepCount; i++) {

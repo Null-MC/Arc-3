@@ -84,7 +84,7 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
                 // float depth_opaque = solidShadowMap.Sample(shadowCoord);
                 float depth_translucent = shadowMap.Sample(shadowCoord);
                 float water_depth = max(shadowPos.z - depth_translucent, 0.0) * depth_scale;
-                output.shadow.rgb *= exp(-water_depth * Water_AbsorbColor);
+                output.shadow.rgb *= exp(-water_depth * scene[0].WaterAbsorbColor);
             }
         }
 

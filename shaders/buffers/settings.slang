@@ -7,6 +7,7 @@ struct SettingsBuffer {
     float Sky_PuddleThreshold;
     int Water_WaveDetail;
     float Water_WaveHeight;
+    float Water_DirtLevel;
     float Parallax_MaxDepth;
     float Emission_Scale;
     float Emission_Curve;

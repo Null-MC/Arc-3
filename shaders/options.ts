@@ -13,6 +13,7 @@ export function setupOptions() {
         .add(new Page('WATER')
             .add(asBool('WATER.WAVES_ENABLED', true, true))
             .add(asIntRange('WATER.WAVE_SIZE', 12, 2, 100, 2, false))
+            .add(asIntRange('WATER.DIRT_LEVEL', 10, 2, 100, 2, false))
             .build())
         .add(new Page('MATERIAL')
             .add(asInt('MATERIAL.FORMAT', 0, 1, 2).needsReload(true).build(0))

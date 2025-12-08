@@ -19,7 +19,7 @@ static const int MAT_LABPBR = 2;
 
 
 half3 mat_normal_lab(const in half2 normalData) {
-    half2 normal_xy = fma(normalData.xy, half2(2.0), half2(-1.0));
+    half2 normal_xy = fma(normalData.xy, half2(2.0), half2(-254.0/255.0));
     half normal_z = sqrt(max((half)1.0 - dot(normal_xy, normal_xy), (half)0.0));
     return half3(normal_xy, normal_z);
 }

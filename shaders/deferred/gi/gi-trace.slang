@@ -309,7 +309,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         sampleColor *= RgbToLinear(trace_tint);
 
         if (traceWaterDist > 0.0)
-            sampleColor *= half3(exp(-traceWaterDist * Water_AbsorbColor));
+            sampleColor *= half3(exp(-traceWaterDist * scene[0].WaterAbsorbColor));
 
         // if (traceOcclusionDist > 0.0)
         //     sampleColor *= (half)exp(-0.2 * traceOcclusionDist);

@@ -1380,6 +1380,7 @@ export function onSettingsChanged(pipeline: PipelineConfig) {
         .appendFloat(options.Sky_PuddleThreshold * 0.01)
         .appendInt(options.Water_WaveDetail)
         .appendFloat(options.Water_WaveSize * 0.01)
+        .appendFloat(options.Water_DirtLevel * 0.01)
         .appendFloat(options.Material_Parallax_Depth * 0.01)
         .appendFloat(options.Material_Emission_Scale * 0.01)
         .appendFloat(options.Material_Emission_Curve * 0.01)

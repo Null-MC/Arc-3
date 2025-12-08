@@ -191,7 +191,7 @@ void updateFroxels(ComputeInput input) {
                         float scale = GetShadowProjectionScaleInv(shadowCascade).z;
                         // float scale = (0.5 * ap.celestial.projectionInv[shadowCascade][2][2]);
                         float waterDepth = max(shadowPos.z - depthTrans, 0.0) * scale;
-                        if (waterDepth > 0.0) shadow *= exp(-waterDepth * Water_AbsorbColor);
+                        if (waterDepth > 0.0) shadow *= exp(-waterDepth * scene[0].WaterAbsorbColor);
                     }
                 }
             }

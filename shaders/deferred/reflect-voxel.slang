@@ -228,7 +228,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
             }
 
             if (traceWaterDist > 0.0)
-                reflectColor *= half3(exp(-traceWaterDist * Water_AbsorbColor));
+                reflectColor *= half3(exp(-traceWaterDist * scene[0].WaterAbsorbColor));
         }
 
         half NoVm = max(dot(reflectNormal, -localDir), (half)0.0);

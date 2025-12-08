@@ -1,12 +1,16 @@
 public module TBN;
 
+import lib.common;
+
+
 // half3x3 GetTBN(const in half3 normal, in half3 tangent, const in half tangentW) {
 //     half3 binormal = normalize(cross(tangent, normal)) * sign(tangentW);
 //     return half3x3(tangent, binormal, normal);
 // }
 
 float3x3 GetTBN(const in float3 normal, in float3 tangent, const in float tangentW) {
-    float3 binormal = normalize(cross(tangent, normal)) * sign(tangentW);
+    float3 binormal = normalize(cross(tangent, normal));
+    if (tangentW < EPSILON) binormal = -binormal;
     return float3x3(tangent, binormal, normal);
 }
 

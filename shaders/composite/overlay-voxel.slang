@@ -242,7 +242,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
             }
 
             if (traceWaterDist > 0.0)
-                opaque_color *= half3(exp(-traceWaterDist * Water_AbsorbColor));
+                opaque_color *= half3(exp(-traceWaterDist * scene[0].WaterAbsorbColor));
         }
     }
 
@@ -252,7 +252,7 @@ float4 applyOverlays(float2 pos : SV_Position) : SV_Target0 {
     // }
 
     half3 final_color = opaque_color;
-    half3 opaqueWaterTint = half3(exp(-(waterDepthL + EPSILON) * Water_AbsorbColor));
+    half3 opaqueWaterTint = half3(exp(-(waterDepthL + EPSILON) * scene[0].WaterAbsorbColor));
 
     if (hasOverlay) {
         if (ss_hit && ap.camera.fluid == 0 && waterDepthL > 0.0) {
