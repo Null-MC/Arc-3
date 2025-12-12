@@ -1376,6 +1376,7 @@ export function onSettingsChanged(pipeline: PipelineConfig) {
     new StreamingBufferBuilder(settings)
         .appendFloat(options.Sky_SeaLevel)
         .appendFloat(options.Sky_FogDensity * 0.01)
+        .appendFloat(options.Sky_DustDensity * 0.01)
         .appendFloat(options.Sky_WeatherOpacity * 0.01)
         .appendFloat(options.Sky_PuddleThreshold * 0.01)
         .appendInt(options.Water_WaveDetail)

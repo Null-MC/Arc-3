@@ -8,6 +8,8 @@ export class Options {
     get Sky_FogDensity(): number {return getIntSetting('SKY.FOG_DENSITY');}
     get Sky_FogNoise(): boolean {return getBoolSetting('SKY.FOG_NOISE');}
 
+    get Sky_DustDensity(): number {return getIntSetting('SKY.DUST_DENSITY');}
+
     get Water_WavesEnabled(): boolean {return getBoolSetting('WATER.WAVES_ENABLED');}
     get Water_WaveSize(): number {return getIntSetting('WATER.WAVE_SIZE');}
     get Water_WaveDetail(): number {return 16;}

@@ -38,8 +38,9 @@ float3 FloodFill_Sky_GetLocalPosition(const in float3 bufferPos) {
 }
 
 half floodfill_sky_sample(const in float3 bufferPos) {
-    if (!FloodFill_Sky_InBounds(bufferPos)) return 0;
+    // if (!FloodFill_Sky_InBounds(bufferPos)) return 0;
 
     float3 texcoord = bufferPos / FloodFill_Sky_BufferSize;
-    return texFloodFill_Sky_write.Sample(texcoord) / 16.0;
+    float skyF = texFloodFill_Sky_write.Sample(texcoord);
+    return sqrt(saturate(skyF / 16.0));
 }

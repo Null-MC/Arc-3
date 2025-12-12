@@ -3,6 +3,7 @@ public module settings;
 struct SettingsBuffer {
     float Sky_SeaLevel;
     float Sky_FogDensity;
+    float Sky_DustDensity;
     float Sky_WeatherOpacity;
     float Sky_PuddleThreshold;
     int Water_WaveDetail;

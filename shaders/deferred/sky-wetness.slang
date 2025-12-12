@@ -61,10 +61,14 @@ FragmentOutput skyWetness(float2 pos : SV_Position) {
 
         float geo_NoLm = max(dot(normals.geo, worldUp), 0.0);
 
-        float skyF = smoothstep(0.70, 0.92, mat_lit.lmcoord.y);
+        float skyF = smoothstep(0.78, 0.92, mat_lit.lmcoord.y);
         if (FloodFill_Sky_Enabled) {
             float3 bufferPos = FloodFill_Sky_GetBufferPosition(localPos + 0.5*normals.geo);
-            if (FloodFill_Sky_InBounds(bufferPos)) skyF = floodfill_sky_sample(bufferPos);
+            if (FloodFill_Sky_InBounds(bufferPos)) {
+                float ff_skyF = floodfill_sky_sample(bufferPos);
+                skyF = min(skyF, smoothstep(0.5, 1.0, ff_skyF));
+                // skyF = smoothstep(0.9, 1.0, skyF);
+            }
         }
 
         // skyF *= NoLm_wrap;
@@ -82,7 +86,7 @@ FragmentOutput skyWetness(float2 pos : SV_Position) {
         float puddleThreshold_max = puddleThreshold_min + (0.08*porosity + 0.02);
 
         puddleF = lerp(puddles.y, puddles.x, porosity) * sky_wetness * geo_NoLm;
-        wetnessF = saturate(unmix(0.0, puddleThreshold_min, puddleF)*0.6 + 0.4*scene[0].WetnessGround) * NoLm_wrap;
+        wetnessF = saturate(unmix(0.0, puddleThreshold_min, puddleF)*0.6 + 0.4*sky_wetness) * NoLm_wrap;
         puddleF = smoothstep(puddleThreshold_min, puddleThreshold_max, puddleF);
 
         wetnessF = max(wetnessF * porosity, puddleF);

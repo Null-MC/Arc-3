@@ -14,6 +14,9 @@ option.SKY.FOG_DENSITY=Fog Density
 
 option.SKY.FOG_NOISE=Chunky Fog
 
+option.SKY.DUST_DENSITY=Dust Density
+option.SKY.DUST_DENSITY.comment=The density of dust particles for indoor/cave fog.
+
 
 screen.WATER=Water
 

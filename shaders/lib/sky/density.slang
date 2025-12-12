@@ -6,7 +6,6 @@ import lib.sky.common;
 import lib.sky.scattering;
 import lib.light.floodfill_sky;
 
-extern static const float Fog_DensityIndoors = 4.0;
 extern static const bool Sky_FogNoise;
 
 Sampler3D<half> texFogNoise;
@@ -93,9 +92,9 @@ float SampleFogDensity(const in float3 localPos) {
         float3 skyBufferPos = FloodFill_Sky_GetBufferPosition(localPos);
         if (FloodFill_Sky_InBounds(skyBufferPos)) {
             float skyLightF = floodfill_sky_sample(skyBufferPos);
-            float indoorF = smoothstep(0.0, 0.5, skyLightF);
+            // float indoorF = smoothstep(0.0, 0.5, skyLightF);
 
-            density = lerp(Fog_DensityIndoors, density, indoorF);
+            density = lerp(settings.Sky_DustDensity, density, skyLightF);
         }
     }
 

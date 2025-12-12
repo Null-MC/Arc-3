@@ -9,6 +9,8 @@ export function setupOptions() {
             .add(asBool('SKY.FOG_ENABLED', true, true))
             .add(asIntRange('SKY.FOG_DENSITY', 100, 0, 300, 5, false))
             .add(asBool('SKY.FOG_NOISE', false, true))
+            .add(EMPTY)
+            .add(asIntRange('SKY.DUST_DENSITY', 100, 0, 400, 5, false))
             .build())
         .add(new Page('WATER')
             .add(asBool('WATER.WAVES_ENABLED', true, true))

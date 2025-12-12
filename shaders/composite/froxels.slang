@@ -162,8 +162,11 @@ void updateFroxels(ComputeInput input) {
         half3 moon_color = scene[0].MoonColor * sampleSkyTransmit(skyPos, scene[0].MoonLocalDir);
         float3 skyLight = shadowIsSun ? sun_color : moon_color;
 
+        float skyLightF = 1.0; // TODO: fallback to camera brightness?
         float3 skyBufferPos = FloodFill_Sky_GetBufferPosition(localPos);
-        float skyLightF = floodfill_sky_sample(skyBufferPos);
+        if (FloodFill_Sky_InBounds(skyBufferPos)) {
+            skyLightF = floodfill_sky_sample(skyBufferPos);
+        }
 
         float3 shadowViewPos = mul3(ap.celestial.view, localPos);
         int shadowCascade = GetShadowProjection(shadowViewPos, 0.0);
@@ -239,8 +242,6 @@ void updateFroxels(ComputeInput input) {
         else {
             ambient = sampleSkyMultiScatter(skyPos, scene[0].SunLocalDir);
         }
-        // ambient = ambient * ap.camera.BrightnessSmooth; + VL_MinLight;
-        // if (isWater) ambient *= 0.2;
 
         float sky_VoL = dot(localDir, scene[0].SkyLightLocalDir);
 
