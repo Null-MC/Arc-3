@@ -61,7 +61,7 @@ float3 sample_cosine_weighted_hemisphere(const in float2 rand, out float pdf) {
     // dir.z = sqrt(max(1.0 - dot(dir.xy, dir.xy), 0.0));
     dir.z = sqrt(max(1.0 - rand.x, 0.0));
     
-    pdf = dir.z;// / PI;
+    pdf = dir.z / PI;
 
     return dir;
 }
@@ -208,7 +208,8 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 uint2 uv2 = uint2(traceScreenPos * ap.game.screenSize);
                 half3 sample_normal = ObjectData_Normals.unpackTex(texNormalGB[uv2].g);
                 // half3 sample_normal = ObjectData_Normals.unpackGeo(texNormalGB[uv2].r);
-                cos_sample = step(0.0, dot(sample_normal, -trace_localDir));
+                // cos_sample = step(0.0, dot(sample_normal, -trace_localDir));
+                cos_sample = max(dot(sample_normal, -trace_localDir), 0.0);
             }
         }
 
@@ -290,9 +291,8 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 float2 voxelTexCoord = GetVoxelTexCoord(hit_localNormal, currPos);
                 sampleColor = SampleVoxel(hit_localPos, hit_localNormal, hit_voxelMaskPos, voxelTexCoord, hit_wetness, true);
 
-                // float3 hit_offset = hit_localPos - localPos;
                 cos_sample = max(dot(hit_localNormal, -trace_localDir), 0.0);
-                // cos_sample = rcp(dot(hit_offset, hit_offset) + EPSILON);// max(dot(hit_normal, -trace_localDir), 0.0);
+                // cos_sample *= rcp(length(hit_localPos - localPos) + 1.0);// max(dot(hit_normal, -trace_localDir), 0.0);
                 // cos_sample = 1.0;
             }
         }
@@ -314,7 +314,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
         // if (traceOcclusionDist > 0.0)
         //     sampleColor *= (half)exp(-0.2 * traceOcclusionDist);
 
-        diffuse += pdf * cos_sample * sampleColor;
+        diffuse += (cos_sample / pdf) * (sampleColor / PI);
         }
     }
 
