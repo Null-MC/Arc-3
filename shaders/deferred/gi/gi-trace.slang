@@ -291,9 +291,9 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 sampleColor = SampleVoxel(hit_localPos, hit_localNormal, hit_voxelMaskPos, voxelTexCoord, hit_wetness, true);
 
                 // float3 hit_offset = hit_localPos - localPos;
-                // cos_sample = max(dot(hit_localNormal, -trace_localDir), 0.0);
+                cos_sample = max(dot(hit_localNormal, -trace_localDir), 0.0);
                 // cos_sample = rcp(dot(hit_offset, hit_offset) + EPSILON);// max(dot(hit_normal, -trace_localDir), 0.0);
-                cos_sample = 1.0;
+                // cos_sample = 1.0;
             }
         }
 
@@ -303,7 +303,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             float3 skyPos = getSkyPosition(localPos);
             sampleColor = sampleSkyView(skyPos, trace_localDir, scene[0].SunLocalDir);
             // sampleColor = sampleSkyIrradiance(trace_localDir);
-            cos_sample = lmcoord_y / PI;
+            cos_sample = lmcoord_y;
         }
 
         sampleColor *= RgbToLinear(trace_tint);

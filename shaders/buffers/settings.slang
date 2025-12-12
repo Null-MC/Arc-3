@@ -8,6 +8,7 @@ struct SettingsBuffer {
     int Water_WaveDetail;
     float Water_WaveHeight;
     float Water_DirtLevel;
+    float Material_MipBias;
     float Parallax_MaxDepth;
     float Emission_Scale;
     float Emission_Curve;
@@ -26,5 +27,6 @@ struct SettingsBuffer {
     float Exposure_Min;
     float Exposure_Max;
     float Exposure_Range;
+    float Vignette_Scale;
     float TAA_CasStrength;
 };

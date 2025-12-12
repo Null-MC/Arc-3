@@ -7,12 +7,12 @@ extern static const float FloodFill_FrustumOffsetF = 0.0;//VOXEL_FRUSTUM_OFFSET 
 
 static const uint3 FloodFill_BufferCenter = FloodFill_BufferSize / 2;
 
-static const uint BLOCK_FACE_UP = 1;
 static const uint BLOCK_FACE_DOWN = 0;
-static const uint BLOCK_FACE_NORTH = 2;
-static const uint BLOCK_FACE_SOUTH = 3;
-static const uint BLOCK_FACE_EAST = 5;
-static const uint BLOCK_FACE_WEST = 4;
+static const uint BLOCK_FACE_UP = 1;
+static const uint BLOCK_FACE_SOUTH = 2;
+static const uint BLOCK_FACE_NORTH = 3;
+static const uint BLOCK_FACE_EAST = 4;
+static const uint BLOCK_FACE_WEST = 5;
 
 [[vk::image_format("rgba16f")]]
 RWTexture3D<half3> imgFloodFill_write;

@@ -155,8 +155,8 @@ struct FragmentOutput {
 [[shader("fragment")]]
 FragmentOutput fragmentMain(VertexOutput input) {
     float2 tex_uv = input.uv;
-    float LOD = albedoTex.CalculateLevelOfDetail(tex_uv);
-    LOD = max(LOD - 1.0, 0.0);
+    half LOD = (half)albedoTex.CalculateLevelOfDetail(tex_uv);
+    LOD = max(LOD - (half)settings.Material_MipBias, (half)0.0);
 
     AtlasBounds atlas;
     float3 tanViewDir;

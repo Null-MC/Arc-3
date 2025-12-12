@@ -7,6 +7,7 @@ import lib.light.floodfill;
 import lib.light.shadow;
 import lib.sky.density;
 import lib.water.common;
+import lib.ACES;
 
 RWStructuredBuffer<SceneBuffer> scene_writer;
 
@@ -25,7 +26,9 @@ void beginScene() {
     scene_writer[0].MoonLocalDir = normalize(mul(float3x3(ap.camera.viewInv), ap.celestial.moonPosition));
     scene_writer[0].SkyLightLocalDir = normalize(mul(float3x3(ap.camera.viewInv), ap.celestial.position));
 
-    scene_writer[0].WaterAbsorbColor = lerp(WaterAbsorbClear, WaterAbsorbMurky, settings.Water_DirtLevel);
+    float chlorophyll = pow2(settings.Water_DirtLevel) * 50.0;
+    scene_writer[0].WaterScatterColor = ACES_linear_to_cg(GetWaterScatterColor(chlorophyll));
+    scene_writer[0].WaterAbsorbColor = ACES_linear_to_cg(GetWaterAbsorbColor(chlorophyll));
 
     for (int i = 0; i < Shadow_CascadeCount; i++) {
         GetShadowProjectionBounds(i, scene_writer[0].shadowViewMin[i], scene_writer[0].shadowViewMax[i]);

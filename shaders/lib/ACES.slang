@@ -118,7 +118,7 @@ float3 Linear_from_ACEScct(float3 cct) {
 }
 
 half3 ACES_DarkToDimSurround(half3 linearCV) {
-    half3 XYZ = mul(AP1_2_XYZ_MAT, linearCV);
+    float3 XYZ = mul(AP1_2_XYZ_MAT, linearCV);
 
     half3 xyY = XYZ_2_xyY(XYZ);
     xyY.z = clamp(xyY.z, 0.0, half.maxValue);

@@ -1213,8 +1213,6 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .exportBool('TAA_SharpenHistory', options.Post_TAA_CubicHistory)
                     .compile();
             }
-
-            finalFlipper.flip();
                 
             if (options.Debug_Histogram) {
                 finalStage.createCompute('histogram-clear')
@@ -1222,6 +1220,8 @@ export function configurePipeline(pipeline: PipelineConfig): void {
                     .workGroups(1, 1, 1)
                     .compile();
             }
+
+            finalFlipper.flip();
 
             finalStage.createCompute('histogram')
                 .location('post/histogram-exposure', "buildHistogram")
@@ -1381,6 +1381,7 @@ export function onSettingsChanged(pipeline: PipelineConfig) {
         .appendInt(options.Water_WaveDetail)
         .appendFloat(options.Water_WaveSize * 0.01)
         .appendFloat(options.Water_DirtLevel * 0.01)
+        .appendFloat(options.Material_MipBias * 0.01)
         .appendFloat(options.Material_Parallax_Depth * 0.01)
         .appendFloat(options.Material_Emission_Scale * 0.01)
         .appendFloat(options.Material_Emission_Curve * 0.01)
@@ -1399,6 +1400,7 @@ export function onSettingsChanged(pipeline: PipelineConfig) {
         .appendFloat(options.Post_Exposure_Min)
         .appendFloat(options.Post_Exposure_Max)
         .appendFloat(options.Post_Exposure_Range)
+        .appendFloat(options.Post_Vignette_Scale * 0.01)
         .appendFloat(options.Post_TAA_CasStrength * 0.01);
 }
 

@@ -14,6 +14,7 @@ export class Options {
     get Water_DirtLevel(): number {return getIntSetting('WATER.DIRT_LEVEL');}
 
     get Material_Format(): number {return getIntSetting('MATERIAL.FORMAT');}
+    get Material_MipBias(): number {return getIntSetting('MATERIAL.MIP_BIAS');}
 
     // get Material_Normals_Rough(): boolean {return getBoolSetting('MATERIAL.NORMALS_ROUGH');}
     get Material_Normals_Smooth(): boolean {return getBoolSetting('MATERIAL.NORMALS.SMOOTH');}
@@ -95,6 +96,9 @@ export class Options {
     get Post_Exposure_Max(): number {return getFloatSetting('POST.EXPOSURE.MAX');}
     get Post_Exposure_Range(): number {return getFloatSetting('POST.EXPOSURE.RANGE');}
 
+    get Post_Vignette_Enabled(): boolean {return getBoolSetting('POST.VIGNETTE.ENABLED');}
+    get Post_Vignette_Scale(): number {return getIntSetting('POST.VIGNETTE.SCALE');}
+
     get Post_Bloom_Enabled(): boolean {return getBoolSetting('POST.BLOOM.ENABLED');}
     get Post_Bloom_Strength(): number {return getFloatSetting('POST.BLOOM.STRENGTH');}
 
@@ -140,6 +144,7 @@ export class Options {
             .addBool('PointLight_Enabled', this.Lighting_Point_Enabled)
             .addInt('PointLight_MaxCount', this.Lighting_Point_MaxCount)
             .addInt('Voxel_Resolution', this.Lighting_VoxelResolution)
+            .addBool('Vignette_Enabled', this.Post_Vignette_Enabled)
             .addBool('TAA_Enabled', this.Post_TAA_Enabled)
             .addBool('Debug_WhiteWorld', this.Debug_WhiteWorld);
     }

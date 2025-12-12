@@ -13,12 +13,15 @@ import lib.sky.density;
 import lib.sky.scattering;
 import lib.sky.sample_transmit;
 import lib.sky.sample_multiscatter;
+import lib.sky.sample_irradiance;
+import lib.light.HG;
 
 
 extern static const int Froxel_MaxFrames = 15;
 extern static const uint Froxel_SkyLight_StepCount = 8;
 extern static const float Froxel_SkyLight_TraceDist = 16.0;
 extern static const uint Froxel_PointLight_StepCount = 4;
+extern static const int Shadow_CascadeCount;
 extern static const bool FloodFill_Enabled;
 extern static const bool PointLight_Enabled;
 extern static const int PointLight_MaxCount;
@@ -167,7 +170,10 @@ void updateFroxels(ComputeInput input) {
 
         if (shadowCascade >= 0) {
             float3 shadowPos = mul3(ap.celestial.projection[shadowCascade], shadowViewPos);
-            // skyLight *= SampleShadowColor(shadowPos * 0.5 + 0.5, shadowCascade);
+
+            if (Shadow_CascadeCount == 1)
+                shadowPos.xy = Shadow_Distort(shadowPos.xy);
+
             shadowPos = shadowPos * 0.5 + 0.5;
 
             // TODO: shadow water depth?
@@ -201,28 +207,49 @@ void updateFroxels(ComputeInput input) {
 
         float3 skyTrace_localEnd = localPos + scene[0].SkyLightLocalDir * Froxel_SkyLight_TraceDist;
         float skyTrace_stepDist = Froxel_SkyLight_TraceDist / Froxel_SkyLight_StepCount;
-        float accumDensity = 0.0;
+        float accumDensityAir = 0.0, accumDensityWater = 0.0;
 
         for (uint i = 0; i < Froxel_SkyLight_StepCount; i++) {
             float stepF = (i + dither) / Froxel_SkyLight_StepCount;
             float3 trace_localPos = lerp(localPos, skyTrace_localEnd, stepF);
 
-            float trace_density = SampleFogDensity(trace_localPos);
-            accumDensity += trace_density * skyTrace_stepDist;
-        }
-        
-        if (accumDensity > EPSILON) {
-            float extinction = accumDensity * 0.001 * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase);
-            skyLight *= exp(-extinction);
+            int3 trace_voxelPos = int3(floor(trace_localPos + ap.camera.position));
+            bool trace_isWater = ap.voxel[trace_voxelPos].block.isFluid;
+
+            float trace_density = trace_isWater ? 1.0
+                : SampleFogDensity(trace_localPos);
+            
+            if (trace_isWater) {} //accumDensityWater += trace_density * skyTrace_stepDist;
+            else accumDensityAir += trace_density * skyTrace_stepDist;
         }
 
-        float3 ambient = sampleSkyMultiScatter(skyPos, scene[0].SunLocalDir);
+        if (accumDensityAir > EPSILON) {
+            float extinction = accumDensityAir * 0.001 * (scene[0].sky.mieScatteringBase + scene[0].sky.mieAbsorptionBase);
+            skyLight *= exp(-extinction);
+        }
+        // if (accumDensityWater > EPSILON) {
+        //     float extinction = accumDensityWater * 0.01 * scene[0].WaterAbsorbColor;
+        //     skyLight *= exp(-extinction);
+        // }
+
+        float3 ambient;
+        if (isWater) {
+            ambient = sampleSkyIrradiance(float3(0.0, 1.0, 0.0));
+        }
+        else {
+            ambient = sampleSkyMultiScatter(skyPos, scene[0].SunLocalDir);
+        }
         // ambient = ambient * ap.camera.BrightnessSmooth; + VL_MinLight;
         // if (isWater) ambient *= 0.2;
 
         float sky_VoL = dot(localDir, scene[0].SkyLightLocalDir);
-        float miePhase_sky = max(getMiePhase(sky_VoL), 0.0);
-        scatter += miePhase_sky * skyLight + ambient * skyLightF;
+
+        float phase = isWater
+            ? GetWaterPhase(sky_VoL)
+            : getMiePhase(sky_VoL);
+
+        // float miePhase_sky = max(getMiePhase(sky_VoL), 0.0);
+        scatter += max(phase, 0.0) * skyLight + ambient * skyLightF;
     }
 
     if (PointLight_Enabled) {
@@ -268,7 +295,7 @@ void updateFroxels(ComputeInput input) {
     }
 
     scatter *= isWater
-        ? Water_ScatterColor
+        ? 0.001 * scene[0].WaterScatterColor
         : 0.001 * scene[0].sky.mieScatteringBase;
 
     // project last frame position and accumulate

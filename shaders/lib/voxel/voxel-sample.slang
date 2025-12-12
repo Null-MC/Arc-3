@@ -33,7 +33,7 @@ float2 GetVoxelTexCoord(const in float3 normal, const in float3 voxelPos) {
 }
 
 float3 SampleVoxel(const in float3 localPos, const in float3 normal, const in int3 voxelBufferPos, const in float2 voxelTexCoord, const in half wetness, const in bool isGI = false) {
-    half3 albedo = half3(0);
+    half3 albedo = half3(0.65);
     half roughL = (half)0.85;
     half metalness = (half)0.0;
     half porosity = (half)0.7;

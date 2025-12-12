@@ -7,6 +7,7 @@ import lib.material.pbr;
 import lib.light.shadow;
 import lib.water.common;
 
+extern static const int Shadow_CascadeCount;
 extern static const bool RENDER_TRANSLUCENT = false;
 
 Sampler2D<float> texDepth;
@@ -82,6 +83,11 @@ FragmentOutput skyShadowSss(float2 pos : SV_Position) {
                 float depth_scale = -0.5 * ap.celestial.projectionInv[cascade][2].z;
 
                 // float depth_opaque = solidShadowMap.Sample(shadowCoord);
+
+                if (Shadow_CascadeCount == 1) {
+                    shadowCoord.xy = Shadow_Distort(shadowCoord.xy * 2.0 - 1.0) * 0.5 + 0.5;
+                }
+
                 float depth_translucent = shadowMap.Sample(shadowCoord);
                 float water_depth = max(shadowPos.z - depth_translucent, 0.0) * depth_scale;
                 output.shadow.rgb *= exp(-water_depth * scene[0].WaterAbsorbColor);

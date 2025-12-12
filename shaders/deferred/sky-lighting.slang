@@ -120,7 +120,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
 
         // Ambient from Sky Irradiance
         if (!Lighting_GI || RENDER_TRANSLUCENT) {
-            half3 sky_ambient = 2.0 * sampleSkyIrradiance(normals.tex);
+            half3 sky_ambient = PI * sampleSkyIrradiance(normals.tex);
             diffuse += sky_ambient * lmcoord_y * mat_lit.occlusion;
         }
 
@@ -139,7 +139,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         // float NoLm = max(dot(normals.tex, scene[0].SkyLightLocalDir), 0.0);
         // diffuse = lerp(diffuse, sssFinal, sss * (1.0 - NoLm));
         // diffuse *= 1.0 - 0.3*sss;
-        diffuse += 3.0*sssFinal*sss;
+        diffuse += sssFinal*sss;
         // diffuse = lerp(diffuse, 3.0 * sssFinal, 0.5*sss);
 
 

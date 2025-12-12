@@ -233,7 +233,7 @@ half4 applyReflections(float2 pos : SV_Position) : SV_Target0 {
 
         half NoVm = max(dot(reflectNormal, -localDir), (half)0.0);
         var lazanyi = mat_f0(albedo.rgb, f0_metal, metalness);
-        half3 F_NoV = lazanyi.F(NoVm);
+        half3 F_NoV = saturate(lazanyi.F(NoVm));
 
         // imgDebug[uv] = float4(LinearToRgb(reflectColor * 0.008), 1.0);
 

@@ -67,6 +67,10 @@ void populateShared(ComputeInput input) {
 
 			// if (blockId >= 0)
 			// 	blockMeta = ap.blocks[blockId].metadata;
+
+			// allow full blocks to still emit light
+			if (ap.blocks[blockId].emission > 0)
+				blockMeta = 0u;
 		}
 
 		sharedBlockMap[x] = blockId;
@@ -76,21 +80,21 @@ void populateShared(ComputeInput input) {
 
 half3 sampleFloodfillShared(int3 pos, uint mask_index) {
 	int shared_index = getSharedCoord(pos);
-	// uint blockMeta = sharedBlockMetaMap[shared_index];
-	// uint wMask = bitfieldExtract(blockMeta, mask_index, 1);
-	return floodfillBuffer[shared_index];// * half(1-wMask);
+	uint blockMeta = sharedBlockMetaMap[shared_index];
+	uint wMask = bitfieldExtract(blockMeta, mask_index, 1);
+	return floodfillBuffer[shared_index] * half(1-wMask);
 }
 
 half3 mixNeighbors(const in int3 fragCoord, const in uint mask) {
-	half3 m1 = half3(1u - (uint3(mask) >> uint3(BLOCK_FACE_WEST, BLOCK_FACE_UP, BLOCK_FACE_NORTH)) & 1u);
-	half3 m2 = half3(1u - (uint3(mask) >> uint3(BLOCK_FACE_EAST, BLOCK_FACE_DOWN, BLOCK_FACE_SOUTH)) & 1u);
+	half3 m1 = half3(1u - ((uint3(mask) >> uint3(BLOCK_FACE_EAST, BLOCK_FACE_DOWN, BLOCK_FACE_SOUTH)) & 1u));
+	half3 m2 = half3(1u - ((uint3(mask) >> uint3(BLOCK_FACE_WEST, BLOCK_FACE_UP, BLOCK_FACE_NORTH)) & 1u));
 
-	half3 nX1 = sampleFloodfillShared(fragCoord + int3(-1,  0,  0), BLOCK_FACE_EAST) * m1.x;
-	half3 nX2 = sampleFloodfillShared(fragCoord + int3( 1,  0,  0), BLOCK_FACE_WEST) * m2.x;
-	half3 nY1 = sampleFloodfillShared(fragCoord + int3( 0, -1,  0), BLOCK_FACE_DOWN) * m1.y;
-	half3 nY2 = sampleFloodfillShared(fragCoord + int3( 0,  1,  0), BLOCK_FACE_UP) * m2.y;
-	half3 nZ1 = sampleFloodfillShared(fragCoord + int3( 0,  0, -1), BLOCK_FACE_SOUTH) * m1.z;
-	half3 nZ2 = sampleFloodfillShared(fragCoord + int3( 0,  0,  1), BLOCK_FACE_NORTH) * m2.z;
+	half3 nX1 = sampleFloodfillShared(fragCoord + int3(-1,  0,  0), BLOCK_FACE_WEST) * m1.x;
+	half3 nX2 = sampleFloodfillShared(fragCoord + int3( 1,  0,  0), BLOCK_FACE_EAST) * m2.x;
+	half3 nY1 = sampleFloodfillShared(fragCoord + int3( 0, -1,  0), BLOCK_FACE_UP) * m1.y;
+	half3 nY2 = sampleFloodfillShared(fragCoord + int3( 0,  1,  0), BLOCK_FACE_DOWN) * m2.y;
+	half3 nZ1 = sampleFloodfillShared(fragCoord + int3( 0,  0, -1), BLOCK_FACE_NORTH) * m1.z;
+	half3 nZ2 = sampleFloodfillShared(fragCoord + int3( 0,  0,  1), BLOCK_FACE_SOUTH) * m2.z;
 
 	const float avgFalloff = LpvFalloff / 6.0;
 	return (nX1 + nX2 + nY1 + nY2 + nZ1 + nZ2) * avgFalloff;
@@ -155,10 +159,7 @@ void floodfill(ComputeInput input) {
 	half3 accumLight = half3(0.0);
 
 	if (!isFullBlock) {
-		uint faceMask = 0u;
-		if (blockId >= 0u)
-			faceMask = sharedBlockMetaMap[sharedCoord];
-
+		uint faceMask = sharedBlockMetaMap[sharedCoord];
 		accumLight = mixNeighbors(localCellIndex, faceMask) * blockTint;
 	}
 

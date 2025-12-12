@@ -62,7 +62,6 @@ half4 accumulateReflections(float2 pos : SV_Position) : SV_Target0 {
     if (depth < 1.0) {
         // color = texSource.Sample(texcoord);
         half4 traceData = texSource[uv];
-        color = traceData.rgb;
 
         float3 reproj = texReprojection[uv];
         // float2 texcoord = pos / float2(ap.game.screenSize);
@@ -77,10 +76,11 @@ half4 accumulateReflections(float2 pos : SV_Position) : SV_Target0 {
         bool isHand = mat_lit.blockMapId == BLOCK_HAND;
 
         float2 texcoord = pos / ap.game.screenSize;
-        if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
+        // if (TAA_Enabled) texcoord -= scene[0].taa_jitter;
 
         float3 screenPos = float3(texcoord, depth);
-        float3 screenPos_prev = reproject(screenPos, traceData.a * (1.0 - roughness), isHand);
+        float parallaxDist = traceData.a * pow2(1.0 - roughness);
+        float3 screenPos_prev = reproject(screenPos, parallaxDist, isHand);
 
         screenPos_prev.xy -= 0.5*texVelocity[uv];
 
@@ -105,7 +105,7 @@ half4 accumulateReflections(float2 pos : SV_Position) : SV_Target0 {
         float _maxFrames = lerp(2.0, float(MaxFrames), roughL);
         counter = clamp(color_prev.a * rejectPass, 0, _maxFrames) + 1;
 
-        color = lerp(color_prev.rgb, color, rcp(counter));
+        color = lerp(color_prev.rgb, traceData.rgb, rcp(counter));
     }
 
     return half4(color, counter);

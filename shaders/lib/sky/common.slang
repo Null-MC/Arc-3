@@ -46,10 +46,9 @@ float getMiePhase(const in float cosTheta, const in float g) {
 }
 
 float getMiePhase(float cosTheta) {
-    //const float g = 0.8;
-    //return getMiePhase(cosTheta, g);
+    return getMiePhase(cosTheta, 0.8);
 
-    return DHG(cosTheta, -0.5, 0.8, 0.5);
+    // return DHG(cosTheta, -0.5, 0.8, 0.5);
 }
 
 float getRayleighPhase(float cosTheta) {

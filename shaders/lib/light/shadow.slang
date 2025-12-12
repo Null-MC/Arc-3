@@ -217,10 +217,10 @@ half3 SampleShadowColor_PCSS(const in float3 shadowPos, const in int cascade, co
     float blockerDistance = ShadowBlockerDistance(shadowPos, cascade, maxPixelRadius, projectionScale.z, dither);
 
     const float shadowPixelSize = rcp(Shadow_Resolution);
-    const float minShadowPixelRadius = shadowPixelSize;
+    const float2 minShadowPixelRadius = min(shadowPixelSize, maxPixelRadius);
 
     float2 pixelRadius = (blockerDistance / Shadow_PenumbraScale) * projectionScale.xy;
-    pixelRadius = clamp(pixelRadius, float2(minShadowPixelRadius), maxPixelRadius);
+    pixelRadius = clamp(pixelRadius, minShadowPixelRadius, maxPixelRadius);
     return SampleShadowColor_PCF(shadowPos, cascade, pixelRadius, dither);
 }
 

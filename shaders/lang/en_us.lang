@@ -22,6 +22,8 @@ option.WATER.WAVES_ENABLED=Waves Enabled
 option.WATER.WAVE_SIZE=Wave Size
 suffix.WATER.WAVE_SIZE=%
 
+option.WATER.DIRT_LEVEL=Dirtiness
+suffix.WATER.DIRT_LEVEL=%
 
 screen.MATERIAL=Materials
 
@@ -29,6 +31,9 @@ option.MATERIAL.FORMAT=Format
 value.MATERIAL.FORMAT.0=None
 value.MATERIAL.FORMAT.1=Old PBR
 value.MATERIAL.FORMAT.2=Lab PBR
+
+option.MATERIAL.MIP_BIAS=MipMap Bias
+suffix.MATERIAL.MIP_BIAS=%
 
 
 screen.MATERIAL.NORMALS=Normals
@@ -241,6 +246,14 @@ option.POST.EXPOSURE.MIN=Minimum
 option.POST.EXPOSURE.MAX=Maximum
 
 option.POST.EXPOSURE.RANGE=Range
+
+
+screen.POST.VIGNETTE=Vignette
+
+option.POST.VIGNETTE.ENABLED=Enabled
+
+option.POST.VIGNETTE.SCALE=Scale
+suffix.POST.VIGNETTE.SCALE=%
 
 
 screen.POST.BLOOM=Bloom
