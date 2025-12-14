@@ -8,6 +8,8 @@ import lib.light.floodfill_sky;
 import lib.light.shadow;
 import lib.water.common;
 import lib.voxel.froxel;
+import lib.voxel.voxel_common;
+import lib.voxel.voxel_mask;
 import lib.sky.common;
 import lib.sky.density;
 import lib.sky.scattering;
@@ -25,6 +27,8 @@ extern static const int Shadow_CascadeCount;
 extern static const bool FloodFill_Enabled;
 extern static const bool PointLight_Enabled;
 extern static const int PointLight_MaxCount;
+
+StructuredBuffer<VoxelMask> VoxelMaskBuffer;
 
 groupshared uint sharedLightList[PointLight_MaxCount];
 groupshared Atomic<uint> counter;
@@ -147,9 +151,12 @@ void updateFroxels(ComputeInput input) {
 
     float dither = hash13(seed);
 
-    int3 voxelPos = int3(floor(localPos + ap.camera.position));
-    bool isWater = ap.voxel[voxelPos].block.isFluid;
-    // half3 waterColor = ap.
+    // int3 voxelPos = int3(floor(localPos + ap.camera.position));
+    // bool isWater = ap.voxel[voxelPos].block.isFluid;
+    int3 voxelMaskPos = int3(floor(Voxel_GetBufferPosition(localPos)));
+    uint voxelIndex = Voxel_GetBufferIndex(voxelMaskPos);
+    var voxelMask = VoxelMaskBuffer[voxelIndex];
+    bool isWater = (voxelMask.getId() == MaskId_Water);
 
     float3 scatter = 0.0;
     float transmit = 1.0;
@@ -216,8 +223,12 @@ void updateFroxels(ComputeInput input) {
             float stepF = (i + dither) / Froxel_SkyLight_StepCount;
             float3 trace_localPos = lerp(localPos, skyTrace_localEnd, stepF);
 
-            int3 trace_voxelPos = int3(floor(trace_localPos + ap.camera.position));
-            bool trace_isWater = ap.voxel[trace_voxelPos].block.isFluid;
+            // int3 trace_voxelPos = int3(floor(trace_localPos + ap.camera.position));
+            // bool trace_isWater = ap.voxel[trace_voxelPos].block.isFluid;
+            int3 trace_voxelMaskPos = int3(floor(Voxel_GetBufferPosition(trace_localPos)));
+            uint trace_voxelIndex = Voxel_GetBufferIndex(trace_voxelMaskPos);
+            var trace_voxelMask = VoxelMaskBuffer[trace_voxelIndex];
+            bool trace_isWater = (trace_voxelMask.getId() == MaskId_Water);
 
             float trace_density = trace_isWater ? 1.0
                 : SampleFogDensity(trace_localPos);
@@ -295,9 +306,9 @@ void updateFroxels(ComputeInput input) {
         }
     }
 
-    scatter *= isWater
-        ? 0.001 * scene[0].WaterScatterColor
-        : 0.001 * scene[0].sky.mieScatteringBase;
+    scatter *= 0.001 * (isWater
+        ? scene[0].WaterScatterColor
+        : scene[0].sky.mieScatteringBase);
 
     // project last frame position and accumulate
     float3 bufferPosLast = input.globalPos + 0.5;

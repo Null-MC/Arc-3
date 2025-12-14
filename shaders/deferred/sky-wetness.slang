@@ -11,6 +11,7 @@ extern static const bool RENDER_TRANSLUCENT = false;
 
 Sampler2D<float> texDepth;
 Sampler2D<half2> texPuddles;
+Sampler3D<half> texRipples;
 Sampler2D<half> texWaterWaves_high;
 
 Sampler2D<half4> texAlbedoGB;
@@ -120,13 +121,19 @@ FragmentOutput skyWetness(float2 pos : SV_Position) {
             }
         }
 
-        float n1 = texWaterWaves_high.Sample(worldPos.xz * 0.57 - 60.0*time);
-        float n2 = texWaterWaves_high.Sample(worldPos.xz * 0.53 + 60.0*time);
+        float puddleHeight = 0.02 * sqrt(puddleF) * (1.0 - porosity);
 
-        float puddleHeight = 0.02 * sqrt(puddleF) + 0.06 * (n1 * n2) * ap.world.rainStrength;
+        // float n1 = texWaterWaves_high.Sample(worldPos.xz * 0.57 - 60.0*time);
+        // float n2 = texWaterWaves_high.Sample(worldPos.xz * 0.53 + 60.0*time);
+        // puddleHeight += 0.06 * (n1 * n2) * ap.world.rainStrength;
+
+        float3 rippleTexcoord = float3(worldPos.xz * 0.38, 700.0 * time);
+        float rippleHeight = texRipples.Sample(rippleTexcoord) - 0.5;
+        puddleHeight += 0.02 * rippleHeight * ap.world.rainStrength;
+
         float3 puddlePos = puddleHeight * normals.geo + localPos;
         float3 puddle_normal = getSurfaceNormal(puddlePos, normals.geo);
-        puddle_normal = normalize(lerp(puddle_normal, normals.geo, porosity));
+        // puddle_normal = normalize(lerp(puddle_normal, normals.geo, porosity));
         
         // Wetness_ApplyNormal(normals.tex, puddle_normal, puddleF);
 

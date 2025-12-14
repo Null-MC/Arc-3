@@ -139,7 +139,7 @@ FragmentOutput lightingSky(float2 pos : SV_Position) {
         // float NoLm = max(dot(normals.tex, scene[0].SkyLightLocalDir), 0.0);
         // diffuse = lerp(diffuse, sssFinal, sss * (1.0 - NoLm));
         // diffuse *= 1.0 - 0.3*sss;
-        diffuse += sssFinal*sss;
+        diffuse += 0.3 * sssFinal*sss;
         // diffuse = lerp(diffuse, 3.0 * sssFinal, 0.5*sss);
 
 

@@ -483,6 +483,16 @@ export function configurePipeline(pipeline: PipelineConfig): void {
 
     pipeline.importPNGTexture('texPuddles', 'textures/puddles.png', true, false);
 
+    pipeline.importRawTexture('texRipples', 'textures/ripples.dat')
+        .type(PixelType.UNSIGNED_BYTE)
+        .format(Format.R8)
+        .width(256)
+        .height(256)
+        .depth(64)
+        .clamp(false)
+        .blur(true)
+        .load();
+
     pipeline.importRawTexture('texFogNoise', 'textures/fog.dat')
         .type(PixelType.UNSIGNED_BYTE)
         .format(Format.R8)

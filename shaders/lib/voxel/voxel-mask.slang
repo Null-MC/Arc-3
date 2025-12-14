@@ -9,12 +9,12 @@ static const uint MaskId_Solid = 1;
 static const uint MaskId_Water = 2;
 static const uint MaskId_Tint = 3;
 
-static const uint MaskFace_Down = 0;
-static const uint MaskFace_Up = 1;
-static const uint MaskFace_North = 2;
-static const uint MaskFace_South = 3;
-static const uint MaskFace_West = 4;
-static const uint MaskFace_East = 5;
+// static const uint MaskFace_Down = 0;
+// static const uint MaskFace_Up = 1;
+// static const uint MaskFace_North = 2;
+// static const uint MaskFace_South = 3;
+// static const uint MaskFace_West = 4;
+// static const uint MaskFace_East = 5;
 
 
 struct VoxelMask {

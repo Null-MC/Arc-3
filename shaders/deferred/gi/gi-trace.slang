@@ -150,9 +150,9 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
             float3 traceClipPos_prev = traceClipStart;
             float2 traceScreenPos;
 
-            float max_thickness = 0.1 + 0.02*viewDist;
+            float max_thickness = 0.1 + 0.16*viewDist;
 
-            float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
+            // float traceDepthL_prev = linearizeDepth(traceClipStart.z, ap.camera.near, ap.camera.far);
             for (uint i = 0; i < GI_ScreenStepCount; i++) {
                 float f = (i + dither) / GI_ScreenStepCount;
                 traceClipPos = lerp(traceClipStart, traceClipEnd, f);
@@ -172,7 +172,7 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 }
 
                 traceClipPos_prev = traceClipPos;
-                traceDepthL_prev = traceDepthL;
+                // traceDepthL_prev = traceDepthL;
             }
 
             if (ss_hit) {
@@ -206,8 +206,8 @@ half4 applyGI(float2 pos : SV_Position) : SV_Target0 {
                 sampleColor = trace_albedo * trace_diffuse;
 
                 uint2 uv2 = uint2(traceScreenPos * ap.game.screenSize);
-                half3 sample_normal = ObjectData_Normals.unpackTex(texNormalGB[uv2].g);
-                // half3 sample_normal = ObjectData_Normals.unpackGeo(texNormalGB[uv2].r);
+                // half3 sample_normal = ObjectData_Normals.unpackTex(texNormalGB[uv2].g);
+                half3 sample_normal = ObjectData_Normals.unpackGeo(texNormalGB[uv2].r);
                 // cos_sample = step(0.0, dot(sample_normal, -trace_localDir));
                 cos_sample = max(dot(sample_normal, -trace_localDir), 0.0);
             }
